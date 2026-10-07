@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Standalone Rust CLI and task-local build tools
+/target/
+/.tools/
+/.cache/
+*.env

@@ -1,0 +1,9 @@
+[package]
+name = "hmail-cleaner"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+hmail-cleaner-core = { path = "../core" }
+hmail-cleaner-adapters = { path = "../adapters" }
