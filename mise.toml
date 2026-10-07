@@ -47,4 +47,4 @@ run_windows = 'powershell.exe -NoProfile -Command "docker --context $env:HMAIL_T
 description = "Run integration tests against disposable MySQL"
 depends = ["db:up"]
 env.HMAIL_TEST_DATABASE_URL = "{{ env.HMAIL_TEST_DATABASE_URL | default(value='mysql://root:hmail_fixture@127.0.0.1:13306/mysql?ssl-mode=disabled') }}"
-run = "cargo test -p hmail-cleaner-adapters --test mysql --locked -- --ignored --test-threads=1"
+run = "cargo test -p hmail-cleaner-adapters --locked -- --ignored --test-threads=1"

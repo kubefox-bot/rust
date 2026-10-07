@@ -1,4 +1,4 @@
-use super::{RepositoryError, DELIVERED_STATE, MAX_BATCH_SIZE};
+use super::{ids::bind as bind_ids, transaction, RepositoryError, DELIVERED_STATE, MAX_BATCH_SIZE};
 use hmail_cleaner_core::cleanup::{Candidate, DeleteResult, DeletedRows, PortResult};
 use sqlx::{Connection, MySql, MySqlConnection, QueryBuilder, Row, Transaction};
 use std::collections::{HashMap, HashSet};
@@ -53,22 +53,10 @@ pub(super) async fn batch(
     let rows = match execute(&mut transaction, candidates).await {
         Ok(rows) => rows,
         Err(original) => {
-            if let Err(rollback) = transaction.rollback().await {
-                return Err(RepositoryError::Rollback {
-                    original: original.to_string(),
-                    rollback,
-                }
-                .into());
-            }
-            return Err(original);
+            return transaction::rollback(transaction, original).await;
         }
     };
-    match transaction.commit().await {
-        Ok(()) => Ok(DeleteResult::Committed(rows)),
-        Err(error) => Ok(DeleteResult::CommitUncertain {
-            reason: error.to_string(),
-        }),
-    }
+    Ok(transaction::commit(transaction, rows).await)
 }
 
 async fn execute(
@@ -157,11 +145,4 @@ pub(super) async fn verify(connection: &mut MySqlConnection, ids: &[i64]) -> Por
         }
     }
     Ok(())
-}
-
-fn bind_ids<'a>(query: &mut QueryBuilder<'a, MySql>, ids: impl Iterator<Item = i64>) {
-    let mut separated = query.separated(",");
-    for id in ids {
-        separated.push_bind(id);
-    }
 }

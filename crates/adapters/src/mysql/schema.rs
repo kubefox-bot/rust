@@ -46,7 +46,7 @@ pub(super) async fn verify(connection: &mut MySqlConnection) -> PortResult<()> {
         "SELECT TABLE_NAME,COLUMN_NAME,DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
          WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN
          ('hm_messages','hm_accounts','hm_imapfolders','hm_message_metadata','hm_messagerecipients')"
-    ).fetch_all(connection).await?;
+    ).fetch_all(&mut *connection).await?;
     let types: HashMap<_, _> = columns
         .into_iter()
         .map(|(table, column, kind)| ((table, column), kind))
@@ -57,6 +57,32 @@ pub(super) async fn verify(connection: &mut MySqlConnection) -> PortResult<()> {
             .is_some_and(|actual| actual == kind)
         {
             return Err(RepositoryError::Schema(format!("{table}.{column} must be {kind}")).into());
+        }
+    }
+    let primary: Vec<(String,String)> = sqlx::query_as(
+        "SELECT TABLE_NAME,COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE()
+         AND CONSTRAINT_NAME='PRIMARY' AND TABLE_NAME IN ('hm_message_metadata','hm_messagerecipients')"
+    ).fetch_all(&mut *connection).await?;
+    for kind in [
+        hmail_cleaner_core::maintenance::OrphanTable::Metadata,
+        hmail_cleaner_core::maintenance::OrphanTable::Recipients,
+    ] {
+        let table = super::orphans::descriptor(kind);
+        let keys = primary
+            .iter()
+            .filter(|(name, _)| name == table.name)
+            .map(|(_, column)| column.as_str())
+            .collect::<Vec<_>>();
+        if keys != [table.id]
+            || types
+                .get(&(table.name.to_string(), table.id.to_string()))
+                .is_none_or(|kind| kind != "bigint")
+        {
+            return Err(RepositoryError::Schema(format!(
+                "{}.{} must be the sole bigint primary key",
+                table.name, table.id
+            ))
+            .into());
         }
     }
     Ok(())

@@ -1,9 +1,13 @@
 mod config;
 mod delete;
 mod duplicates;
+mod ids;
+mod orphans;
+mod references;
 mod registry;
 mod schema;
 mod select;
+mod transaction;
 
 pub use config::{DatabaseConfig, DatabaseConfigError};
 
@@ -129,5 +133,42 @@ impl Repository for MySqlRepository {
 
     async fn verify_deleted(&mut self, ids: &[i64]) -> PortResult<()> {
         delete::verify(&mut self.connection, ids).await
+    }
+}
+
+impl hmail_cleaner_core::maintenance::FullRepository for MySqlRepository {
+    async fn orphan_upper_id(
+        &mut self,
+        table: hmail_cleaner_core::maintenance::OrphanTable,
+    ) -> PortResult<i64> {
+        orphans::selection::upper(&mut self.connection, table).await
+    }
+    async fn orphan_batch(
+        &mut self,
+        selection: hmail_cleaner_core::maintenance::OrphanSelection,
+        cursor: i64,
+        limit: u32,
+    ) -> PortResult<hmail_cleaner_core::maintenance::OrphanBatch> {
+        orphans::selection::next(&mut self.connection, selection, cursor, limit).await
+    }
+    async fn delete_orphans(
+        &mut self,
+        table: hmail_cleaner_core::maintenance::OrphanTable,
+        rows: &[hmail_cleaner_core::maintenance::OrphanRow],
+    ) -> PortResult<DeleteResult> {
+        orphans::deletion::delete(&mut self.connection, table, rows).await
+    }
+    async fn verify_orphans_deleted(
+        &mut self,
+        table: hmail_cleaner_core::maintenance::OrphanTable,
+        ids: &[i64],
+    ) -> PortResult<()> {
+        orphans::deletion::verify(&mut self.connection, table, ids).await
+    }
+    async fn file_references(
+        &mut self,
+        limit: usize,
+    ) -> PortResult<hmail_cleaner_core::maintenance::FileReferences> {
+        references::load(&mut self.connection, limit).await
     }
 }

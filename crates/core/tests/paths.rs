@@ -4,6 +4,27 @@ use std::path::{Path, PathBuf};
 
 const NAME: &str = "{6C2CD4A9-683F-4EB4-91D7-9E2FD3700000}.eml";
 
+#[test]
+fn reference_guid_accepts_basename_and_legacy_paths_but_rejects_corruption() {
+    use hmail_cleaner_core::paths::message_guid;
+    assert_eq!(
+        message_guid(NAME).unwrap().to_string(),
+        "6c2cd4a9-683f-4eb4-91d7-9e2fd3700000"
+    );
+    assert_eq!(
+        message_guid(&format!(r"D:\Data\domain\account\6C\{NAME}")).unwrap(),
+        message_guid(NAME).unwrap()
+    );
+    for invalid in [
+        "bad.eml",
+        "",
+        "{not-a-guid}.eml",
+        "{6C2CD4A9-683F-4EB4-91D7-9E2FD3700000}.txt",
+    ] {
+        assert!(message_guid(invalid).is_err());
+    }
+}
+
 fn message(address: &str, filename: &str) -> Candidate {
     Candidate {
         id: 1,

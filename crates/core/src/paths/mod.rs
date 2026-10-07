@@ -58,7 +58,20 @@ pub fn resolve_path(root: &Path, candidate: &Candidate) -> Result<PathBuf, PathE
     Ok(resolved)
 }
 
+pub fn message_guid(filename: &str) -> Result<Uuid, PathError> {
+    let basename = filename
+        .rsplit(['/', '\\'])
+        .next()
+        .ok_or(PathError::InvalidFilename)?;
+    parse_guid(basename)
+}
+
 fn guid_bucket(filename: &str) -> Result<&str, PathError> {
+    parse_guid(filename)?;
+    filename.get(1..3).ok_or(PathError::InvalidFilename)
+}
+
+fn parse_guid(filename: &str) -> Result<Uuid, PathError> {
     let extension_start = filename
         .len()
         .checked_sub(MESSAGE_EXTENSION.len())
@@ -75,8 +88,7 @@ fn guid_bucket(filename: &str) -> Result<&str, PathError> {
     if guid.len() != BRACED_GUID_LENGTH || !guid.starts_with('{') || !guid.ends_with('}') {
         return Err(PathError::InvalidFilename);
     }
-    Uuid::parse_str(guid).map_err(|_| PathError::InvalidFilename)?;
-    guid.get(1..3).ok_or(PathError::InvalidFilename)
+    Uuid::parse_str(guid).map_err(|_| PathError::InvalidFilename)
 }
 
 fn validate_component(component: &str) -> Result<(), PathError> {

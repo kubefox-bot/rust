@@ -3,10 +3,173 @@ mod fixtures;
 use fixtures::{date, name, Fixture};
 use hmail_cleaner_adapters::mysql::{DatabaseConfig, MySqlRepository};
 use hmail_cleaner_core::cleanup::{DeleteResult, Repository, Selection};
+use hmail_cleaner_core::maintenance::{FullRepository, OrphanSelection, OrphanTable};
 use sqlx::Executor;
 
 const OLD: &str = "2026-01-01 10:00:00";
 const BOUNDARY: &str = "2026-09-07 12:00:00";
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn historical_orphans_are_deleted_and_live_rows_preserved() {
+    let mut fixture = Fixture::create().await;
+    fixture.add(1, 1, 10, 2, OLD, &name(1)).await;
+    fixture.add_dependents(1).await;
+    fixture.add_dependents(9).await;
+    let mut repository = fixture.repository().await;
+    for table in [OrphanTable::Metadata, OrphanTable::Recipients] {
+        let upper_id = repository.orphan_upper_id(table).await.unwrap();
+        let batch = repository
+            .orphan_batch(OrphanSelection { table, upper_id }, 0, 1000)
+            .await
+            .unwrap();
+        assert_eq!(batch.rows.len(), 1);
+        assert_eq!(batch.rows[0].parent_message_id, 9);
+        let counts = match repository.delete_orphans(table, &batch.rows).await.unwrap() {
+            DeleteResult::Committed(counts) => counts,
+            DeleteResult::CommitUncertain { .. } => panic!("fixture commit must succeed"),
+        };
+        assert_eq!(counts.messages, 0);
+        assert_eq!(counts.metadata + counts.recipients, 1);
+        repository
+            .verify_orphans_deleted(table, &[batch.rows[0].id])
+            .await
+            .unwrap();
+    }
+    assert_eq!(
+        fixture
+            .ids("hm_message_metadata", "metadata_messageid")
+            .await,
+        vec![1]
+    );
+    assert_eq!(
+        fixture
+            .ids("hm_messagerecipients", "recipientmessageid")
+            .await,
+        vec![1]
+    );
+    assert_eq!(fixture.ids("hm_messages", "messageid").await, vec![1]);
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn orphan_cursor_advances_by_primary_id() {
+    let mut fixture = Fixture::create().await;
+    fixture.add_dependents(7).await;
+    fixture.add_dependents(11).await;
+    fixture
+        .admin
+        .execute("UPDATE hm_message_metadata SET metadata_id=metadata_messageid")
+        .await
+        .unwrap();
+    let mut repository = fixture.repository().await;
+    let selection = OrphanSelection {
+        table: OrphanTable::Metadata,
+        upper_id: repository
+            .orphan_upper_id(OrphanTable::Metadata)
+            .await
+            .unwrap(),
+    };
+    let first = repository.orphan_batch(selection, 0, 1).await.unwrap();
+    assert_eq!(first.last_id, 7);
+    let second = repository
+        .orphan_batch(selection, first.last_id, 1)
+        .await
+        .unwrap();
+    assert_eq!(second.last_id, 11);
+    let end = repository
+        .orphan_batch(selection, second.last_id, 1)
+        .await
+        .unwrap();
+    assert!(end.rows.is_empty());
+    assert_eq!(end.last_id, 11);
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn orphan_parent_reappearance_is_retained() {
+    let mut fixture = Fixture::create().await;
+    fixture.add_dependents(9).await;
+    let mut repository = fixture.repository().await;
+    let table = OrphanTable::Metadata;
+    let upper_id = repository.orphan_upper_id(table).await.unwrap();
+    let batch = repository
+        .orphan_batch(OrphanSelection { table, upper_id }, 0, 1000)
+        .await
+        .unwrap();
+    fixture.add(9, 1, 10, 2, OLD, &name(9)).await;
+    assert!(repository.delete_orphans(table, &batch.rows).await.is_err());
+    assert_eq!(
+        fixture
+            .ids("hm_message_metadata", "metadata_messageid")
+            .await,
+        vec![9]
+    );
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn all_message_states_protect_guids() {
+    let mut fixture = Fixture::create().await;
+    for (id, account, state) in [(1, 1, 2), (2, 0, 1), (3, 0, 2)] {
+        let created = if id == 1 { "2026-10-01 12:00:00" } else { OLD };
+        fixture
+            .add(id, account, 10, state, created, &name(id))
+            .await;
+    }
+    let mut repository = fixture.repository().await;
+    let references = repository.file_references(3).await.unwrap();
+    assert_eq!(references.len(), 3);
+    for id in 1..=3 {
+        assert!(references.contains(&hmail_cleaner_core::paths::message_guid(&name(id)).unwrap()));
+    }
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn malformed_reference_rejects_complete_set() {
+    let mut fixture = Fixture::create().await;
+    fixture.add(1, 1, 10, 2, OLD, &name(1)).await;
+    fixture.add(2, 1, 10, 2, OLD, "bad.eml").await;
+    let mut repository = fixture.repository().await;
+    assert!(repository.file_references(3).await.is_err());
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn reference_limit_is_enforced() {
+    let mut fixture = Fixture::create().await;
+    for id in 1..=3 {
+        fixture.add(id, 1, 10, 2, OLD, &name(id)).await;
+    }
+    let mut repository = fixture.repository().await;
+    assert!(repository.file_references(2).await.is_err());
+    let references = repository.file_references(3).await.unwrap();
+    assert_eq!(references.len(), 3);
+    fixture.add(4, 1, 10, 2, OLD, &name(3)).await;
+    assert_eq!(repository.file_references(3).await.unwrap().len(), 3);
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn unsupported_orphan_primary_key_is_rejected() {
+    let mut fixture = Fixture::create().await;
+    fixture.admin.execute("ALTER TABLE hm_message_metadata DROP PRIMARY KEY, ADD PRIMARY KEY(metadata_id, metadata_messageid)").await.unwrap();
+    assert!(MySqlRepository::connect(&fixture.config).await.is_err());
+    fixture.finish().await;
+}
 
 fn selection(upper_id: i64) -> Selection {
     Selection {
