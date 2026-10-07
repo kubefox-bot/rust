@@ -1,2 +1,42 @@
 [tools]
 rust = "1.98.1"
+
+[tasks.fmt]
+description = "Format the Rust workspace"
+run = "cargo fmt --all"
+
+[tasks."fmt:check"]
+description = "Check Rust formatting"
+run = "cargo fmt --all -- --check"
+
+[tasks.test]
+description = "Run portable workspace tests"
+run = "cargo test --workspace --locked"
+
+[tasks.lint]
+description = "Check Rust code with Clippy"
+run = "cargo clippy --workspace --all-targets --locked"
+
+[tasks.check]
+description = "Run formatting, tests and Clippy"
+depends = ["fmt:check", "test", "lint"]
+
+[tasks.build]
+description = "Build the standalone CLI in release mode"
+run = "cargo build --release -p hmail-cleaner --locked"
+
+[tasks."db:up"]
+description = "Start disposable MySQL 5.7.21 for integration tests"
+env.HMAIL_TEST_DOCKER_CONTEXT = "{{ env.HMAIL_TEST_DOCKER_CONTEXT | default(value='colima-hmail-cleanup') }}"
+run = 'docker --context "$HMAIL_TEST_DOCKER_CONTEXT" compose -p hmail-cleanup-tests -f crates/adapters/tests/fixtures/mysql.compose.yml up -d --wait --wait-timeout 120'
+
+[tasks."db:down"]
+description = "Stop and remove only the disposable MySQL test project"
+env.HMAIL_TEST_DOCKER_CONTEXT = "{{ env.HMAIL_TEST_DOCKER_CONTEXT | default(value='colima-hmail-cleanup') }}"
+run = 'docker --context "$HMAIL_TEST_DOCKER_CONTEXT" compose -p hmail-cleanup-tests -f crates/adapters/tests/fixtures/mysql.compose.yml down --volumes'
+
+[tasks."test:db"]
+description = "Run integration tests against disposable MySQL"
+depends = ["db:up"]
+env.HMAIL_TEST_DATABASE_URL = "{{ env.HMAIL_TEST_DATABASE_URL | default(value='mysql://root:hmail_fixture@127.0.0.1:13306/mysql?ssl-mode=disabled') }}"
+run = "cargo test -p hmail-cleaner-adapters --test mysql --locked -- --ignored --test-threads=1"

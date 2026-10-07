@@ -82,10 +82,10 @@ pub struct DirectoryFailure {
     pub reason: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeleteResult {
     Committed,
-    CommitUncertain,
+    CommitUncertain { reason: String },
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]

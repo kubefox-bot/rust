@@ -12,7 +12,9 @@
 
 ## Global Constraints
 
-- Целевая ОС: Windows Server 2016; исполнение на самом сервере при STOPPED hMailServer.
+- Целевая ОС: Windows Server 2016/1607 x64; исполнение на самом сервере при STOPPED hMailServer.
+- Тестовая MySQL: 5.7.21, закреплённый digest образа; mysql --version пользователя подтверждает клиент, версия сервера проверяется SELECT VERSION().
+- mise.toml: Rust 1.98.1, задачи fmt/fmt:check/test/lint/check/build/db:up/db:down/test:db; зависимости фиксируются Cargo.lock.
 - Файлы удаляются первыми; соответствующие записи БД — после Removed или AlreadyAbsent.
 - Карантин, резервное копирование, SQLite-журнал и отдельный resume не нужны.
 - Отбор: `messageaccountid > 0`, `messagetype = 2`, `messagecreatetime < cutoff`.
@@ -90,19 +92,19 @@ core tests/selection.rs, tests/paths.rs; extend .gitignore только новы
 - Produces: `cutoff(now: NaiveDateTime, retention: Retention) -> Result<NaiveDateTime, SelectionError>`.
 - Produces: `resolve_path(root: &Path, candidate: &Candidate) -> Result<PathBuf, PathError>`.
 
-- [ ] Создать минимальные manifests пакетов hmail-cleaner-core, hmail-cleaner-adapters,
+- [x] Создать минимальные manifests пакетов hmail-cleaner-core, hmail-cleaner-adapters,
   hmail-cleaner и local mise pin 1.98.1 для запуска тестов. Пустые entrypoints
   adapters/lib.rs и cli/main.rs нужны для загрузки workspace до Tasks 2/5;
   функциональное поведение в них пока не добавлять. Tauri не входит в workspace.
   Порты использовать без async-trait.
-- [ ] Написать failing tests `month_clamps_to_february`, `year_clamps_leap_day`, `days_preserve_local_time`, `explicit_before_is_unchanged`.
+- [x] Написать failing tests `month_clamps_to_february`, `year_clamps_leap_day`, `days_preserve_local_time`, `explicit_before_is_unchanged`.
   Assertions: 2026-03-31 10:00 − 1mo = 2026-02-28 10:00; 2024-02-29 10:00 − 1y = 2023-02-28 10:00; 2026-10-07 12:00 − 30d = 2026-09-07 12:00.
-- [ ] Написать failing tests `guid_resolves_to_account_bucket`, `legacy_absolute_path_stays_in_root`, `similar_root_is_rejected`, `traversal_stream_and_drive_relative_are_rejected`, `unicode_and_plus_account_are_preserved`.
+- [x] Написать failing tests `guid_resolves_to_account_bucket`, `legacy_absolute_path_stays_in_root`, `similar_root_is_rejected`, `traversal_stream_and_drive_relative_are_rejected`, `unicode_and_plus_account_are_preserved`.
   Assertions: `info@chem.orp` и `{6C2CD4A9-683F-4EB4-91D7-9E2FD3700000}.eml` дают `root/chem.orp/info/6C/{GUID}.eml`; `../`, ADS, `D:relative.eml` и соседний root возвращают PathError. Проверки Windows-формата должны работать на Mac как чистый разбор.
-- [ ] Run `mise exec -- cargo test -p hmail-cleaner-core`; ожидается FAIL из-за отсутствующих API/поведения.
-- [ ] Реализовать retention и resolver, проверяя GUID через UUID. Сравнение root не делать обычным starts_with строки; компоненты и Windows prefix должны проверяться явно. Границы и переполнение дат возвращают ошибку.
-- [ ] Run тот же test и `mise exec -- cargo fmt --all -- --check`; ожидается PASS.
-- [ ] Commit `feat: add portable retention and message path rules`.
+- [x] Run `mise exec -- cargo test -p hmail-cleaner-core`; ожидается FAIL из-за отсутствующих API/поведения.
+- [x] Реализовать retention и resolver, проверяя GUID через UUID. Сравнение root не делать обычным starts_with строки; компоненты и Windows prefix должны проверяться явно. Границы и переполнение дат возвращают ошибку.
+- [x] Run тот же test и `mise exec -- cargo fmt --all -- --check`; ожидается PASS.
+- [x] Commit `feat: add portable retention and message path rules`.
 
 ### Task 2: Выборка MySQL и удаление точных id
 
@@ -116,12 +118,12 @@ fixtures/mod.rs. Fixture воспроизводит соответствующи
 - Produces: `mysql::DatabaseConfig::parse(url: &str) -> Result<Self, DatabaseConfigError>` в mysql/config.rs; приватные MySqlConnectOptions, безопасные Display/Debug. CLI вызывает этот валидатор, адаптер не читает env и не импортирует CLI.
 - Implements: Repository; владеет выделенным SQLx MySqlConnection и advisory lock. Клиент не строится внутри core.
 
-- [ ] Создать MySQL 5.7 fixture на loopback port 13306 (на ARM Mac platform linux/amd64).
+- [x] Создать MySQL 5.7 fixture на loopback port 13306 (на ARM Mac platform linux/amd64).
   Тестовый URL читается только конфигурацией fixture из HMAIL_TEST_DATABASE_URL,
   без fallback к DATABASE_URL. Разрешены только loopback host и отдельная
   уникальная тестовая БД, созданная самим fixture; старые БД не переиспользуются.
   Для запуска: `docker compose -p hmail-cleanup-tests -f crates/adapters/tests/fixtures/mysql.compose.yml up -d --wait`; test URL указывает только этот fixture, выключение удаляет только его собственные ресурсы.
-- [ ] Написать ignored integration tests:
+- [x] Написать ignored integration tests:
   `selects_only_old_delivered_accounts_across_folders`,
   `keyset_cursor_advances_over_rejected_rows`,
   `legacy_and_bare_duplicate_names_are_rejected`,
@@ -130,21 +132,21 @@ fixtures/mod.rs. Fixture воспроизводит соответствующи
   `second_connection_cannot_acquire_cleanup_lock`.
   В fixture есть old/new/boundary, Inbox/Sent, queue, public, missing account/folder,
   metadata и recipients как с совпадающим, так и с посторонним id.
-- [ ] Запустить fixture и `mise exec -- cargo test -p hmail-cleaner-adapters --test mysql -- --ignored --test-threads=1`.
+- [x] Запустить fixture и `mise exec -- cargo test -p hmail-cleaner-adapters --test mysql -- --ignored --test-threads=1`.
   При отсутствующем fixture URL тест должен FAIL с ясной причиной, не PASS со skip.
-- [ ] Реализовать schema preflight требуемых колонок/InnoDB, snapshot upper_id,
+- [x] Реализовать schema preflight требуемых колонок/InnoDB, snapshot upper_id,
   справочник account/folder и один запрос дубликатов по нормализованному basename.
   next_batch читает диапазон primary key, строгий cutoff и LIMIT; rejected rows
   учитываются в last_id и результате.
-- [ ] Реализовать delete_batch: SELECT FOR UPDATE и сверка id/account/folder/name/date,
+- [x] Реализовать delete_batch: SELECT FOR UPDATE и сверка id/account/folder/name/date,
   DELETE metadata/recipients/parent по bind-id в одной транзакции, проверка
   rows_affected, commit. Пустой набор возвращает Committed без DELETE.
   Ошибка commit возвращает CommitUncertain, не утверждение о rollback.
-- [ ] Реализовать verify_deleted точными id для трёх таблиц. Advisory lock
+- [x] Реализовать verify_deleted точными id для трёх таблиц. Advisory lock
   берётся на том же выделенном соединении, его жизненный цикл освобождает lock.
-- [ ] Повторить MySQL tests; ожидается PASS. Проверить EXPLAIN выборки в fixture:
+- [x] Повторить MySQL tests; ожидается PASS. Проверить EXPLAIN выборки в fixture:
   диапазон по primary key без OFFSET, сортировки по дате и зависимых запросов на каждое письмо.
-- [ ] Commit `feat: delete exact message batches transactionally in MySQL`.
+- [x] Commit `feat: delete exact message batches transactionally in MySQL`.
 
 ### Task 3: Файловые работники и offline preflight
 

@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: mysql:5.7.21@sha256:691c55aabb3c4e3b89b953dd2f022f7ea845e5443954767d321d5f5fa394e28c
+    platform: linux/amd64
+    # The old gosu in this exact image fails under ARM emulation.
+    # Its entrypoint supports starting directly as the intended mysql user.
+    user: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: hmail_fixture
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "127.0.0.1:13306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
