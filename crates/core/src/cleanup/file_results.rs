@@ -27,7 +27,10 @@ pub(super) fn accept<P: Fn(Progress)>(
     for outcome in outcomes {
         let (candidate, path) = planned.remove(&outcome.id).expect("validated file outcome");
         match outcome.result {
-            DeletionResult::Removed => summary.removed_files += 1,
+            DeletionResult::Removed { size_bytes } => {
+                summary.removed_files += 1;
+                summary.removed_bytes += size_bytes;
+            }
             DeletionResult::AlreadyAbsent => summary.absent_files += 1,
             DeletionResult::Failed(error) => {
                 batch::failure(

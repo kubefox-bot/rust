@@ -83,7 +83,7 @@ mod tests {
                 .map(|file| FileOutcome {
                     id: file.id,
                     path: file.path,
-                    result: DeletionResult::Removed,
+                    result: DeletionResult::Removed { size_bytes: 7 },
                 })
                 .collect()
         })
@@ -113,7 +113,7 @@ mod tests {
                 .map(|file| FileOutcome {
                     id: file.id,
                     path: file.path,
-                    result: DeletionResult::Removed,
+                    result: DeletionResult::Removed { size_bytes: 7 },
                 })
                 .collect()
         })
@@ -126,7 +126,7 @@ mod tests {
         ));
         assert_eq!(
             outcomes.iter().find(|file| file.id == 1).unwrap().result,
-            DeletionResult::Removed
+            DeletionResult::Removed { size_bytes: 7 }
         );
     }
 }

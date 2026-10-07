@@ -107,7 +107,7 @@ fn failure(error: CleanupError) -> Report {
     };
     Report {
         status,
-        summary: error.summary,
+        summary: *error.summary,
         stage: Some(error.stage),
         error: Some(error.source.to_string()),
         exit_code,
@@ -152,7 +152,9 @@ mod tests {
         }
         async fn delete_batch(&mut self, _rows: &[Candidate]) -> PortResult<DeleteResult> {
             self.deletes += 1;
-            Ok(DeleteResult::Committed)
+            Ok(DeleteResult::Committed(
+                hmail_cleaner_core::cleanup::DeletedRows::default(),
+            ))
         }
         async fn verify_deleted(&mut self, _ids: &[i64]) -> PortResult<()> {
             Ok(())

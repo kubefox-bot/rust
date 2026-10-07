@@ -72,23 +72,32 @@ pub async fn clean<R: Repository, F: FileStore, G: OfflineGuard, P: Fn(Progress)
         if eligible.is_empty() {
             continue;
         }
-        match at(
+        let deleted = match at(
             repository.delete_batch(&eligible).await,
             Stage::Database,
             summary,
         )? {
-            DeleteResult::Committed => {}
+            DeleteResult::Committed(rows) => rows,
             DeleteResult::CommitUncertain { reason } => {
                 return Err(CleanupError {
                     stage: Stage::Database,
-                    summary,
+                    summary: Box::new(summary),
                     source: format!(
                         "COMMIT confirmation lost; repeat cleanup to reconcile: {reason}"
                     )
                     .into(),
                 })
             }
-        }
+        };
+        at(
+            if deleted.messages == eligible.len() as u64 {
+                Ok(())
+            } else {
+                Err("database returned an unexpected committed message count".into())
+            },
+            Stage::Database,
+            summary,
+        )?;
         let ids = eligible.iter().map(|row| row.id).collect::<Vec<_>>();
         at(
             repository.verify_deleted(&ids).await,
@@ -96,6 +105,8 @@ pub async fn clean<R: Repository, F: FileStore, G: OfflineGuard, P: Fn(Progress)
             summary,
         )?;
         summary.deleted_messages += eligible.len() as u64;
+        summary.deleted_metadata += deleted.metadata;
+        summary.deleted_recipients += deleted.recipients;
         emit(Stage::Database, summary, &progress);
         let pruning = at(
             files.prune_empty(parents).await,
@@ -158,7 +169,7 @@ fn cancelled(cancellation: &Cancellation, summary: Summary) -> Result<(), Cleanu
     if cancellation.is_requested() {
         return Err(CleanupError {
             stage: Stage::Cancelled,
-            summary,
+            summary: Box::new(summary),
             source: "cancelled after completing the started batch".into(),
         });
     }

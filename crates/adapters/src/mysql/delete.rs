@@ -1,13 +1,12 @@
 use super::{RepositoryError, DELIVERED_STATE, MAX_BATCH_SIZE};
-use hmail_cleaner_core::cleanup::{Candidate, DeleteResult, PortResult};
+use hmail_cleaner_core::cleanup::{Candidate, DeleteResult, DeletedRows, PortResult};
 use sqlx::{Connection, MySql, MySqlConnection, QueryBuilder, Row, Transaction};
 use std::collections::{HashMap, HashSet};
 
-const RELATED: &[(&str, &str)] = &[
-    ("hm_message_metadata", "metadata_messageid"),
-    ("hm_messagerecipients", "recipientmessageid"),
-    ("hm_messages", "messageid"),
-];
+const METADATA: (&str, &str) = ("hm_message_metadata", "metadata_messageid");
+const RECIPIENTS: (&str, &str) = ("hm_messagerecipients", "recipientmessageid");
+const MESSAGES: (&str, &str) = ("hm_messages", "messageid");
+const RELATED: &[(&str, &str)] = &[METADATA, RECIPIENTS, MESSAGES];
 
 pub(super) async fn verify_access(connection: &mut MySqlConnection) -> PortResult<()> {
     let mut transaction = connection.begin().await?;
@@ -41,7 +40,7 @@ pub(super) async fn batch(
     candidates: &[Candidate],
 ) -> PortResult<DeleteResult> {
     if candidates.is_empty() {
-        return Ok(DeleteResult::Committed);
+        return Ok(DeleteResult::Committed(DeletedRows::default()));
     }
     if candidates.len() > MAX_BATCH_SIZE {
         return Err(RepositoryError::InvalidBatch("too many IDs").into());
@@ -51,18 +50,21 @@ pub(super) async fn batch(
         return Err(RepositoryError::InvalidBatch("duplicate IDs").into());
     }
     let mut transaction = connection.begin().await?;
-    if let Err(original) = execute(&mut transaction, candidates).await {
-        if let Err(rollback) = transaction.rollback().await {
-            return Err(RepositoryError::Rollback {
-                original: original.to_string(),
-                rollback,
+    let rows = match execute(&mut transaction, candidates).await {
+        Ok(rows) => rows,
+        Err(original) => {
+            if let Err(rollback) = transaction.rollback().await {
+                return Err(RepositoryError::Rollback {
+                    original: original.to_string(),
+                    rollback,
+                }
+                .into());
             }
-            .into());
+            return Err(original);
         }
-        return Err(original);
-    }
+    };
     match transaction.commit().await {
-        Ok(()) => Ok(DeleteResult::Committed),
+        Ok(()) => Ok(DeleteResult::Committed(rows)),
         Err(error) => Ok(DeleteResult::CommitUncertain {
             reason: error.to_string(),
         }),
@@ -72,7 +74,7 @@ pub(super) async fn batch(
 async fn execute(
     transaction: &mut Transaction<'_, MySql>,
     candidates: &[Candidate],
-) -> PortResult<()> {
+) -> PortResult<DeletedRows> {
     let expected: HashMap<_, _> = candidates
         .iter()
         .map(|message| (message.id, message))
@@ -108,17 +110,33 @@ async fn execute(
             return Err(RepositoryError::StaleBatch.into());
         }
     }
-    for (table, column) in RELATED {
-        let mut deletion =
-            QueryBuilder::<MySql>::new(format!("DELETE FROM {table} WHERE {column} IN ("));
-        bind_ids(&mut deletion, candidates.iter().map(|message| message.id));
-        deletion.push(")");
-        let result = deletion.build().execute(&mut **transaction).await?;
-        if *table == "hm_messages" && result.rows_affected() != candidates.len() as u64 {
-            return Err(RepositoryError::StaleBatch.into());
-        }
+    let metadata = delete_ids(transaction, METADATA, candidates).await?;
+    let recipients = delete_ids(transaction, RECIPIENTS, candidates).await?;
+    let messages = delete_ids(transaction, MESSAGES, candidates).await?;
+    if messages != candidates.len() as u64 {
+        return Err(RepositoryError::StaleBatch.into());
     }
-    Ok(())
+    Ok(DeletedRows {
+        messages,
+        metadata,
+        recipients,
+    })
+}
+
+async fn delete_ids(
+    transaction: &mut Transaction<'_, MySql>,
+    (table, column): (&str, &str),
+    candidates: &[Candidate],
+) -> PortResult<u64> {
+    let mut deletion =
+        QueryBuilder::<MySql>::new(format!("DELETE FROM {table} WHERE {column} IN ("));
+    bind_ids(&mut deletion, candidates.iter().map(|message| message.id));
+    deletion.push(")");
+    Ok(deletion
+        .build()
+        .execute(&mut **transaction)
+        .await?
+        .rows_affected())
 }
 
 pub(super) async fn verify(connection: &mut MySqlConnection, ids: &[i64]) -> PortResult<()> {

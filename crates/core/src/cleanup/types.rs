@@ -51,7 +51,7 @@ pub struct FileOutcome {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DeletionResult {
-    Removed,
+    Removed { size_bytes: u64 },
     AlreadyAbsent,
     Failed(FileFailure),
 }
@@ -84,8 +84,15 @@ pub struct DirectoryFailure {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeleteResult {
-    Committed,
+    Committed(DeletedRows),
     CommitUncertain { reason: String },
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DeletedRows {
+    pub messages: u64,
+    pub metadata: u64,
+    pub recipients: u64,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
@@ -96,6 +103,14 @@ pub struct Summary {
     pub deleted_messages: u64,
     pub removed_directories: u64,
     pub failed: u64,
+    pub removed_bytes: u64,
+    pub deleted_metadata: u64,
+    pub deleted_recipients: u64,
+    pub orphan_metadata: u64,
+    pub orphan_recipients: u64,
+    pub scanned_files: u64,
+    pub selected_orphan_files: u64,
+    pub removed_orphan_files: u64,
 }
 
 #[derive(Debug)]

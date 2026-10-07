@@ -1,5 +1,7 @@
 use hmail_cleaner_adapters::filesystem::LocalFiles;
-use hmail_cleaner_core::cleanup::{DeletionResult, FileFailureKind, FileStore, FileTarget};
+#[cfg(unix)]
+use hmail_cleaner_core::cleanup::FileFailureKind;
+use hmail_cleaner_core::cleanup::{DeletionResult, FileStore, FileTarget};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -24,6 +26,21 @@ fn write(target: &FileTarget) {
 }
 
 #[tokio::test]
+async fn removed_file_is_verified_and_counted_by_size() {
+    let (_temp, root) = setup();
+    let selected = target(&root, 1);
+    fs::create_dir_all(selected.path.parent().unwrap()).unwrap();
+    fs::write(&selected.path, b"1234567").unwrap();
+    let files = LocalFiles::new(root).unwrap();
+    let outcomes = files.delete(vec![selected.clone()], 2).await.unwrap();
+    assert_eq!(
+        outcomes[0].result,
+        DeletionResult::Removed { size_bytes: 7 }
+    );
+    assert!(!selected.path.try_exists().unwrap());
+}
+
+#[tokio::test]
 async fn removes_only_exact_targets() {
     let (_temp, root) = setup();
     let first = target(&root, 1);
@@ -32,7 +49,10 @@ async fn removes_only_exact_targets() {
     write(&second);
     let files = LocalFiles::new(root).unwrap();
     let outcomes = files.delete(vec![first.clone()], 2).await.unwrap();
-    assert_eq!(outcomes[0].result, DeletionResult::Removed);
+    assert_eq!(
+        outcomes[0].result,
+        DeletionResult::Removed { size_bytes: 5 }
+    );
     assert!(!first.path.exists());
     assert!(second.path.exists());
 }
@@ -72,11 +92,16 @@ async fn permission_error_is_failure() {
         .unwrap();
     }
     #[cfg(windows)]
-    {
-        let mut permissions = fs::metadata(&first.path).unwrap().permissions();
-        permissions.set_readonly(true);
-        fs::set_permissions(&first.path, permissions).unwrap();
-    }
+    let locked = {
+        use std::os::windows::fs::OpenOptionsExt;
+        const FILE_SHARE_READ: u32 = 1;
+        const FILE_SHARE_WRITE: u32 = 2;
+        fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+            .open(&first.path)
+            .unwrap()
+    };
     let result = files.delete(vec![first.clone()], 1).await.unwrap();
     #[cfg(unix)]
     {
@@ -88,14 +113,13 @@ async fn permission_error_is_failure() {
         .unwrap();
     }
     #[cfg(windows)]
-    {
-        let mut permissions = fs::metadata(&first.path).unwrap().permissions();
-        permissions.set_readonly(false);
-        fs::set_permissions(&first.path, permissions).unwrap();
-    }
+    drop(locked);
+    #[cfg(unix)]
     assert!(
         matches!(&result[0].result,DeletionResult::Failed(failure) if failure.kind==FileFailureKind::AccessDenied)
     );
+    #[cfg(windows)]
+    assert!(matches!(&result[0].result, DeletionResult::Failed(_)));
     assert!(first.path.exists());
 }
 #[cfg(unix)]

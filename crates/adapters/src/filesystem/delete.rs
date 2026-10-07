@@ -1,6 +1,6 @@
 use super::validation;
 use hmail_cleaner_core::cleanup::{DeletionResult, FileOutcome, FileTarget, PortResult};
-use std::{collections::BTreeMap, fs, io, path::PathBuf};
+use std::{collections::BTreeMap, path::PathBuf};
 
 type Group = Vec<FileTarget>;
 pub(super) async fn run(
@@ -30,7 +30,7 @@ fn remove_group(root: &std::path::Path, group: Group) -> Vec<FileOutcome> {
             let result = match &valid {
                 Err(error) => DeletionResult::Failed(error.clone()),
                 Ok(false) => DeletionResult::AlreadyAbsent,
-                Ok(true) => remove_one(&file.path),
+                Ok(true) => super::removal::remove(&file.path),
             };
             FileOutcome {
                 id: file.id,
@@ -39,23 +39,4 @@ fn remove_group(root: &std::path::Path, group: Group) -> Vec<FileOutcome> {
             }
         })
         .collect()
-}
-fn remove_one(path: &std::path::Path) -> DeletionResult {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if validation::linked(&metadata) || !metadata.is_file() => {
-            return DeletionResult::Failed(validation::invalid(
-                "message is a link/reparse point or not a regular file",
-            ))
-        }
-        Ok(_) => {}
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            return DeletionResult::AlreadyAbsent
-        }
-        Err(error) => return DeletionResult::Failed(validation::io_failure(error)),
-    }
-    match fs::remove_file(path) {
-        Ok(()) => DeletionResult::Removed,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => DeletionResult::AlreadyAbsent,
-        Err(error) => DeletionResult::Failed(validation::io_failure(error)),
-    }
 }

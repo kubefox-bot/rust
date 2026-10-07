@@ -44,6 +44,7 @@ struct Repo {
     events: Events,
     fail_next: bool,
     uncertain_next: bool,
+    bad_count: bool,
     rejected: HashSet<i64>,
 }
 impl Repository for Repo {
@@ -103,7 +104,11 @@ impl Repository for Repo {
                 reason: "lost acknowledgement".into(),
             });
         }
-        Ok(DeleteResult::Committed)
+        Ok(DeleteResult::Committed(DeletedRows {
+            messages: if self.bad_count { 0 } else { rows.len() as u64 },
+            metadata: rows.len() as u64,
+            recipients: rows.len() as u64,
+        }))
     }
     async fn verify_deleted(&mut self, ids: &[i64]) -> PortResult<()> {
         self.events
@@ -140,7 +145,7 @@ impl FileStore for Files {
                 } else if !self.absent.lock().unwrap().insert(file.id) {
                     DeletionResult::AlreadyAbsent
                 } else {
-                    DeletionResult::Removed
+                    DeletionResult::Removed { size_bytes: 7 }
                 };
                 FileOutcome {
                     id: file.id,
@@ -180,6 +185,7 @@ impl Scenario {
                 events: events.clone(),
                 fail_next: false,
                 uncertain_next: false,
+                bad_count: false,
                 rejected: HashSet::new(),
             },
             files: Files {
@@ -225,6 +231,40 @@ async fn file_step_precedes_database_delete() {
             Event::Prune
         ]
     );
+}
+#[tokio::test]
+async fn absent_file_contributes_no_bytes() {
+    let mut s = Scenario::new(1);
+    s.files.absent.lock().unwrap().insert(1);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.removed_bytes, 0);
+    assert_eq!(summary.absent_files, 1);
+}
+#[tokio::test]
+async fn verification_error_preserves_message() {
+    let mut s = Scenario::new(1);
+    s.files.failures.insert(1);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.deleted_messages, 0);
+    assert_eq!(summary.removed_bytes, 0);
+    assert!(s.repository.rows.contains_key(&1));
+}
+#[tokio::test]
+async fn confirmed_files_and_sql_rows_have_separate_counters() {
+    let mut s = Scenario::new(1);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.removed_bytes, 7);
+    assert_eq!(summary.deleted_metadata, 1);
+    assert_eq!(summary.deleted_recipients, 1);
+}
+#[tokio::test]
+async fn unexpected_commit_count_is_not_verified_success() {
+    let mut s = Scenario::new(1);
+    s.repository.bad_count = true;
+    let error = s.run(&Cancellation::default()).await.unwrap_err();
+    assert_eq!(error.summary.deleted_messages, 0);
+    assert_eq!(error.summary.removed_bytes, 7);
+    assert!(!s.events.lock().unwrap().contains(&Event::Prune));
 }
 #[tokio::test]
 async fn removed_and_absent_ids_are_deleted_but_failed_ids_are_preserved() {

@@ -144,7 +144,11 @@ async fn deletes_only_requested_ids_and_their_dependents() {
     let allowed = vec![batch.candidates[0].clone(), batch.candidates[2].clone()];
     assert_eq!(
         repository.delete_batch(&allowed).await.unwrap(),
-        DeleteResult::Committed
+        DeleteResult::Committed(hmail_cleaner_core::cleanup::DeletedRows {
+            messages: 2,
+            metadata: 2,
+            recipients: 2
+        })
     );
     repository.verify_deleted(&[1, 3]).await.unwrap();
     for (table, column) in [
@@ -167,7 +171,7 @@ async fn empty_delete_is_a_noop() {
     repository.snapshot().await.unwrap();
     assert_eq!(
         repository.delete_batch(&[]).await.unwrap(),
-        DeleteResult::Committed
+        DeleteResult::Committed(hmail_cleaner_core::cleanup::DeletedRows::default())
     );
     assert_eq!(fixture.ids("hm_messages", "messageid").await, vec![1]);
     repository.close().await.unwrap();
@@ -311,10 +315,10 @@ impl Repository for LostAcknowledgement {
         &mut self,
         candidates: &[hmail_cleaner_core::cleanup::Candidate],
     ) -> hmail_cleaner_core::cleanup::PortResult<DeleteResult> {
-        assert_eq!(
+        assert!(matches!(
             self.0.delete_batch(candidates).await?,
-            DeleteResult::Committed
-        );
+            DeleteResult::Committed(_)
+        ));
         Ok(DeleteResult::CommitUncertain {
             reason: "fixture lost acknowledgement".into(),
         })
@@ -516,7 +520,11 @@ async fn invalid_datetime_is_reported_and_next_message_is_cleaned() {
     assert_eq!(good.candidates[0].id, 2);
     assert_eq!(
         repository.delete_batch(&good.candidates).await.unwrap(),
-        DeleteResult::Committed
+        DeleteResult::Committed(hmail_cleaner_core::cleanup::DeletedRows {
+            messages: 1,
+            metadata: 1,
+            recipients: 1
+        })
     );
     repository.verify_deleted(&[2]).await.unwrap();
     for (table, column) in [

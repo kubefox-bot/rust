@@ -45,7 +45,7 @@ pub struct Progress {
 #[error("{stage:?}: {source}")]
 pub struct CleanupError {
     pub stage: Stage,
-    pub summary: Summary,
+    pub summary: Box<Summary>,
     #[source]
     pub source: Box<dyn Error + Send + Sync>,
 }
@@ -61,7 +61,7 @@ pub(super) fn at<T>(
 ) -> Result<T, CleanupError> {
     result.map_err(|source| CleanupError {
         stage,
-        summary,
+        summary: Box::new(summary),
         source,
     })
 }
