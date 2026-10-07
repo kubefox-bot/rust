@@ -17,7 +17,8 @@
 - Карантин, резервное копирование, SQLite-журнал и отдельный resume не нужны.
 - Отбор: `messageaccountid > 0`, `messagetype = 2`, `messagecreatetime < cutoff`.
 - Сроки: `30d`, `1mo`, `1y` либо `--before`, локальная шкала сервера.
-- Очередь, #Public, более новые сообщения, аккаунты, папки и каталоги сохраняются.
+- Очередь, #Public, более новые сообщения, аккаунты и логические IMAP-папки сохраняются.
+- После подтверждённого SQL-шагa пустые затронутые GUID/account/domain каталоги удаляются; Data и непустые каталоги сохраняются. Полного прохода по пустым каталогам нет.
 - Порция: 1 000, допускается 1–10 000; работники: 2, допускается 1–8; прогресс не чаще раза в 250 мс.
 - Без полного обхода дерева, OFFSET, загрузки всех сообщений в RAM и автоматического ALTER/OPTIMIZE.
 - Удаляются только конкретные id и их metadata/recipients в одной InnoDB-транзакции.
@@ -40,7 +41,7 @@
 
 - Core: `lib.rs`, `selection.rs`, `paths.rs`, `cleanup/{mod,types,ports}.rs`.
 - MySQL: `mysql/{mod,config,schema,select,delete,duplicates}.rs`.
-- Файлы: `filesystem/{mod,delete,validation}.rs`.
+- Файлы: `filesystem/{mod,delete,validation,prune}.rs`.
 - Служба: `offline/{mod,windows}.rs`, Windows-код под cfg(windows).
 - CLI: `main.rs`, `args.rs`, `commands.rs`, `config/{mod,types}.rs`, `output.rs`.
 - Тесты: integration tests соответствующего crate; MySQL-fixture и Compose в
@@ -53,10 +54,11 @@ Core-контракты в `cleanup/types.rs`:
 - `Snapshot { upper_id: i64 }`.
 - `Batch { last_id: i64, candidates: Vec<Candidate>, rejected: Vec<RowFailure> }`; rejected содержит id и причину.
 - `FileTarget { id: i64, path: PathBuf }`; пути сформированы core, доверие фактическому filesystem проверяет адаптер.
-- `FileOutcome { id: i64, result: DeletionResult }`; `DeletionResult::{Removed, AlreadyAbsent, Failed(FileFailure)}`.
+- `FileOutcome { id: i64, path: PathBuf, result: DeletionResult }`; `DeletionResult::{Removed, AlreadyAbsent, Failed(FileFailure)}`.
 - `FileFailure { kind: FileFailureKind, message: String }`; `FileFailureKind::{AccessDenied, InvalidPath, Io}`; `RowFailure { id: i64, reason: String }`.
+- `PruneOutcome { removed: u64, failures: Vec<DirectoryFailure> }`; `DirectoryFailure { path: PathBuf, reason: String }`.
 - `DeleteResult = Committed | CommitUncertain`; Committed возвращается только после подтверждённого commit.
-- `Summary { selected: u64, removed_files: u64, absent_files: u64, deleted_messages: u64, failed: u64 }`; подтверждённые удаления считаются отдельно от файлов.
+- `Summary { selected: u64, removed_files: u64, absent_files: u64, deleted_messages: u64, removed_directories: u64, failed: u64 }`; подтверждённые удаления считаются отдельно от файлов.
 - `RunOptions { cutoff: NaiveDateTime, batch_size: NonZeroU32, workers: u8, data_directory: PathBuf }`.
 - `Cancellation` владеет AtomicBool и предоставляет `request()` и `is_requested()`.
 - `Progress` содержит этап, Summary и при ошибке конкретный id/причину.
@@ -69,6 +71,7 @@ Core-контракты в `cleanup/types.rs`:
 - `Repository::delete_batch(&mut self, candidates: &[Candidate]) -> DeleteResult`.
 - `Repository::verify_deleted(&mut self, ids: &[i64]) -> ()`.
 - `FileStore::delete(&self, files: Vec<FileTarget>, workers: u8) -> Vec<FileOutcome>`.
+- `FileStore::prune_empty(&self, parents: Vec<PathBuf>) -> PruneOutcome`.
 - `OfflineGuard::ensure_stopped(&self) -> ()`.
 
 Экспорты доступны через публичные модули; запросы SQL и детали workers приватны
@@ -145,7 +148,7 @@ fixtures/mod.rs. Fixture воспроизводит соответствующи
 
 ### Task 3: Файловые работники и offline preflight
 
-**Files:** Create filesystem/mod.rs, delete.rs, validation.rs;
+**Files:** Create filesystem/mod.rs, delete.rs, validation.rs, prune.rs;
 offline/mod.rs, windows.rs; tests/filesystem.rs, tests/offline.rs.
 
 **Interfaces:**
@@ -157,7 +160,8 @@ offline/mod.rs, windows.rs; tests/filesystem.rs, tests/offline.rs.
 
 - [ ] Написать failing tests `removes_only_exact_targets`, `missing_target_is_already_absent`,
   `permission_error_is_failure`, `missing_root_is_not_missing_message`,
-  `symlink_chain_is_rejected`, `root_and_empty_directories_remain`,
+  `symlink_chain_is_rejected`, `prunes_empty_parents_but_preserves_root`,
+  `preserves_nonempty_and_hidden_entries`, `prune_has_no_global_tree_walk`,
   `workers_never_exceed_configured_limit`, `ini_root_mismatch_blocks_changes`.
   Failure injection приватна тестовому filesystem boundary; production CLI не
   имеет флага отключения проверок. На Windows добавить тест reparse attributes.
@@ -169,7 +173,10 @@ offline/mod.rs, windows.rs; tests/filesystem.rs, tests/offline.rs.
   Проверку стабильных родительских каталогов можно переиспользовать внутри группы.
 - [ ] Каждый target возвращает FileOutcome; NotFound после проверки root/пути —
   AlreadyAbsent, остальные ошибки — Failed. Дождаться всех начатых работников,
-  включая ошибку join; не удалять директории.
+  включая ошибку join. В отдельном prune_empty обработать только переданные
+  родительские пути: deduplicate, remove_dir снизу вверх до границы root;
+  DirectoryNotEmpty останавливает подъём, NotFound допускает проверку родителя,
+  остальные ошибки попадают в PruneOutcome. Не использовать recursive remove_dir_all.
 - [ ] Реализовать сверку DataFolder и Windows SCM STOPPED через windows-service
   под cfg(windows). Production clean на других ОС возвращает UnsupportedPlatform;
   тестовый core получает fake OfflineGuard, не production bypass.
@@ -193,12 +200,15 @@ offline/mod.rs, windows.rs; tests/filesystem.rs, tests/offline.rs.
   `removed_and_absent_ids_are_deleted_but_failed_ids_are_preserved`,
   `repeated_run_cleans_rows_after_previous_sql_failure`,
   `uncertain_commit_stops_new_batches`, `rejected_rows_advance_cursor`,
-  `cancel_finishes_started_batch`, `preview_has_no_delete_calls`.
+  `cancel_finishes_started_batch`, `preview_has_no_delete_calls`,
+  `prunes_only_after_confirmed_database_deletion`, `failed_database_step_does_not_prune`.
   Fake-порты записывают порядок эффектов и фактические наборы id.
 - [ ] Run `mise exec -- cargo test -p hmail-cleaner-core --test cleanup`; ожидается FAIL.
 - [ ] Реализовать один явный цикл: STOPPED → snapshot → next_batch → STOPPED →
   resolve targets → file results → точные допустимые candidates → delete_batch →
-  verify_deleted → следующий cursor. Не создавать интерпретатор действий.
+  verify_deleted → prune_empty для допустимых путей → следующий cursor.
+  Ошибки prune учитываются отдельно от уже подтверждённого SQL-результата.
+  Не создавать интерпретатор действий.
 - [ ] Сводка считает только подтверждённые удаления. Row/path/file failures
   публикуются как Progress и дают partial result; SQL/preflight/unknown-commit
   останавливают новые порции, сохраняя достигнутую сводку.
