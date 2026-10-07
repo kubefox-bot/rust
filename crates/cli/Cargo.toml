@@ -7,3 +7,13 @@ rust-version.workspace = true
 [dependencies]
 hmail-cleaner-core = { path = "../core" }
 hmail-cleaner-adapters = { path = "../adapters" }
+chrono.workspace = true
+tokio.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+dotenvy = "0.15"
+
+[dev-dependencies]
+tempfile = "3"

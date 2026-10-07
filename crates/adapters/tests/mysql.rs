@@ -453,3 +453,30 @@ async fn real_sql_rollback_after_file_deletion_is_reconciled_on_repeat() {
     repository.close().await.unwrap();
     fixture.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn read_only_database_can_preview_but_fails_delete_preflight() {
+    let mut fixture = Fixture::create().await;
+    fixture.add(1, 1, 10, 2, OLD, &name(1)).await;
+    let (user, config) = fixture.read_only_config().await;
+    let mut reader = MySqlRepository::connect(&config).await.unwrap();
+    let snapshot = reader.snapshot().await.unwrap();
+    assert_eq!(
+        reader
+            .next_batch(selection(snapshot.upper_id), 0, 1000)
+            .await
+            .unwrap()
+            .candidates
+            .len(),
+        1
+    );
+    assert!(reader.verify_delete_access().await.is_err());
+    reader.close().await.unwrap();
+    let mut writer = fixture.repository().await;
+    writer.verify_delete_access().await.unwrap();
+    assert_eq!(fixture.ids("hm_messages", "messageid").await, vec![1]);
+    writer.close().await.unwrap();
+    fixture.drop_reader(&user).await;
+    fixture.finish().await;
+}

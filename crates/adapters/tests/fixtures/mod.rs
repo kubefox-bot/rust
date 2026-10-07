@@ -20,6 +20,7 @@ pub struct Fixture {
     pub admin: MySqlConnection,
     pub config: DatabaseConfig,
     database: String,
+    url: Url,
 }
 impl Fixture {
     pub async fn create() -> Self {
@@ -93,6 +94,7 @@ impl Fixture {
             admin,
             config,
             database,
+            url,
         }
     }
     pub async fn add(
@@ -133,6 +135,34 @@ impl Fixture {
     }
     pub async fn repository(&self) -> MySqlRepository {
         MySqlRepository::connect(&self.config).await.unwrap()
+    }
+    pub async fn read_only_config(&mut self) -> (String, DatabaseConfig) {
+        let user = format!(
+            "hc_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        self.admin
+            .execute(format!("CREATE USER '{user}'@'%' IDENTIFIED BY 'fixture_readonly'").as_str())
+            .await
+            .unwrap();
+        self.admin
+            .execute(format!("GRANT SELECT ON {}.* TO '{user}'@'%'", self.database).as_str())
+            .await
+            .unwrap();
+        let mut url = self.url.clone();
+        url.set_username(&user).unwrap();
+        url.set_password(Some("fixture_readonly")).unwrap();
+        (user, DatabaseConfig::parse(url.as_str()).unwrap())
+    }
+    pub async fn drop_reader(&mut self, user: &str) {
+        assert!(user.starts_with("hc_") && user[3..].bytes().all(|byte| byte.is_ascii_digit()));
+        self.admin
+            .execute(format!("DROP USER '{user}'@'%'").as_str())
+            .await
+            .unwrap();
     }
     pub async fn ids(&mut self, table: &str, column: &str) -> Vec<i64> {
         assert!(matches!(

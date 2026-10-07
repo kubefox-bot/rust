@@ -24,16 +24,24 @@ depends = ["fmt:check", "test", "lint"]
 [tasks.build]
 description = "Build the standalone CLI in release mode"
 run = "cargo build --release -p hmail-cleaner --locked"
+run_windows = "mise run build:windows"
+
+[tasks."build:windows"]
+description = "Build the x64 Windows CLI with a static MSVC runtime (requires MSVC tools)"
+env.RUSTFLAGS = "-C target-feature=+crt-static"
+run = "cargo build --release -p hmail-cleaner --target x86_64-pc-windows-msvc --locked"
 
 [tasks."db:up"]
 description = "Start disposable MySQL 5.7.21 for integration tests"
 env.HMAIL_TEST_DOCKER_CONTEXT = "{{ env.HMAIL_TEST_DOCKER_CONTEXT | default(value='colima-hmail-cleanup') }}"
 run = 'docker --context "$HMAIL_TEST_DOCKER_CONTEXT" compose -p hmail-cleanup-tests -f crates/adapters/tests/fixtures/mysql.compose.yml up -d --wait --wait-timeout 120'
+run_windows = 'powershell.exe -NoProfile -Command "docker --context $env:HMAIL_TEST_DOCKER_CONTEXT compose -p hmail-cleanup-tests -f crates/adapters/tests/fixtures/mysql.compose.yml up -d --wait --wait-timeout 120; exit $LASTEXITCODE"'
 
 [tasks."db:down"]
 description = "Stop and remove only the disposable MySQL test project"
 env.HMAIL_TEST_DOCKER_CONTEXT = "{{ env.HMAIL_TEST_DOCKER_CONTEXT | default(value='colima-hmail-cleanup') }}"
 run = 'docker --context "$HMAIL_TEST_DOCKER_CONTEXT" compose -p hmail-cleanup-tests -f crates/adapters/tests/fixtures/mysql.compose.yml down --volumes'
+run_windows = 'powershell.exe -NoProfile -Command "docker --context $env:HMAIL_TEST_DOCKER_CONTEXT compose -p hmail-cleanup-tests -f crates/adapters/tests/fixtures/mysql.compose.yml down --volumes; exit $LASTEXITCODE"'
 
 [tasks."test:db"]
 description = "Run integration tests against disposable MySQL"

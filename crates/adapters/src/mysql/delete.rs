@@ -9,6 +9,33 @@ const RELATED: &[(&str, &str)] = &[
     ("hm_messages", "messageid"),
 ];
 
+pub(super) async fn verify_access(connection: &mut MySqlConnection) -> PortResult<()> {
+    let mut transaction = connection.begin().await?;
+    let result = probe(&mut transaction).await;
+    let rollback = transaction.rollback().await;
+    match (result, rollback) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(original), Ok(())) => Err(original),
+        (Ok(()), Err(error)) => Err(error.into()),
+        (Err(original), Err(rollback)) => Err(RepositoryError::Rollback {
+            original: original.to_string(),
+            rollback,
+        }
+        .into()),
+    }
+}
+async fn probe(transaction: &mut Transaction<'_, MySql>) -> PortResult<()> {
+    for (table, column) in RELATED {
+        sqlx::query(&format!("SELECT {column} FROM {table} WHERE 1=0"))
+            .execute(&mut **transaction)
+            .await?;
+        sqlx::query(&format!("DELETE FROM {table} WHERE 1=0"))
+            .execute(&mut **transaction)
+            .await?;
+    }
+    Ok(())
+}
+
 pub(super) async fn batch(
     connection: &mut MySqlConnection,
     candidates: &[Candidate],

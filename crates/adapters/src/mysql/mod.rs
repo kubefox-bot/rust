@@ -75,6 +75,11 @@ impl MySqlRepository {
     pub fn server_version(&self) -> &str {
         &self.version
     }
+    /// Check SELECT/DELETE permissions without changing any row, then rollback.
+    /// Destructive composition points call this before the file step; preview does not.
+    pub async fn verify_delete_access(&mut self) -> PortResult<()> {
+        delete::verify_access(&mut self.connection).await
+    }
 
     pub async fn close(self) -> PortResult<()> {
         self.connection.close().await?;

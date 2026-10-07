@@ -243,36 +243,36 @@ Create examples/cleaner.env.example, docs/cleanup-cli.md,
 - Produces: exit 0 complete, 1 partial/backend/uncertain, 2 invalid config/preflight,
   130 cancelled. JSON выдаёт типизированные события и итог, без credentials.
 
-- [ ] Написать failing tests `retention_options_are_exclusive`, `zero_retention_is_rejected`,
+- [x] Написать failing tests `retention_options_are_exclusive`, `zero_retention_is_rejected`,
   `defaults_are_1000_and_2`, `workers_outside_1_to_8_are_rejected`,
   `batch_size_outside_1_to_10000_is_rejected`,
   `legacy_env_is_not_auto_loaded`, `explicit_env_file_is_supported`,
   `diagnostics_do_not_contain_secret_url`,
   `preview_is_read_only`, `partial_cleanup_has_nonzero_exit`.
   Commands тестируются с fake-портами; raw env setup только в config tests.
-- [ ] Run `mise exec -- cargo test -p hmail-cleaner`; ожидается FAIL.
-- [ ] Реализовать Args через Clap, конфигурацию через одного владельца;
+- [x] Run `mise exec -- cargo test -p hmail-cleaner`; ожидается FAIL.
+- [x] Реализовать Args через Clap, конфигурацию через одного владельца;
   clocks/cutoff берутся один раз из server-local времени. Группировать вывод
   progress на интервале 250 мс; конкретные ошибки и финальный результат не терять.
   Ctrl+C только запрашивает Cancellation.
-- [ ] Создать пустой безопасный env example и руководство двух команд с точной
+- [x] Создать пустой безопасный env example и руководство двух команд с точной
   границей и объяснением повторного запуска. Пример не копирует tracked .env.
-- [ ] Настроить Windows MSVC static CRT только в CLI build-команде через scoped
+- [x] Настроить Windows MSVC static CRT только в CLI build-команде через scoped
   RUSTFLAGS, не через общую .cargo/config.toml, влияющую на старый Tauri. Подготовить CI:
   macOS core tests, Linux MySQL 5.7 fixture, Windows native build/tests + exe artifact.
   Никаких secrets для working hMailServer и никакого автозапуска workflow через push.
-- [ ] Run fmt, `mise exec -- cargo test --workspace`,
+- [x] Run fmt, `mise exec -- cargo test --workspace`,
   `mise exec -- cargo clippy --workspace --all-targets`,
   отдельные ignored MySQL tests и `mise exec -- cargo build --release -p hmail-cleaner`.
   Читать warnings; не добавлять deny/suppress lint ради зелёного результата.
-- [ ] Если Mac cross-build доступен, проверить CLI через cargo-xwin с
+- [x] Если Mac cross-build доступен, проверить CLI через cargo-xwin с
   x86_64-pc-windows-msvc. Target/LLVM/SDK устанавливать только локально для задачи,
   не менять глобальную конфигурацию mise. Если недоступен — оставить готовый CI
   и явно указать отсутствие Windows binary proof; публикация требует отдельного запроса.
-- [ ] Зафиксировать реальные результаты: Mac/core, MySQL, Windows build и
+- [x] Зафиксировать реальные результаты: Mac/core, MySQL, Windows build и
   Windows Server 2016 runtime — отдельные пункты. Без доступа к Windows серверу
   не утверждать, что реальная очистка или проверка на нём выполнена.
-- [ ] Commit `feat: expose cleanup through a standalone CLI`.
+- [x] Commit `feat: expose cleanup through a standalone CLI`.
 
 ## Проверка плана и способ исполнения
 
