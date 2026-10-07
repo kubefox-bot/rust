@@ -480,3 +480,52 @@ async fn read_only_database_can_preview_but_fails_delete_preflight() {
     fixture.drop_reader(&user).await;
     fixture.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn invalid_datetime_is_reported_and_next_message_is_cleaned() {
+    let mut fixture = Fixture::create().await;
+    for id in [1, 2] {
+        fixture.add(id, 1, 10, 2, OLD, &name(id)).await;
+        fixture.add_dependents(id).await;
+    }
+    fixture
+        .admin
+        .execute("SET SESSION sql_mode=''")
+        .await
+        .unwrap();
+    fixture
+        .admin
+        .execute("UPDATE hm_messages SET messagecreatetime='0000-00-00 00:00:00' WHERE messageid=1")
+        .await
+        .unwrap();
+    let mut repository = fixture.repository().await;
+    let snapshot = repository.snapshot().await.unwrap();
+    let bad = repository
+        .next_batch(selection(snapshot.upper_id), 0, 1)
+        .await
+        .unwrap();
+    assert_eq!(bad.last_id, 1);
+    assert!(bad.candidates.is_empty());
+    assert_eq!(bad.rejected[0].id, 1);
+    assert!(bad.rejected[0].reason.contains("messagecreatetime"));
+    let good = repository
+        .next_batch(selection(snapshot.upper_id), bad.last_id, 1)
+        .await
+        .unwrap();
+    assert_eq!(good.candidates[0].id, 2);
+    assert_eq!(
+        repository.delete_batch(&good.candidates).await.unwrap(),
+        DeleteResult::Committed
+    );
+    repository.verify_deleted(&[2]).await.unwrap();
+    for (table, column) in [
+        ("hm_messages", "messageid"),
+        ("hm_message_metadata", "metadata_messageid"),
+        ("hm_messagerecipients", "recipientmessageid"),
+    ] {
+        assert_eq!(fixture.ids(table, column).await, vec![1]);
+    }
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}

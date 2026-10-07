@@ -44,6 +44,20 @@ impl Report {
             exit_code: EXIT_FAILED,
         }
     }
+    pub fn with_close_failure(self, error: impl ToString) -> Self {
+        if self.exit_code == EXIT_OK {
+            return Self::backend(error, self.summary);
+        }
+        let close_error = error.to_string();
+        let message = match &self.error {
+            Some(original) => format!("{original}; database close also failed: {close_error}"),
+            None => format!("database close also failed: {close_error}"),
+        };
+        Self {
+            error: Some(message),
+            ..self
+        }
+    }
 }
 pub(crate) async fn execute<
     R: Repository,
@@ -207,5 +221,73 @@ mod tests {
         .await;
         assert_eq!(report.exit_code, 1);
         assert_eq!(report.summary.failed, 1);
+    }
+}
+
+#[cfg(test)]
+mod close_tests {
+    use super::*;
+    #[test]
+    fn close_failure_preserves_uncertain_commit() {
+        let original = Report {
+            status: Status::Failed,
+            summary: Summary {
+                removed_files: 2,
+                ..Summary::default()
+            },
+            stage: Some(Stage::Database),
+            error: Some("COMMIT confirmation lost; repeat cleanup to reconcile".into()),
+            exit_code: 1,
+        };
+        let report = original.with_close_failure("broken pipe during QUIT");
+        assert!(report
+            .error
+            .as_deref()
+            .unwrap()
+            .contains("COMMIT confirmation lost"));
+        assert!(report.error.as_deref().unwrap().contains("broken pipe"));
+        assert_eq!(report.summary.removed_files, 2);
+        assert_eq!(report.stage, Some(Stage::Database));
+        assert_eq!(report.exit_code, 1);
+    }
+    #[test]
+    fn close_failure_preserves_cancelled_and_preflight_reports() {
+        for (status, stage, exit_code) in [
+            (Status::Cancelled, Stage::Cancelled, 130),
+            (Status::Invalid, Stage::Preflight, 2),
+        ] {
+            let original = Report {
+                status,
+                summary: Summary::default(),
+                stage: Some(stage),
+                error: Some("original failure".into()),
+                exit_code,
+            };
+            let report = original.with_close_failure("QUIT failure");
+            assert_eq!(report.exit_code, exit_code);
+            assert_eq!(report.stage, Some(stage));
+            assert!(report
+                .error
+                .as_deref()
+                .unwrap()
+                .contains("original failure"));
+        }
+    }
+    #[test]
+    fn close_failure_turns_success_into_failure() {
+        let original = Report {
+            status: Status::Complete,
+            summary: Summary {
+                deleted_messages: 2,
+                ..Summary::default()
+            },
+            stage: None,
+            error: None,
+            exit_code: 0,
+        };
+        let report = original.with_close_failure("QUIT failure");
+        assert_eq!(report.exit_code, 1);
+        assert_eq!(report.summary.deleted_messages, 2);
+        assert!(report.error.as_deref().unwrap().contains("QUIT failure"));
     }
 }

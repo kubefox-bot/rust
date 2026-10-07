@@ -77,7 +77,7 @@ async fn run(config: &config::Config, cancel: &Cancellation, output: &output::Ou
             let report = Report::invalid(error);
             return match repository.close().await {
                 Ok(()) => report,
-                Err(error) => Report::backend(error, report.summary),
+                Err(error) => report.with_close_failure(error),
             };
         }
     }
@@ -95,6 +95,6 @@ async fn run(config: &config::Config, cancel: &Cancellation, output: &output::Ou
     .await;
     match repository.close().await {
         Ok(()) => report,
-        Err(error) => Report::backend(error, report.summary),
+        Err(error) => report.with_close_failure(error),
     }
 }

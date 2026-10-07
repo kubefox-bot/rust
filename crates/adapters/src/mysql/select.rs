@@ -46,9 +46,12 @@ pub(super) async fn next(
     };
     for row in rows {
         let id: i64 = row.try_get("messageid")?;
-        match candidate(&row, registry, duplicate_names)? {
+        match candidate(&row, registry, duplicate_names) {
             Ok(message) => batch.candidates.push(message),
-            Err(reason) => batch.rejected.push(RowFailure { id, reason }),
+            Err(error) => batch.rejected.push(RowFailure {
+                id,
+                reason: error.to_string(),
+            }),
         }
     }
     Ok(batch)
@@ -58,30 +61,28 @@ fn candidate(
     row: &MySqlRow,
     registry: &Registry,
     duplicate_names: &HashSet<String>,
-) -> PortResult<Result<Candidate, String>> {
+) -> PortResult<Candidate> {
     let id = row.try_get("messageid")?;
     let account_id: i32 = row.try_get("messageaccountid")?;
     let folder_id: i32 = row.try_get("messagefolderid")?;
     let filename: String = row.try_get("messagefilename")?;
     let created_at: NaiveDateTime = row.try_get("messagecreatetime")?;
     let Some(address) = registry.accounts.get(&account_id) else {
-        return Ok(Err("account is absent".into()));
+        return Err("account is absent".into());
     };
     let owner = registry.folders.get(&folder_id);
     if owner.copied() != u32::try_from(account_id).ok() {
-        return Ok(Err(
-            "IMAP folder is absent or belongs to another account".into()
-        ));
+        return Err("IMAP folder is absent or belongs to another account".into());
     }
     if duplicate_names.contains(&duplicates::basename(&filename)) {
-        return Ok(Err("filename has multiple database references".into()));
+        return Err("filename has multiple database references".into());
     }
-    Ok(Ok(Candidate {
+    Ok(Candidate {
         id,
         account_id,
         folder_id,
         account_address: address.clone(),
         filename,
         created_at,
-    }))
+    })
 }
