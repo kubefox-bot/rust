@@ -160,30 +160,30 @@ offline/mod.rs, windows.rs; tests/filesystem.rs, tests/offline.rs.
 - Produces: `verify_data_folder(root: &Path, ini_path: &Path) -> PortResult<()>`.
   Отсутствующая служба/INI/корень — preflight failure.
 
-- [ ] Написать failing tests `removes_only_exact_targets`, `missing_target_is_already_absent`,
+- [x] Написать failing tests `removes_only_exact_targets`, `missing_target_is_already_absent`,
   `permission_error_is_failure`, `missing_root_is_not_missing_message`,
   `symlink_chain_is_rejected`, `prunes_empty_parents_but_preserves_root`,
   `preserves_nonempty_and_hidden_entries`, `prune_has_no_global_tree_walk`,
   `workers_never_exceed_configured_limit`, `ini_root_mismatch_blocks_changes`.
   Failure injection приватна тестовому filesystem boundary; production CLI не
   имеет флага отключения проверок. На Windows добавить тест reparse attributes.
-- [ ] Run `mise exec -- cargo test -p hmail-cleaner-adapters --test filesystem --test offline`;
+- [x] Run `mise exec -- cargo test -p hmail-cleaner-adapters --test filesystem --test offline`;
   ожидается FAIL для отсутствующих адаптеров.
-- [ ] Реализовать проверку root и компонентов без рекурсивного read_dir.
+- [x] Реализовать проверку root и компонентов без рекурсивного read_dir.
   Группировать цели по родительскому GUID-каталогу и запускать не больше workers
   блокирующих операций; внутри группы последовательный цикл std::fs::remove_file.
   Проверку стабильных родительских каталогов можно переиспользовать внутри группы.
-- [ ] Каждый target возвращает FileOutcome; NotFound после проверки root/пути —
+- [x] Каждый target возвращает FileOutcome; NotFound после проверки root/пути —
   AlreadyAbsent, остальные ошибки — Failed. Дождаться всех начатых работников,
   включая ошибку join. В отдельном prune_empty обработать только переданные
   родительские пути: deduplicate, remove_dir снизу вверх до границы root;
   DirectoryNotEmpty останавливает подъём, NotFound допускает проверку родителя,
   остальные ошибки попадают в PruneOutcome. Не использовать recursive remove_dir_all.
-- [ ] Реализовать сверку DataFolder и Windows SCM STOPPED через windows-service
+- [x] Реализовать сверку DataFolder и Windows SCM STOPPED через windows-service
   под cfg(windows). Production clean на других ОС возвращает UnsupportedPlatform;
   тестовый core получает fake OfflineGuard, не production bypass.
-- [ ] Повторить filesystem/offline tests и fmt; ожидается PASS.
-- [ ] Commit `feat: add bounded exact-path deletion and Windows service checks`.
+- [x] Повторить filesystem/offline tests и fmt; ожидается PASS.
+- [x] Commit `feat: add bounded exact-path deletion and Windows service checks`.
 
 ### Task 4: Сценарий очистки и повторного запуска
 

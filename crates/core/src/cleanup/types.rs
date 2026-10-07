@@ -36,7 +36,7 @@ pub struct RowFailure {
     pub reason: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileTarget {
     pub id: i64,
     pub path: PathBuf,
@@ -49,14 +49,14 @@ pub struct FileOutcome {
     pub result: DeletionResult,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DeletionResult {
     Removed,
     AlreadyAbsent,
     Failed(FileFailure),
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FileFailureKind {
     AccessDenied,
@@ -64,7 +64,7 @@ pub enum FileFailureKind {
     Io,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FileFailure {
     pub kind: FileFailureKind,
     pub message: String,

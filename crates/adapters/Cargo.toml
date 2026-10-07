@@ -13,3 +13,8 @@ sqlx.workspace = true
 
 [dev-dependencies]
 url = "2"
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+windows-service = "0.8"
+windows-sys = { version = "0.59", features = ["Win32_System_WindowsProgramming"] }
