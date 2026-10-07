@@ -1,18 +1,16 @@
+mod app;
 mod args;
 mod commands;
 mod config;
+mod menu;
 mod output;
 use args::{Args, Mode};
 use clap::Parser;
 use commands::Report;
-use hmail_cleaner_adapters::{
-    filesystem::LocalFiles,
-    mysql::MySqlRepository,
-    offline::{verify_data_folder, WindowsOffline},
-};
-use hmail_cleaner_core::cleanup::{Cancellation, Dependencies};
-use std::{process::ExitCode, sync::Arc};
-
+use config::{RunIntent, ServicePolicy};
+use hmail_cleaner_core::cleanup::Cancellation;
+use output::{Output, OutputPolicy};
+use std::{io::IsTerminal, process::ExitCode, sync::Arc};
 #[tokio::main]
 async fn main() -> ExitCode {
     let args = match Args::try_parse() {
@@ -23,84 +21,114 @@ async fn main() -> ExitCode {
             return ExitCode::from(code);
         }
     };
-    let cancel = Arc::new(Cancellation::default());
-    let output = output::Output::new(args.options().json, cancel.clone());
-    let config = match config::load_config(&args) {
-        Ok(config) => config,
+    if args.is_menu()
+        && (!std::io::stdin().is_terminal() || args.options().silence || args.options().json)
+    {
+        eprintln!("menu requires an interactive terminal and text output; use explicit preview/clean for unattended runs");
+        return ExitCode::from(2);
+    }
+    let settings = match config::load_settings(&args) {
+        Ok(s) => s,
         Err(error) => {
-            output.finish(&Report::invalid(error));
+            if args.options().json {
+                if let Ok(output) =
+                    Output::open(OutputPolicy::Json, None, Arc::new(Cancellation::default()))
+                {
+                    output.finish(&Report::invalid(error));
+                }
+            } else {
+                eprintln!("{error}");
+            }
             return ExitCode::from(2);
         }
     };
-    let signal = if config.mode == Mode::Clean {
-        let cancel = cancel.clone();
-        Some(tokio::spawn(async move {
-            if let Err(error) = tokio::signal::ctrl_c().await {
-                eprintln!("Ctrl+C handler failed: {error}");
-            }
-            cancel.request();
-        }))
+    let cancel = Arc::new(Cancellation::default());
+    let policy = if args.options().silence {
+        OutputPolicy::Silent
+    } else if args.options().json {
+        OutputPolicy::Json
     } else {
-        None
+        OutputPolicy::Text
     };
-    let report = run(&config, &cancel, &output).await;
-    if let Some(signal) = signal {
-        signal.abort();
-        let _ = signal.await;
-    }
-    output.finish(&report);
-    ExitCode::from(if output.failed() { 1 } else { report.exit_code })
+    let output = match Output::open(policy, settings.log_file.as_deref(), cancel.clone()) {
+        Ok(o) => o,
+        Err(error) => {
+            eprintln!("cannot open output: {error}");
+            return ExitCode::from(2);
+        }
+    };
+    let signal_cancel = cancel.clone();
+    let signal = tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            signal_cancel.request();
+        }
+    });
+    let code = if args.is_menu() {
+        run_menu(settings, &output, &cancel).await
+    } else {
+        let intent = RunIntent {
+            mode: args.mode(),
+            scan: settings.scan,
+            service_policy: if args.options().manage_service {
+                ServicePolicy::Manage
+            } else {
+                ServicePolicy::RequireStopped
+            },
+        };
+        let report = run_intent(&settings, intent, &output, &cancel).await;
+        output.finish(&report);
+        report.exit_code
+    };
+    signal.abort();
+    let _ = signal.await;
+    ExitCode::from(if output.failed() { 1 } else { code })
 }
-async fn run(config: &config::Config, cancel: &Cancellation, output: &output::Output) -> Report {
-    if let Err(error) = verify_data_folder(&config.options.data_directory, &config.hmail_ini) {
-        return Report::invalid(error);
+async fn run_intent(
+    settings: &config::Settings,
+    intent: RunIntent,
+    output: &Output,
+    cancel: &Cancellation,
+) -> Report {
+    match settings.for_run(intent, chrono::Local::now()) {
+        Ok(config) => app::run_once(&config, output, cancel).await,
+        Err(error) => Report::invalid(error),
     }
-    let files = match LocalFiles::new(config.options.data_directory.clone()) {
-        Ok(files) => files,
-        Err(error) => return Report::invalid(error),
-    };
-    let guard = WindowsOffline::new(config.service_name.clone());
-    // Native preflight runs before opening a database for a destructive command.
-    if config.mode == Mode::Clean
-        || matches!(
-            config.scan,
-            hmail_cleaner_core::maintenance::ScanOptions::Full { .. }
-        )
-    {
-        use hmail_cleaner_core::cleanup::OfflineGuard;
-        if let Err(error) = guard.ensure_stopped().await {
-            return Report::invalid(error);
+}
+async fn run_menu(mut settings: config::Settings, output: &Output, cancel: &Cancellation) -> u8 {
+    loop {
+        if cancel.is_requested() || output.failed() {
+            return 130;
         }
-    }
-    let mut repository = match MySqlRepository::connect(&config.database).await {
-        Ok(repository) => repository,
-        Err(error) => return Report::invalid(error),
-    };
-    output.server(repository.server_version(), config.options.cutoff);
-    if config.mode == Mode::Clean {
-        if let Err(error) = repository.verify_delete_access().await {
-            let report = Report::invalid(error);
-            return match repository.close().await {
-                Ok(()) => report,
-                Err(error) => report.with_close_failure(error),
-            };
-        }
-    }
-    let report = commands::execute_scan(
-        config.mode,
-        Dependencies {
-            repository: &mut repository,
-            files: &files,
-            guard: &guard,
-        },
-        &config.options,
-        config.scan,
-        cancel,
-        |progress| output.progress(progress),
-    )
-    .await;
-    match repository.close().await {
-        Ok(()) => report,
-        Err(error) => report.with_close_failure(error),
+        let action = {
+            let mut input = std::io::stdin().lock();
+            let mut writer = std::io::stdout().lock();
+            menu::next_action(&mut input, &mut writer, &settings)
+        };
+        let intent = match action {
+            Ok(menu::MenuAction::Exit) => return 0,
+            Ok(menu::MenuAction::SetRetention(age)) => {
+                settings = settings.with_retention(age);
+                continue;
+            }
+            Ok(menu::MenuAction::Preview(scan)) => RunIntent {
+                mode: Mode::Preview,
+                scan,
+                service_policy: ServicePolicy::RequireStopped,
+            },
+            Ok(menu::MenuAction::Clean {
+                scan,
+                service_policy,
+            }) => RunIntent {
+                mode: Mode::Clean,
+                scan,
+                service_policy,
+            },
+            Err(error) => {
+                output.finish(&Report::invalid(error));
+                return 2;
+            }
+        };
+        let report = run_intent(&settings, intent, output, cancel).await;
+        output.finish(&report);
     }
 }

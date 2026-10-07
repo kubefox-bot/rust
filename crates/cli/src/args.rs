@@ -19,10 +19,13 @@ pub(crate) enum Scan {
 )]
 pub(crate) struct Args {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
+    #[command(flatten)]
+    options: Options,
 }
 #[derive(Debug, Subcommand)]
 enum Command {
+    Menu(Options),
     #[command(about = "Report database-selected old messages without deletion")]
     Preview(Options),
     #[command(about = "Delete old messages while hMailServer is STOPPED")]
@@ -33,7 +36,7 @@ pub(crate) enum Mode {
     Preview,
     Clean,
 }
-#[derive(Debug, ClapArgs)]
+#[derive(Debug, Default, ClapArgs)]
 #[command(group(ArgGroup::new("retention").multiple(false)))]
 pub(crate) struct Options {
     #[arg(long, value_enum)]
@@ -56,6 +59,8 @@ pub(crate) struct Options {
     pub log_file: Option<PathBuf>,
     #[arg(long)]
     pub manage_service: bool,
+    #[arg(long, conflicts_with = "json")]
+    pub silence: bool,
     #[arg(
         long,
         help = "Read DATABASE_URL only from this explicitly selected env file (system env overrides it)"
@@ -67,14 +72,20 @@ pub(crate) struct Options {
 impl Args {
     pub fn options(&self) -> &Options {
         match &self.command {
-            Command::Preview(options) | Command::Clean(options) => options,
+            Some(Command::Preview(options) | Command::Clean(options) | Command::Menu(options)) => {
+                options
+            }
+            None => &self.options,
         }
     }
     pub fn mode(&self) -> Mode {
         match self.command {
-            Command::Preview(_) => Mode::Preview,
-            Command::Clean(_) => Mode::Clean,
+            Some(Command::Clean(_)) => Mode::Clean,
+            Some(Command::Preview(_) | Command::Menu(_)) | None => Mode::Preview,
         }
+    }
+    pub fn is_menu(&self) -> bool {
+        matches!(self.command, None | Some(Command::Menu(_)))
     }
 }
 #[cfg(test)]

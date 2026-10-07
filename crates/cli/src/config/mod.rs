@@ -25,22 +25,7 @@ pub(crate) fn load_settings(args: &Args) -> Result<Settings, ConfigError> {
         .unwrap_or_default();
     load_with_sources(args, &system, &file)
 }
-pub(crate) fn load_config(args: &Args) -> Result<Config, ConfigError> {
-    let settings = load_settings(args)?;
-    settings.for_run(
-        RunIntent {
-            mode: args.mode(),
-            scan: settings.scan,
-            service_policy: if args.options().manage_service {
-                ServicePolicy::Manage
-            } else {
-                ServicePolicy::RequireStopped
-            },
-        },
-        Local::now(),
-    )
-}
-fn load_with_sources(
+pub(crate) fn load_with_sources(
     args: &Args,
     system: &sources::Values,
     file: &sources::Values,
