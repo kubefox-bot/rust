@@ -1,8 +1,7 @@
-mod retention;
 use chrono::NaiveDateTime;
 use clap::{ArgGroup, Args as ClapArgs, Parser, Subcommand};
 use hmail_cleaner_core::{
-    cleanup::{DEFAULT_BATCH_SIZE, DEFAULT_WORKERS, MAX_BATCH_SIZE, MAX_WORKERS},
+    cleanup::{MAX_BATCH_SIZE, MAX_WORKERS},
     selection::Retention,
 };
 use std::path::PathBuf;
@@ -35,24 +34,28 @@ pub(crate) enum Mode {
     Clean,
 }
 #[derive(Debug, ClapArgs)]
-#[command(group(ArgGroup::new("retention").required(true).multiple(false)))]
+#[command(group(ArgGroup::new("retention").multiple(false)))]
 pub(crate) struct Options {
-    #[arg(long, value_enum, default_value = "fast")]
-    pub scan: Scan,
-    #[arg(long,group="retention",value_parser=retention::parse,help="Retention age: 30d, 1mo (calendar month), 1y")]
+    #[arg(long, value_enum)]
+    pub scan: Option<Scan>,
+    #[arg(long,group="retention",value_parser=crate::config::parse_age,help="Retention age: 30d, 1mo (calendar month), 1y")]
     pub older_than: Option<Retention>,
-    #[arg(long,group="retention",value_parser=retention::before,help="Strict local cutoff: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")]
+    #[arg(long,group="retention",value_parser=crate::config::parse_before,help="Strict local cutoff: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")]
     pub before: Option<NaiveDateTime>,
     #[arg(long)]
-    pub data_dir: PathBuf,
+    pub data_dir: Option<PathBuf>,
     #[arg(long)]
-    pub hmail_ini: PathBuf,
-    #[arg(long, default_value = "hMailServer")]
-    pub service_name: String,
-    #[arg(long,default_value_t=DEFAULT_BATCH_SIZE,value_parser=clap::value_parser!(u32).range(1..=i64::from(MAX_BATCH_SIZE)))]
-    pub batch_size: u32,
-    #[arg(long,default_value_t=DEFAULT_WORKERS,value_parser=clap::value_parser!(u8).range(1..=i64::from(MAX_WORKERS)))]
-    pub workers: u8,
+    pub hmail_ini: Option<PathBuf>,
+    #[arg(long)]
+    pub service_name: Option<String>,
+    #[arg(long,value_parser=clap::value_parser!(u32).range(1..=i64::from(MAX_BATCH_SIZE)))]
+    pub batch_size: Option<u32>,
+    #[arg(long,value_parser=clap::value_parser!(u8).range(1..=i64::from(MAX_WORKERS)))]
+    pub workers: Option<u8>,
+    #[arg(long)]
+    pub log_file: Option<PathBuf>,
+    #[arg(long)]
+    pub manage_service: bool,
     #[arg(
         long,
         help = "Read DATABASE_URL only from this explicitly selected env file (system env overrides it)"
@@ -97,7 +100,7 @@ mod tests {
         assert!(
             Args::try_parse_from(argv(&["--older-than", "30d", "--before", "2026-09-07"])).is_err()
         );
-        assert!(Args::try_parse_from(argv(&[])).is_err());
+        assert!(Args::try_parse_from(argv(&[])).is_ok());
     }
     #[test]
     fn zero_retention_is_rejected() {
@@ -108,8 +111,8 @@ mod tests {
     #[test]
     fn defaults_are_1000_and_2() {
         let args = Args::try_parse_from(argv(&["--older-than", "1mo"])).unwrap();
-        assert_eq!(args.options().batch_size, 1000);
-        assert_eq!(args.options().workers, 2);
+        assert_eq!(args.options().batch_size, None);
+        assert_eq!(args.options().workers, None);
     }
     #[test]
     fn workers_outside_1_to_8_are_rejected() {

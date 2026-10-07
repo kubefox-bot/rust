@@ -1,10 +1,36 @@
 use crate::args::Mode;
 use hmail_cleaner_adapters::mysql::{DatabaseConfig, DatabaseConfigError};
 use hmail_cleaner_core::cleanup::RunOptions;
+use hmail_cleaner_core::{maintenance::ScanMode, selection::Retention};
+use std::num::NonZeroU32;
 use std::path::PathBuf;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ServicePolicy {
+    RequireStopped,
+    Manage,
+}
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct RunIntent {
+    pub mode: Mode,
+    pub scan: ScanMode,
+    pub service_policy: ServicePolicy,
+}
+#[derive(Debug, Clone)]
+pub(crate) struct Settings {
+    pub database: DatabaseConfig,
+    pub data_dir: PathBuf,
+    pub hmail_ini: PathBuf,
+    pub service_name: String,
+    pub retention: Retention,
+    pub scan: ScanMode,
+    pub batch_size: NonZeroU32,
+    pub workers: u8,
+    pub log_file: Option<PathBuf>,
+}
 #[derive(Debug)]
 pub(crate) struct Config {
     pub mode: Mode,
+    pub service_policy: ServicePolicy,
     pub scan: hmail_cleaner_core::maintenance::ScanOptions,
     pub database: DatabaseConfig,
     pub options: RunOptions,
@@ -29,4 +55,6 @@ pub(crate) enum ConfigError {
     Retention,
     #[error("file cutoff is ambiguous or nonexistent in the server local timezone")]
     LocalTime,
+    #[error("missing or invalid setting {0}")]
+    Setting(&'static str),
 }

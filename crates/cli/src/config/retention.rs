@@ -3,7 +3,7 @@ use hmail_cleaner_core::selection::Retention;
 use std::num::NonZeroU32;
 const DATE_FORMAT: &str = "%Y-%m-%d";
 const TIME_FORMATS: &[&str] = &["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"];
-pub(super) fn parse(value: &str) -> Result<Retention, String> {
+pub(crate) fn parse(value: &str) -> Result<Retention, String> {
     let (count, unit) = if let Some(count) = value.strip_suffix("mo") {
         (count, "mo")
     } else if let Some(count) = value.strip_suffix('d') {
@@ -28,7 +28,7 @@ pub(super) fn parse(value: &str) -> Result<Retention, String> {
         _ => unreachable!("validated age suffix"),
     }
 }
-pub(super) fn before(value: &str) -> Result<NaiveDateTime, String> {
+pub(crate) fn before(value: &str) -> Result<NaiveDateTime, String> {
     if let Ok(date) = NaiveDate::parse_from_str(value, DATE_FORMAT) {
         return date
             .and_hms_opt(0, 0, 0)
