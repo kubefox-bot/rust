@@ -91,7 +91,7 @@ fn parse_guid(filename: &str) -> Result<Uuid, PathError> {
     Uuid::parse_str(guid).map_err(|_| PathError::InvalidFilename)
 }
 
-fn validate_component(component: &str) -> Result<(), PathError> {
+pub fn validate_component(component: &str) -> Result<(), PathError> {
     if component.is_empty()
         || component == "."
         || component == ".."

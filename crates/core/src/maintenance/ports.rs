@@ -28,3 +28,21 @@ pub trait FullRepository: Repository {
         limit: usize,
     ) -> impl Future<Output = PortResult<FileReferences>> + Send;
 }
+
+pub trait FileScan: Send {
+    fn next_batch(
+        &mut self,
+        limit: u32,
+    ) -> impl Future<Output = PortResult<super::types::ScanBatch>> + Send;
+    fn close(self) -> impl Future<Output = PortResult<()>> + Send;
+}
+pub trait FullFileStore: crate::cleanup::FileStore {
+    type Scan: FileScan;
+    fn validate_tree(&self) -> impl Future<Output = PortResult<super::types::ScanStats>> + Send;
+    fn open_scan(&self) -> impl Future<Output = PortResult<Self::Scan>> + Send;
+    fn delete_orphans(
+        &self,
+        files: Vec<super::types::FileObservation>,
+        workers: u8,
+    ) -> impl Future<Output = PortResult<Vec<super::types::OrphanFileOutcome>>> + Send;
+}

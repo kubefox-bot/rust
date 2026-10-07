@@ -2,11 +2,126 @@ use hmail_cleaner_adapters::filesystem::LocalFiles;
 #[cfg(unix)]
 use hmail_cleaner_core::cleanup::FileFailureKind;
 use hmail_cleaner_core::cleanup::{DeletionResult, FileStore, FileTarget};
+use hmail_cleaner_core::maintenance::{FileScan, FullFileStore};
 use std::{
     fs,
     path::{Path, PathBuf},
 };
 use tempfile::TempDir;
+
+fn stored(root: &Path, id: i64) -> FileTarget {
+    FileTarget {
+        id,
+        path: root.join(format!(
+            "domain/account/AB/{{AB000000-0000-0000-0000-{id:012X}}}.eml"
+        )),
+    }
+}
+
+#[tokio::test]
+async fn scan_yields_bounded_batches() {
+    let (_temp, root) = setup();
+    for id in 1..=5 {
+        write(&stored(&root, id));
+    }
+    let files = LocalFiles::new(root).unwrap();
+    let mut scan = files.open_scan().await.unwrap();
+    let mut total = 0;
+    loop {
+        let batch = scan.next_batch(2).await.unwrap();
+        assert!(batch.files.len() <= 2);
+        total += batch.examined_files;
+        if batch.finished {
+            break;
+        }
+    }
+    scan.close().await.unwrap();
+    assert_eq!(total, 5);
+}
+
+#[tokio::test]
+async fn scan_counts_fresh_and_referenced_files() {
+    let (_temp, root) = setup();
+    write(&stored(&root, 1));
+    write(&stored(&root, 2));
+    let files = LocalFiles::new(root).unwrap();
+    assert_eq!(files.validate_tree().await.unwrap().examined_files, 2);
+    let mut scan = files.open_scan().await.unwrap();
+    assert_eq!(scan.next_batch(1000).await.unwrap().files.len(), 2);
+    scan.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn root_queue_and_public_are_excluded() {
+    let (_temp, root) = setup();
+    write(&stored(&root, 1));
+    let queue = root.join("{AB000000-0000-0000-0000-000000000002}.eml");
+    fs::write(&queue, b"queue").unwrap();
+    let public = root.join("#Public/AB/{AB000000-0000-0000-0000-000000000003}.eml");
+    fs::create_dir_all(public.parent().unwrap()).unwrap();
+    fs::write(&public, b"public").unwrap();
+    let files = LocalFiles::new(root).unwrap();
+    let mut scan = files.open_scan().await.unwrap();
+    let batch = scan.next_batch(1000).await.unwrap();
+    assert_eq!(batch.files.len(), 1);
+    assert!(queue.exists() && public.exists());
+    scan.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn bucket_mismatch_is_preserved() {
+    let (_temp, root) = setup();
+    let wrong = root.join("domain/account/CD/{AB000000-0000-0000-0000-000000000001}.eml");
+    fs::create_dir_all(wrong.parent().unwrap()).unwrap();
+    fs::write(&wrong, b"wrong bucket").unwrap();
+    let files = LocalFiles::new(root).unwrap();
+    let mut scan = files.open_scan().await.unwrap();
+    assert!(scan.next_batch(1000).await.unwrap().files.is_empty());
+    scan.close().await.unwrap();
+    assert!(wrong.exists());
+}
+
+#[tokio::test]
+async fn changed_observation_is_not_deleted() {
+    let (_temp, root) = setup();
+    let selected = stored(&root, 1);
+    write(&selected);
+    let files = LocalFiles::new(root).unwrap();
+    let mut scan = files.open_scan().await.unwrap();
+    let batch = scan.next_batch(1000).await.unwrap();
+    scan.close().await.unwrap();
+    fs::write(&selected.path, b"a changed larger message").unwrap();
+    let outcomes = files.delete_orphans(batch.files, 2).await.unwrap();
+    assert!(matches!(outcomes[0].result, DeletionResult::Failed(_)));
+    assert!(selected.path.exists());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn inaccessible_tree_fails_precheck() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_temp, root) = setup();
+    let selected = stored(&root, 1);
+    write(&selected);
+    let parent = selected.path.parent().unwrap();
+    fs::set_permissions(parent, fs::Permissions::from_mode(0o000)).unwrap();
+    let result = LocalFiles::new(root.clone()).unwrap().validate_tree().await;
+    fs::set_permissions(parent, fs::Permissions::from_mode(0o700)).unwrap();
+    assert!(result.is_err());
+    assert!(selected.path.exists());
+}
+
+#[tokio::test]
+async fn scan_resources_are_closed_on_cancellation() {
+    let (_temp, root) = setup();
+    write(&stored(&root, 1));
+    let files = LocalFiles::new(root.clone()).unwrap();
+    let mut scan = files.open_scan().await.unwrap();
+    scan.next_batch(1).await.unwrap();
+    scan.close().await.unwrap();
+    fs::remove_dir_all(&root).unwrap();
+    assert!(!root.exists());
+}
 
 fn setup() -> (TempDir, PathBuf) {
     let temp = tempfile::tempdir().unwrap();

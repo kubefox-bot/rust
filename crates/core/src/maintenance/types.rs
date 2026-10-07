@@ -24,3 +24,27 @@ pub struct OrphanBatch {
     pub rows: Vec<OrphanRow>,
 }
 pub type FileReferences = HashSet<Uuid>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileObservation {
+    pub path: std::path::PathBuf,
+    pub guid: Uuid,
+    pub size_bytes: u64,
+    pub modified_at: std::time::SystemTime,
+}
+#[derive(Debug, Default)]
+pub struct ScanStats {
+    pub examined_files: u64,
+}
+#[derive(Debug)]
+pub struct ScanBatch {
+    pub visited_entries: u64,
+    pub examined_files: u64,
+    pub files: Vec<FileObservation>,
+    pub finished: bool,
+}
+#[derive(Debug)]
+pub struct OrphanFileOutcome {
+    pub observation: FileObservation,
+    pub result: crate::cleanup::DeletionResult,
+}

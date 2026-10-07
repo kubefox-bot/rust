@@ -1,15 +1,39 @@
 mod delete;
+mod orphans;
 mod prune;
 mod removal;
 mod retry;
+mod scan;
 mod validation;
 mod workers;
 
 use hmail_cleaner_core::cleanup::{FileOutcome, FileStore, FileTarget, PortResult, PruneOutcome};
+use hmail_cleaner_core::maintenance::{
+    FileObservation, FullFileStore, OrphanFileOutcome, ScanStats,
+};
 use std::path::PathBuf;
 
 pub struct LocalFiles {
     root: PathBuf,
+}
+impl FullFileStore for LocalFiles {
+    type Scan = scan::Session;
+    async fn validate_tree(&self) -> PortResult<ScanStats> {
+        scan::check(self.root.clone()).await
+    }
+    async fn open_scan(&self) -> PortResult<Self::Scan> {
+        scan::open(self.root.clone()).await
+    }
+    async fn delete_orphans(
+        &self,
+        files: Vec<FileObservation>,
+        workers: u8,
+    ) -> PortResult<Vec<OrphanFileOutcome>> {
+        if !(1..=hmail_cleaner_core::cleanup::MAX_WORKERS).contains(&workers) {
+            return Err("workers must be between 1 and 8".into());
+        }
+        orphans::run(self.root.clone(), files, workers).await
+    }
 }
 impl LocalFiles {
     pub fn new(root: PathBuf) -> PortResult<Self> {

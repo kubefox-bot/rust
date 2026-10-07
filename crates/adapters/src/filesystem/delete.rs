@@ -16,9 +16,12 @@ pub(super) async fn run(
             .push(file);
     }
     let groups = groups.into_values().collect::<Vec<_>>();
-    super::workers::run(groups, usize::from(workers), move |group| {
-        remove_group(&root, group)
-    })
+    super::workers::run(
+        groups,
+        usize::from(workers),
+        move |group| remove_group(&root, group),
+        super::workers::failed,
+    )
     .await
 }
 fn remove_group(root: &std::path::Path, group: Group) -> Vec<FileOutcome> {

@@ -1,13 +1,17 @@
 use super::validation;
 use hmail_cleaner_core::cleanup::{DeletionResult, FileOutcome, FileTarget, PortResult};
 use std::sync::Arc;
-pub(super) async fn run<F>(
-    groups: Vec<Vec<FileTarget>>,
+pub(super) async fn run<T, O, F, R>(
+    groups: Vec<Vec<T>>,
     workers: usize,
     operation: F,
-) -> PortResult<Vec<FileOutcome>>
+    recover: R,
+) -> PortResult<Vec<O>>
 where
-    F: Fn(Vec<FileTarget>) -> Vec<FileOutcome> + Send + Sync + 'static,
+    T: Clone + Send + 'static,
+    O: Send + 'static,
+    F: Fn(Vec<T>) -> Vec<O> + Send + Sync + 'static,
+    R: Fn(T, String) -> O,
 {
     if groups.is_empty() {
         return Ok(Vec::new());
@@ -36,16 +40,21 @@ where
     for (recovery, handle) in handles {
         match handle.await {
             Ok(result) => outcomes.extend(result),
-            Err(error) => outcomes.extend(recovery.into_iter().map(|file| FileOutcome {
-                id: file.id,
-                path: file.path,
-                result: DeletionResult::Failed(validation::invalid(&format!(
-                    "file worker failed: {error}"
-                ))),
-            })),
+            Err(error) => outcomes.extend(
+                recovery
+                    .into_iter()
+                    .map(|file| recover(file, format!("file worker failed: {error}"))),
+            ),
         }
     }
     Ok(outcomes)
+}
+pub(super) fn failed(file: FileTarget, message: String) -> FileOutcome {
+    FileOutcome {
+        id: file.id,
+        path: file.path,
+        result: DeletionResult::Failed(validation::invalid(&message)),
+    }
 }
 #[cfg(test)]
 mod tests {
@@ -73,20 +82,25 @@ mod tests {
                 }]
             })
             .collect();
-        let outcomes = run(groups, 3, move |group| {
-            let count = running.fetch_add(1, Ordering::SeqCst) + 1;
-            observed.fetch_max(count, Ordering::SeqCst);
-            std::thread::sleep(Duration::from_millis(2));
-            running.fetch_sub(1, Ordering::SeqCst);
-            group
-                .into_iter()
-                .map(|file| FileOutcome {
-                    id: file.id,
-                    path: file.path,
-                    result: DeletionResult::Removed { size_bytes: 7 },
-                })
-                .collect()
-        })
+        let outcomes = run(
+            groups,
+            3,
+            move |group| {
+                let count = running.fetch_add(1, Ordering::SeqCst) + 1;
+                observed.fetch_max(count, Ordering::SeqCst);
+                std::thread::sleep(Duration::from_millis(2));
+                running.fetch_sub(1, Ordering::SeqCst);
+                group
+                    .into_iter()
+                    .map(|file| FileOutcome {
+                        id: file.id,
+                        path: file.path,
+                        result: DeletionResult::Removed { size_bytes: 7 },
+                    })
+                    .collect()
+            },
+            failed,
+        )
         .await
         .unwrap();
         assert_eq!(outcomes.len(), 30);
@@ -104,19 +118,24 @@ mod tests {
                 }]
             })
             .collect();
-        let outcomes = run(groups, 2, |group| {
-            if group[0].id == 0 {
-                panic!("fixture worker panic");
-            }
-            group
-                .into_iter()
-                .map(|file| FileOutcome {
-                    id: file.id,
-                    path: file.path,
-                    result: DeletionResult::Removed { size_bytes: 7 },
-                })
-                .collect()
-        })
+        let outcomes = run(
+            groups,
+            2,
+            |group| {
+                if group[0].id == 0 {
+                    panic!("fixture worker panic");
+                }
+                group
+                    .into_iter()
+                    .map(|file| FileOutcome {
+                        id: file.id,
+                        path: file.path,
+                        result: DeletionResult::Removed { size_bytes: 7 },
+                    })
+                    .collect()
+            },
+            failed,
+        )
         .await
         .unwrap();
         assert_eq!(outcomes.len(), 2);
