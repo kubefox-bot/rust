@@ -700,3 +700,106 @@ async fn invalid_datetime_is_reported_and_next_message_is_cleaned() {
     repository.close().await.unwrap();
     fixture.finish().await;
 }
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn full_cleanup_reconciles_database_and_real_account_files() {
+    use hmail_cleaner_adapters::filesystem::LocalFiles;
+    use hmail_cleaner_core::{
+        cleanup::{Cancellation, Dependencies, OfflineGuard, PortResult, RunOptions},
+        maintenance::{self, ScanOptions},
+    };
+    use std::{
+        fs,
+        num::NonZeroU32,
+        time::{Duration, SystemTime},
+    };
+    struct Stopped;
+    impl OfflineGuard for Stopped {
+        async fn ensure_stopped(&self) -> PortResult<()> {
+            Ok(())
+        }
+    }
+    let mut fixture = Fixture::create().await;
+    fixture.add(1, 1, 10, 2, OLD, &name(1)).await;
+    fixture.add(2, 1, 10, 2, BOUNDARY, &name(2)).await;
+    fixture.add(3, 1, 10, 2, OLD, &name(3)).await;
+    for id in [1, 2, 3, 9] {
+        fixture.add_dependents(id).await;
+    }
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("data");
+    let bucket = root.join("chem.orp/info/00");
+    fs::create_dir_all(&bucket).unwrap();
+    for id in [1, 2, 4, 5] {
+        fs::write(bucket.join(name(id)), b"1234567").unwrap();
+    }
+    let orphan = bucket.join(name(4));
+    let handle = fs::OpenOptions::new().write(true).open(&orphan).unwrap();
+    handle
+        .set_times(
+            fs::FileTimes::new().set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1)),
+        )
+        .unwrap();
+    drop(handle);
+    let files = LocalFiles::new(root.clone()).unwrap();
+    let mut repo = fixture.repository().await;
+    let options = RunOptions {
+        cutoff: date(BOUNDARY),
+        batch_size: NonZeroU32::new(2).unwrap(),
+        workers: 2,
+        data_directory: root,
+    };
+    let summary = maintenance::clean(
+        Dependencies {
+            repository: &mut repo,
+            files: &files,
+            guard: &Stopped,
+        },
+        &options,
+        ScanOptions::Full {
+            file_cutoff: SystemTime::now() - Duration::from_secs(60),
+        },
+        &Cancellation::default(),
+        |_| {},
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        (
+            summary.deleted_messages,
+            summary.deleted_metadata,
+            summary.deleted_recipients
+        ),
+        (2, 2, 2)
+    );
+    assert_eq!((summary.orphan_metadata, summary.orphan_recipients), (1, 1));
+    assert_eq!(
+        (
+            summary.removed_files,
+            summary.absent_files,
+            summary.removed_orphan_files,
+            summary.removed_bytes
+        ),
+        (2, 1, 1, 14)
+    );
+    assert!(!bucket.join(name(1)).exists());
+    assert!(!orphan.exists());
+    assert!(bucket.join(name(2)).exists());
+    assert!(bucket.join(name(5)).exists());
+    assert_eq!(fixture.ids("hm_messages", "messageid").await, vec![2]);
+    assert_eq!(
+        fixture
+            .ids("hm_message_metadata", "metadata_messageid")
+            .await,
+        vec![2]
+    );
+    assert_eq!(
+        fixture
+            .ids("hm_messagerecipients", "recipientmessageid")
+            .await,
+        vec![2]
+    );
+    repo.close().await.unwrap();
+    fixture.finish().await;
+}

@@ -28,12 +28,16 @@ pub enum Stage {
     Directories,
     Complete,
     Cancelled,
+    OrphanDatabase,
+    References,
+    Scan,
 }
 #[derive(Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Failure {
     Message { id: i64, reason: String },
     Directory { path: PathBuf, reason: String },
+    OrphanFile { path: PathBuf, reason: String },
 }
 #[derive(Debug, Serialize)]
 pub struct Progress {

@@ -2,6 +2,17 @@ use serde::Serialize;
 use std::collections::HashSet;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScanMode {
+    Fast,
+    Full,
+}
+#[derive(Debug, Clone, Copy)]
+pub enum ScanOptions {
+    Fast,
+    Full { file_cutoff: std::time::SystemTime },
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OrphanTable {

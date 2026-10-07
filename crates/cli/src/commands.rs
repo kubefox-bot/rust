@@ -1,7 +1,8 @@
 use crate::args::Mode;
+#[cfg(test)]
+use hmail_cleaner_core::cleanup::{self, FileStore, Repository};
 use hmail_cleaner_core::cleanup::{
-    self, Cancellation, CleanupError, Dependencies, FileStore, OfflineGuard, Progress, Repository,
-    RunOptions, Stage, Summary,
+    Cancellation, CleanupError, Dependencies, OfflineGuard, Progress, RunOptions, Stage, Summary,
 };
 use serde::Serialize;
 const EXIT_OK: u8 = 0;
@@ -59,6 +60,7 @@ impl Report {
         }
     }
 }
+#[cfg(test)]
 pub(crate) async fn execute<
     R: Repository,
     F: FileStore,
@@ -75,6 +77,28 @@ pub(crate) async fn execute<
         Mode::Preview => cleanup::preview(dependencies.repository, options, progress).await,
         Mode::Clean => cleanup::clean(dependencies, options, cancel, progress).await,
     };
+    result_report(result)
+}
+pub(crate) async fn execute_scan<
+    R: hmail_cleaner_core::maintenance::FullRepository,
+    F: hmail_cleaner_core::maintenance::FullFileStore,
+    G: OfflineGuard,
+    P: Fn(Progress) + Send + Sync,
+>(
+    mode: Mode,
+    dependencies: Dependencies<'_, R, F, G>,
+    options: &RunOptions,
+    scan: hmail_cleaner_core::maintenance::ScanOptions,
+    cancel: &Cancellation,
+    progress: P,
+) -> Report {
+    use hmail_cleaner_core::maintenance;
+    result_report(match mode {
+        Mode::Preview => maintenance::preview(dependencies, options, scan, cancel, progress).await,
+        Mode::Clean => maintenance::clean(dependencies, options, scan, cancel, progress).await,
+    })
+}
+fn result_report(result: Result<Summary, CleanupError>) -> Report {
     match result {
         Ok(summary) if summary.failed == 0 => Report {
             status: Status::Complete,
@@ -103,6 +127,9 @@ fn failure(error: CleanupError) -> Report {
         | Stage::Database
         | Stage::Verification
         | Stage::Directories
+        | Stage::OrphanDatabase
+        | Stage::References
+        | Stage::Scan
         | Stage::Complete => (Status::Failed, EXIT_FAILED),
     };
     Report {

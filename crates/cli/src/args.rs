@@ -6,6 +6,11 @@ use hmail_cleaner_core::{
     selection::Retention,
 };
 use std::path::PathBuf;
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+pub(crate) enum Scan {
+    Fast,
+    Full,
+}
 
 #[derive(Debug, Parser)]
 #[command(
@@ -32,6 +37,8 @@ pub(crate) enum Mode {
 #[derive(Debug, ClapArgs)]
 #[command(group(ArgGroup::new("retention").required(true).multiple(false)))]
 pub(crate) struct Options {
+    #[arg(long, value_enum, default_value = "fast")]
+    pub scan: Scan,
     #[arg(long,group="retention",value_parser=retention::parse,help="Retention age: 30d, 1mo (calendar month), 1y")]
     pub older_than: Option<Retention>,
     #[arg(long,group="retention",value_parser=retention::before,help="Strict local cutoff: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")]

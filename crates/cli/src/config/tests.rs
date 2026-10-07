@@ -69,3 +69,15 @@ fn diagnostics_do_not_contain_secret_url() {
     .unwrap();
     assert!(!format!("{config:?}").contains("secret-marker"));
 }
+#[test]
+fn full_cutoff_rejects_dst_gap_and_overlap() {
+    let zone = chrono_tz::America::New_York;
+    for raw in ["2026-03-08 02:30:00", "2026-11-01 01:30:00"] {
+        let local = NaiveDateTime::parse_from_str(raw, "%Y-%m-%d %H:%M:%S").unwrap();
+        assert!(matches!(
+            file_cutoff(&zone, local),
+            Err(ConfigError::LocalTime)
+        ));
+    }
+    assert!(file_cutoff(&zone, now()).is_ok());
+}

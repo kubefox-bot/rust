@@ -16,4 +16,5 @@ clap = { version = "4", features = ["derive"] }
 dotenvy = "0.15"
 
 [dev-dependencies]
+chrono-tz = "0.10"
 tempfile = "3"

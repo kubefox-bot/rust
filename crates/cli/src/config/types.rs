@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub(crate) struct Config {
     pub mode: Mode,
+    pub scan: hmail_cleaner_core::maintenance::ScanOptions,
     pub database: DatabaseConfig,
     pub options: RunOptions,
     pub hmail_ini: PathBuf,
@@ -26,4 +27,6 @@ pub(crate) enum ConfigError {
     Paths,
     #[error("one retention option is required")]
     Retention,
+    #[error("file cutoff is ambiguous or nonexistent in the server local timezone")]
+    LocalTime,
 }

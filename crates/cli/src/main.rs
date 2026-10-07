@@ -61,7 +61,12 @@ async fn run(config: &config::Config, cancel: &Cancellation, output: &output::Ou
     };
     let guard = WindowsOffline::new(config.service_name.clone());
     // Native preflight runs before opening a database for a destructive command.
-    if config.mode == Mode::Clean {
+    if config.mode == Mode::Clean
+        || matches!(
+            config.scan,
+            hmail_cleaner_core::maintenance::ScanOptions::Full { .. }
+        )
+    {
         use hmail_cleaner_core::cleanup::OfflineGuard;
         if let Err(error) = guard.ensure_stopped().await {
             return Report::invalid(error);
@@ -81,7 +86,7 @@ async fn run(config: &config::Config, cancel: &Cancellation, output: &output::Ou
             };
         }
     }
-    let report = commands::execute(
+    let report = commands::execute_scan(
         config.mode,
         Dependencies {
             repository: &mut repository,
@@ -89,6 +94,7 @@ async fn run(config: &config::Config, cancel: &Cancellation, output: &output::Ou
             guard: &guard,
         },
         &config.options,
+        config.scan,
         cancel,
         |progress| output.progress(progress),
     )

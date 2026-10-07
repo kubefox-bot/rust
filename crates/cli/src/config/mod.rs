@@ -1,6 +1,6 @@
 mod types;
 use crate::args::Args;
-use chrono::{Datelike, Local, NaiveDateTime};
+use chrono::{Datelike, Local, NaiveDateTime, TimeZone};
 use hmail_cleaner_adapters::mysql::DatabaseConfig;
 use hmail_cleaner_core::{
     cleanup::RunOptions,
@@ -51,6 +51,12 @@ fn load_with_database(
     }
     Ok(Config {
         mode: args.mode(),
+        scan: match options.scan {
+            crate::args::Scan::Fast => hmail_cleaner_core::maintenance::ScanOptions::Fast,
+            crate::args::Scan::Full => hmail_cleaner_core::maintenance::ScanOptions::Full {
+                file_cutoff: file_cutoff(&Local, cutoff)?,
+            },
+        },
         database,
         options: RunOptions {
             cutoff,
@@ -61,6 +67,15 @@ fn load_with_database(
         hmail_ini: options.hmail_ini.clone(),
         service_name: options.service_name.clone(),
     })
+}
+fn file_cutoff<T: TimeZone>(
+    zone: &T,
+    cutoff: NaiveDateTime,
+) -> Result<std::time::SystemTime, ConfigError> {
+    zone.from_local_datetime(&cutoff)
+        .single()
+        .map(std::time::SystemTime::from)
+        .ok_or(ConfigError::LocalTime)
 }
 fn read_database(path: &std::path::Path) -> Result<Option<String>, ConfigError> {
     let values = dotenvy::from_path_iter(path).map_err(|_| ConfigError::EnvFile)?;

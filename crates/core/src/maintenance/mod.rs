@@ -1,7 +1,12 @@
+mod database;
+mod files;
 mod limits;
 mod ports;
 mod types;
+mod workflow;
 pub use limits::MAX_REFERENCES;
 pub use ports::{FileScan, FullFileStore, FullRepository};
 pub use types::{FileObservation, OrphanFileOutcome, ScanBatch, ScanStats};
 pub use types::{FileReferences, OrphanBatch, OrphanRow, OrphanSelection, OrphanTable};
+pub use types::{ScanMode, ScanOptions};
+pub use workflow::{clean, preview};
