@@ -20,7 +20,7 @@ impl LocalFiles {
 }
 impl FileStore for LocalFiles {
     async fn delete(&self, files: Vec<FileTarget>, workers: u8) -> PortResult<Vec<FileOutcome>> {
-        if !(1..=8).contains(&workers) {
+        if !(1..=hmail_cleaner_core::cleanup::MAX_WORKERS).contains(&workers) {
             return Err("workers must be between 1 and 8".into());
         }
         delete::run(self.root.clone(), files, workers).await

@@ -16,7 +16,7 @@ use std::collections::HashSet;
 use thiserror::Error;
 
 const DELIVERED_STATE: i8 = 2;
-pub(super) const MAX_BATCH_SIZE: usize = 10_000;
+pub(super) const MAX_BATCH_SIZE: usize = hmail_cleaner_core::cleanup::MAX_BATCH_SIZE as usize;
 const LOCK_QUERY: &str = "SELECT GET_LOCK(CONCAT('hmail-clean:', LEFT(SHA2(DATABASE(),256),48)),0)";
 
 #[derive(Debug, Error)]

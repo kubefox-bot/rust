@@ -1,0 +1,342 @@
+use chrono::NaiveDateTime;
+use hmail_cleaner_core::cleanup::*;
+use std::{
+    collections::{BTreeMap, HashSet},
+    num::NonZeroU32,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
+
+#[derive(Debug, PartialEq, Eq)]
+enum Event {
+    Guard,
+    Snapshot,
+    Select(i64),
+    Files(Vec<i64>),
+    Delete(Vec<i64>),
+    Verify(Vec<i64>),
+    Prune,
+}
+type Events = Arc<Mutex<Vec<Event>>>;
+fn date(value: &str) -> NaiveDateTime {
+    NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S").unwrap()
+}
+fn candidate(id: i64) -> Candidate {
+    Candidate {
+        id,
+        account_id: 1,
+        folder_id: 10,
+        account_address: "info@chem.orp".into(),
+        filename: format!("{{AB000000-0000-0000-0000-{id:012X}}}.eml"),
+        created_at: date("2026-01-01 12:00:00"),
+    }
+}
+fn options() -> RunOptions {
+    RunOptions {
+        cutoff: date("2026-09-07 12:00:00"),
+        batch_size: NonZeroU32::new(2).unwrap(),
+        workers: 2,
+        data_directory: PathBuf::from("/Data"),
+    }
+}
+struct Repo {
+    rows: BTreeMap<i64, Candidate>,
+    events: Events,
+    fail_next: bool,
+    uncertain_next: bool,
+    rejected: HashSet<i64>,
+}
+impl Repository for Repo {
+    async fn snapshot(&mut self) -> PortResult<Snapshot> {
+        self.events.lock().unwrap().push(Event::Snapshot);
+        Ok(Snapshot {
+            upper_id: *self.rows.keys().next_back().unwrap_or(&0),
+        })
+    }
+    async fn next_batch(
+        &mut self,
+        selection: Selection,
+        cursor: i64,
+        limit: u32,
+    ) -> PortResult<Batch> {
+        self.events.lock().unwrap().push(Event::Select(cursor));
+        let mut candidates = Vec::new();
+        let mut rejected = Vec::new();
+        let mut last_id = cursor;
+        for row in self
+            .rows
+            .values()
+            .filter(|row| row.id > cursor && row.id <= selection.upper_id)
+            .take(limit as usize)
+        {
+            last_id = row.id;
+            if self.rejected.contains(&row.id) {
+                rejected.push(RowFailure {
+                    id: row.id,
+                    reason: "bad row".into(),
+                });
+            } else {
+                candidates.push(row.clone());
+            }
+        }
+        Ok(Batch {
+            last_id,
+            candidates,
+            rejected,
+        })
+    }
+    async fn delete_batch(&mut self, rows: &[Candidate]) -> PortResult<DeleteResult> {
+        self.events
+            .lock()
+            .unwrap()
+            .push(Event::Delete(rows.iter().map(|row| row.id).collect()));
+        if self.fail_next {
+            self.fail_next = false;
+            return Err("SQL fixture failure".into());
+        }
+        for row in rows {
+            self.rows.remove(&row.id);
+        }
+        if self.uncertain_next {
+            self.uncertain_next = false;
+            return Ok(DeleteResult::CommitUncertain {
+                reason: "lost acknowledgement".into(),
+            });
+        }
+        Ok(DeleteResult::Committed)
+    }
+    async fn verify_deleted(&mut self, ids: &[i64]) -> PortResult<()> {
+        self.events
+            .lock()
+            .unwrap()
+            .push(Event::Verify(ids.to_vec()));
+        assert!(ids.iter().all(|id| !self.rows.contains_key(id)));
+        Ok(())
+    }
+}
+struct Files {
+    events: Events,
+    absent: Mutex<HashSet<i64>>,
+    failures: HashSet<i64>,
+    cancel: Option<Arc<Cancellation>>,
+}
+impl FileStore for Files {
+    async fn delete(&self, files: Vec<FileTarget>, _workers: u8) -> PortResult<Vec<FileOutcome>> {
+        self.events
+            .lock()
+            .unwrap()
+            .push(Event::Files(files.iter().map(|file| file.id).collect()));
+        if let Some(cancel) = &self.cancel {
+            cancel.request();
+        }
+        Ok(files
+            .into_iter()
+            .map(|file| {
+                let result = if self.failures.contains(&file.id) {
+                    DeletionResult::Failed(FileFailure {
+                        kind: FileFailureKind::AccessDenied,
+                        message: "denied".into(),
+                    })
+                } else if !self.absent.lock().unwrap().insert(file.id) {
+                    DeletionResult::AlreadyAbsent
+                } else {
+                    DeletionResult::Removed
+                };
+                FileOutcome {
+                    id: file.id,
+                    path: file.path,
+                    result,
+                }
+            })
+            .collect())
+    }
+    async fn prune_empty(&self, _parents: Vec<PathBuf>) -> PortResult<PruneOutcome> {
+        self.events.lock().unwrap().push(Event::Prune);
+        Ok(PruneOutcome {
+            removed: 1,
+            failures: Vec::new(),
+        })
+    }
+}
+struct Guard(Events);
+impl OfflineGuard for Guard {
+    async fn ensure_stopped(&self) -> PortResult<()> {
+        self.0.lock().unwrap().push(Event::Guard);
+        Ok(())
+    }
+}
+struct Scenario {
+    repository: Repo,
+    files: Files,
+    guard: Guard,
+    events: Events,
+}
+impl Scenario {
+    fn new(count: i64) -> Self {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        Self {
+            repository: Repo {
+                rows: (1..=count).map(|id| (id, candidate(id))).collect(),
+                events: events.clone(),
+                fail_next: false,
+                uncertain_next: false,
+                rejected: HashSet::new(),
+            },
+            files: Files {
+                events: events.clone(),
+                absent: Mutex::new(HashSet::new()),
+                failures: HashSet::new(),
+                cancel: None,
+            },
+            guard: Guard(events.clone()),
+            events,
+        }
+    }
+    async fn run(&mut self, cancel: &Cancellation) -> Result<Summary, CleanupError> {
+        clean(
+            Dependencies {
+                repository: &mut self.repository,
+                files: &self.files,
+                guard: &self.guard,
+            },
+            &options(),
+            cancel,
+            |_| {},
+        )
+        .await
+    }
+}
+#[tokio::test]
+async fn file_step_precedes_database_delete() {
+    let mut s = Scenario::new(2);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.deleted_messages, 2);
+    let events = s.events.lock().unwrap();
+    assert_eq!(
+        &events[..8],
+        &[
+            Event::Guard,
+            Event::Snapshot,
+            Event::Select(0),
+            Event::Guard,
+            Event::Files(vec![1, 2]),
+            Event::Delete(vec![1, 2]),
+            Event::Verify(vec![1, 2]),
+            Event::Prune
+        ]
+    );
+}
+#[tokio::test]
+async fn removed_and_absent_ids_are_deleted_but_failed_ids_are_preserved() {
+    let mut s = Scenario::new(3);
+    s.files.absent.lock().unwrap().insert(2);
+    s.files.failures.insert(3);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.removed_files, 1);
+    assert_eq!(summary.absent_files, 1);
+    assert_eq!(summary.deleted_messages, 2);
+    assert_eq!(summary.failed, 1);
+    assert_eq!(
+        s.repository.rows.keys().copied().collect::<Vec<_>>(),
+        vec![3]
+    );
+}
+#[tokio::test]
+async fn repeated_run_cleans_rows_after_previous_sql_failure() {
+    let mut s = Scenario::new(2);
+    s.repository.fail_next = true;
+    let error = s.run(&Cancellation::default()).await.unwrap_err();
+    assert_eq!(error.summary.removed_files, 2);
+    assert_eq!(s.repository.rows.len(), 2);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.absent_files, 2);
+    assert_eq!(summary.deleted_messages, 2);
+    assert!(s.repository.rows.is_empty());
+}
+#[tokio::test]
+async fn uncertain_commit_stops_new_batches() {
+    let mut s = Scenario::new(4);
+    s.repository.uncertain_next = true;
+    let error = s.run(&Cancellation::default()).await.unwrap_err();
+    assert_eq!(error.summary.deleted_messages, 0);
+    assert_eq!(
+        s.repository.rows.keys().copied().collect::<Vec<_>>(),
+        vec![3, 4]
+    );
+    assert!(!s.events.lock().unwrap().contains(&Event::Select(2)));
+    assert!(!s.events.lock().unwrap().contains(&Event::Prune));
+}
+#[tokio::test]
+async fn rejected_rows_advance_cursor() {
+    let mut s = Scenario::new(4);
+    s.repository.rejected.extend([1, 2]);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.failed, 2);
+    assert_eq!(summary.deleted_messages, 2);
+    assert!(s.events.lock().unwrap().contains(&Event::Select(2)));
+}
+#[tokio::test]
+async fn cancel_finishes_started_batch() {
+    let mut s = Scenario::new(4);
+    let cancel = Arc::new(Cancellation::default());
+    s.files.cancel = Some(cancel.clone());
+    let error = s.run(&cancel).await.unwrap_err();
+    assert!(error.is_cancelled());
+    assert_eq!(error.summary.deleted_messages, 2);
+    assert!(s.events.lock().unwrap().contains(&Event::Prune));
+    assert!(!s.events.lock().unwrap().contains(&Event::Select(2)));
+}
+#[tokio::test]
+async fn preview_has_no_delete_calls() {
+    let mut s = Scenario::new(3);
+    let summary = preview(&mut s.repository, &options(), |_| {})
+        .await
+        .unwrap();
+    assert_eq!(summary.selected, 3);
+    assert_eq!(summary.deleted_messages, 0);
+    assert_eq!(s.repository.rows.len(), 3);
+    assert!(s
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .all(|event| matches!(event, Event::Snapshot | Event::Select(_))));
+}
+#[tokio::test]
+async fn prunes_only_after_confirmed_database_deletion() {
+    let mut s = Scenario::new(2);
+    s.run(&Cancellation::default()).await.unwrap();
+    let events = s.events.lock().unwrap();
+    let verify = events
+        .iter()
+        .position(|event| matches!(event, Event::Verify(_)))
+        .unwrap();
+    let prune = events
+        .iter()
+        .position(|event| matches!(event, Event::Prune))
+        .unwrap();
+    assert!(prune > verify);
+}
+#[tokio::test]
+async fn failed_database_step_does_not_prune() {
+    let mut s = Scenario::new(2);
+    s.repository.fail_next = true;
+    let error = s.run(&Cancellation::default()).await.unwrap_err();
+    assert_eq!(error.stage, Stage::Database);
+    assert!(!s.events.lock().unwrap().contains(&Event::Prune));
+}
+#[tokio::test]
+async fn invalid_paths_are_reported_and_preserved() {
+    let mut s = Scenario::new(1);
+    s.repository.rows.get_mut(&1).unwrap().filename = "../bad.eml".into();
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.failed, 1);
+    assert_eq!(summary.deleted_messages, 0);
+    assert_eq!(s.repository.rows.len(), 1);
+    assert!(!s
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|event| matches!(event, Event::Files(_) | Event::Delete(_) | Event::Prune)));
+}

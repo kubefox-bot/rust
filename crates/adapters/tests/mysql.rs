@@ -290,3 +290,166 @@ async fn snapshot_excludes_later_insertions_and_query_uses_primary_range() {
     repository.close().await.unwrap();
     fixture.finish().await;
 }
+
+// Test-only transport boundary: SQL really commits, but the caller loses its acknowledgement.
+struct LostAcknowledgement(MySqlRepository);
+impl Repository for LostAcknowledgement {
+    async fn snapshot(
+        &mut self,
+    ) -> hmail_cleaner_core::cleanup::PortResult<hmail_cleaner_core::cleanup::Snapshot> {
+        self.0.snapshot().await
+    }
+    async fn next_batch(
+        &mut self,
+        selection: Selection,
+        cursor: i64,
+        limit: u32,
+    ) -> hmail_cleaner_core::cleanup::PortResult<hmail_cleaner_core::cleanup::Batch> {
+        self.0.next_batch(selection, cursor, limit).await
+    }
+    async fn delete_batch(
+        &mut self,
+        candidates: &[hmail_cleaner_core::cleanup::Candidate],
+    ) -> hmail_cleaner_core::cleanup::PortResult<DeleteResult> {
+        assert_eq!(
+            self.0.delete_batch(candidates).await?,
+            DeleteResult::Committed
+        );
+        Ok(DeleteResult::CommitUncertain {
+            reason: "fixture lost acknowledgement".into(),
+        })
+    }
+    async fn verify_deleted(&mut self, ids: &[i64]) -> hmail_cleaner_core::cleanup::PortResult<()> {
+        self.0.verify_deleted(ids).await
+    }
+}
+struct Stopped;
+impl hmail_cleaner_core::cleanup::OfflineGuard for Stopped {
+    async fn ensure_stopped(&self) -> hmail_cleaner_core::cleanup::PortResult<()> {
+        Ok(())
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn lost_commit_acknowledgement_stops_then_repeat_preserves_other_rows() {
+    use hmail_cleaner_adapters::filesystem::LocalFiles;
+    use hmail_cleaner_core::cleanup::{clean, Cancellation, Dependencies, RunOptions};
+    let mut fixture = Fixture::create().await;
+    fixture.add(1, 1, 10, 2, OLD, &name(1)).await;
+    fixture.add_dependents(1).await;
+    fixture
+        .add(2, 1, 10, 2, "2026-10-01 10:00:00", &name(2))
+        .await;
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let parent = root.join("chem.orp/info/00");
+    std::fs::create_dir_all(&parent).unwrap();
+    std::fs::write(parent.join(name(1)), b"old").unwrap();
+    std::fs::write(parent.join(name(2)), b"new").unwrap();
+    let files = LocalFiles::new(root.clone()).unwrap();
+    let options = RunOptions {
+        cutoff: date(BOUNDARY),
+        batch_size: std::num::NonZeroU32::new(1).unwrap(),
+        workers: 2,
+        data_directory: root,
+    };
+    let mut repository = LostAcknowledgement(fixture.repository().await);
+    let error = clean(
+        Dependencies {
+            repository: &mut repository,
+            files: &files,
+            guard: &Stopped,
+        },
+        &options,
+        &Cancellation::default(),
+        |_| {},
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.summary.removed_files, 1);
+    assert_eq!(error.summary.deleted_messages, 0);
+    assert!(!parent.join(name(1)).exists());
+    assert!(parent.join(name(2)).exists());
+    assert_eq!(fixture.ids("hm_messages", "messageid").await, vec![2]);
+    repository.0.close().await.unwrap();
+    let mut repository = fixture.repository().await;
+    let summary = clean(
+        Dependencies {
+            repository: &mut repository,
+            files: &files,
+            guard: &Stopped,
+        },
+        &options,
+        &Cancellation::default(),
+        |_| {},
+    )
+    .await
+    .unwrap();
+    assert_eq!(summary.selected, 0);
+    assert!(parent.join(name(2)).exists());
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}
+
+#[tokio::test]
+#[ignore = "requires disposable MySQL"]
+async fn real_sql_rollback_after_file_deletion_is_reconciled_on_repeat() {
+    use hmail_cleaner_adapters::filesystem::LocalFiles;
+    use hmail_cleaner_core::cleanup::{clean, Cancellation, Dependencies, RunOptions};
+    let mut fixture = Fixture::create().await;
+    fixture.add(1, 1, 10, 2, OLD, &name(1)).await;
+    fixture.add_dependents(1).await;
+    fixture.admin.execute("CREATE TRIGGER fail_recipient_delete BEFORE DELETE ON hm_messagerecipients FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='fixture failure'").await.unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let parent = root.join("chem.orp/info/00");
+    std::fs::create_dir_all(&parent).unwrap();
+    std::fs::write(parent.join(name(1)), b"old").unwrap();
+    let files = LocalFiles::new(root.clone()).unwrap();
+    let options = RunOptions {
+        cutoff: date(BOUNDARY),
+        batch_size: std::num::NonZeroU32::new(1).unwrap(),
+        workers: 2,
+        data_directory: root.clone(),
+    };
+    let mut repository = fixture.repository().await;
+    assert!(clean(
+        Dependencies {
+            repository: &mut repository,
+            files: &files,
+            guard: &Stopped
+        },
+        &options,
+        &Cancellation::default(),
+        |_| {}
+    )
+    .await
+    .is_err());
+    assert!(!parent.join(name(1)).exists());
+    assert!(parent.is_dir());
+    assert_eq!(fixture.ids("hm_messages", "messageid").await, vec![1]);
+    fixture
+        .admin
+        .execute("DROP TRIGGER fail_recipient_delete")
+        .await
+        .unwrap();
+    let summary = clean(
+        Dependencies {
+            repository: &mut repository,
+            files: &files,
+            guard: &Stopped,
+        },
+        &options,
+        &Cancellation::default(),
+        |_| {},
+    )
+    .await
+    .unwrap();
+    assert_eq!(summary.absent_files, 1);
+    assert_eq!(summary.deleted_messages, 1);
+    assert!(root.is_dir());
+    assert!(!parent.exists());
+    repository.close().await.unwrap();
+    fixture.finish().await;
+}

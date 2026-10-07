@@ -198,31 +198,31 @@ offline/mod.rs, windows.rs; tests/filesystem.rs, tests/offline.rs.
 - Produces: `preview(repository: &mut R, options: &RunOptions, progress: P) -> Result<Summary, CleanupError>`;
   async, без удаления, с тем же отбором и resolver.
 
-- [ ] Написать failing tests `file_step_precedes_database_delete`,
+- [x] Написать failing tests `file_step_precedes_database_delete`,
   `removed_and_absent_ids_are_deleted_but_failed_ids_are_preserved`,
   `repeated_run_cleans_rows_after_previous_sql_failure`,
   `uncertain_commit_stops_new_batches`, `rejected_rows_advance_cursor`,
   `cancel_finishes_started_batch`, `preview_has_no_delete_calls`,
   `prunes_only_after_confirmed_database_deletion`, `failed_database_step_does_not_prune`.
   Fake-порты записывают порядок эффектов и фактические наборы id.
-- [ ] Run `mise exec -- cargo test -p hmail-cleaner-core --test cleanup`; ожидается FAIL.
-- [ ] Реализовать один явный цикл: STOPPED → snapshot → next_batch → STOPPED →
+- [x] Run `mise exec -- cargo test -p hmail-cleaner-core --test cleanup`; ожидается FAIL.
+- [x] Реализовать один явный цикл: STOPPED → snapshot → next_batch → STOPPED →
   resolve targets → file results → точные допустимые candidates → delete_batch →
   verify_deleted → prune_empty для допустимых путей → следующий cursor.
   Ошибки prune учитываются отдельно от уже подтверждённого SQL-результата.
   Не создавать интерпретатор действий.
-- [ ] Сводка считает только подтверждённые удаления. Row/path/file failures
+- [x] Сводка считает только подтверждённые удаления. Row/path/file failures
   публикуются как Progress и дают partial result; SQL/preflight/unknown-commit
   останавливают новые порции, сохраняя достигнутую сводку.
   Cancellation проверяется на границе порций, без принудительного process exit.
-- [ ] Дополнить MySQL fixture сценарием dropped-ack: выполнить настоящий commit
+- [x] Дополнить MySQL fixture сценарием dropped-ack: выполнить настоящий commit
   внутри тестового boundary, заменить подтверждение на CommitUncertain,
   затем повторить сценарий и проверить отсутствие повторной потери/чужих удалений.
   Второй вариант — rollback после file step, повтор удаляет оставшиеся строки.
-- [ ] Повторить core cleanup и MySQL tests; ожидается PASS. Проверить отсутствие
+- [x] Повторить core cleanup и MySQL tests; ожидается PASS. Проверить отсутствие
   полной коллекции всех сообщений/результатов: Summary — счётчики, ошибки идут
   в Progress, текущие candidate/id collections ограничены порцией.
-- [ ] Commit `feat: add repeatable file-first cleanup workflow`.
+- [x] Commit `feat: add repeatable file-first cleanup workflow`.
 
 ### Task 5: CLI, сборка и проверка рабочего сценария
 
