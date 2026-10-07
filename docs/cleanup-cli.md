@@ -128,6 +128,15 @@ mise run test:db
 mise run db:down
 ```
 
+Для тестов на Mac сначала запусти отдельный Colima-профиль:
+
+```sh
+colima start --profile hmail-cleanup --activate=false --template=false --cpus 2 --memory 2 --disk 20 --mount none --ssh-config=false
+mise run test:db
+mise run db:down
+colima stop --profile hmail-cleanup
+```
+
 Тестовый URL читается только из HMAIL_TEST_DATABASE_URL: loopback:13306,
 bootstrap database mysql, уникальная БД создаётся и удаляется fixture.
 Тесты не используют production DATABASE_URL. На ARM Mac используется linux/amd64
