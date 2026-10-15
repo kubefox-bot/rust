@@ -69,6 +69,10 @@ pub(super) async fn run<R: FullRepository, G: OfflineGuard, P: Fn(Progress) + Se
                 *summary,
             )?;
             cursor = batch.last_id;
+            match table {
+                OrphanTable::Metadata => summary.selected_orphan_metadata += ids.len() as u64,
+                OrphanTable::Recipients => summary.selected_orphan_recipients += ids.len() as u64,
+            }
             if operation == Operation::Clean {
                 workflow::at(guard.ensure_stopped().await, Stage::Preflight, *summary)?;
                 let rows = match workflow::at(
@@ -114,8 +118,16 @@ pub(super) async fn run<R: FullRepository, G: OfflineGuard, P: Fn(Progress) + Se
                 )?;
             }
             match table {
-                OrphanTable::Metadata => summary.orphan_metadata += ids.len() as u64,
-                OrphanTable::Recipients => summary.orphan_recipients += ids.len() as u64,
+                OrphanTable::Metadata => {
+                    if operation == Operation::Clean {
+                        summary.orphan_metadata += ids.len() as u64;
+                    }
+                }
+                OrphanTable::Recipients => {
+                    if operation == Operation::Clean {
+                        summary.orphan_recipients += ids.len() as u64;
+                    }
+                }
             };
             workflow::emit(Stage::OrphanDatabase, *summary, progress);
         }

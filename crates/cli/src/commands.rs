@@ -20,6 +20,7 @@ pub(crate) enum Status {
 }
 #[derive(Debug, Serialize)]
 pub(crate) struct Report {
+    pub mode: Option<Mode>,
     pub status: Status,
     pub summary: Summary,
     pub stage: Option<Stage>,
@@ -44,6 +45,7 @@ impl Report {
     }
     pub fn invalid(error: impl ToString) -> Self {
         Self {
+            mode: None,
             status: Status::Invalid,
             summary: Summary::default(),
             stage: Some(Stage::Preflight),
@@ -53,6 +55,7 @@ impl Report {
     }
     pub fn backend(error: impl ToString, summary: Summary) -> Self {
         Self {
+            mode: None,
             status: Status::Failed,
             summary,
             stage: Some(Stage::Database),
@@ -92,7 +95,7 @@ pub(crate) async fn execute<
         Mode::Preview => cleanup::preview(dependencies.repository, options, progress).await,
         Mode::Clean => cleanup::clean(dependencies, options, cancel, progress).await,
     };
-    result_report(result)
+    result_report(mode, result)
 }
 pub(crate) async fn execute_scan<
     R: hmail_cleaner_core::maintenance::FullRepository,
@@ -108,14 +111,20 @@ pub(crate) async fn execute_scan<
     progress: P,
 ) -> Report {
     use hmail_cleaner_core::maintenance;
-    result_report(match mode {
-        Mode::Preview => maintenance::preview(dependencies, options, scan, cancel, progress).await,
-        Mode::Clean => maintenance::clean(dependencies, options, scan, cancel, progress).await,
-    })
+    result_report(
+        mode,
+        match mode {
+            Mode::Preview => {
+                maintenance::preview(dependencies, options, scan, cancel, progress).await
+            }
+            Mode::Clean => maintenance::clean(dependencies, options, scan, cancel, progress).await,
+        },
+    )
 }
-fn result_report(result: Result<Summary, CleanupError>) -> Report {
+fn result_report(mode: Mode, result: Result<Summary, CleanupError>) -> Report {
     match result {
         Ok(summary) if summary.failed == 0 => Report {
+            mode: Some(mode),
             status: Status::Complete,
             summary,
             stage: None,
@@ -123,13 +132,17 @@ fn result_report(result: Result<Summary, CleanupError>) -> Report {
             exit_code: EXIT_OK,
         },
         Ok(summary) => Report {
+            mode: Some(mode),
             status: Status::Partial,
             summary,
             stage: None,
             error: None,
             exit_code: EXIT_FAILED,
         },
-        Err(error) => failure(error),
+        Err(error) => Report {
+            mode: Some(mode),
+            ..failure(error)
+        },
     }
 }
 fn failure(error: CleanupError) -> Report {
@@ -148,6 +161,7 @@ fn failure(error: CleanupError) -> Report {
         | Stage::Complete => (Status::Failed, EXIT_FAILED),
     };
     Report {
+        mode: None,
         status,
         summary: *error.summary,
         stage: Some(error.stage),
@@ -274,6 +288,7 @@ mod close_tests {
     #[test]
     fn close_failure_preserves_uncertain_commit() {
         let original = Report {
+            mode: None,
             status: Status::Failed,
             summary: Summary {
                 removed_files: 2,
@@ -301,6 +316,7 @@ mod close_tests {
             (Status::Invalid, Stage::Preflight, 2),
         ] {
             let original = Report {
+                mode: None,
                 status,
                 summary: Summary::default(),
                 stage: Some(stage),
@@ -320,6 +336,7 @@ mod close_tests {
     #[test]
     fn close_failure_turns_success_into_failure() {
         let original = Report {
+            mode: None,
             status: Status::Complete,
             summary: Summary {
                 deleted_messages: 2,

@@ -14,9 +14,31 @@ pub(crate) use retention::{before as parse_before, parse as parse_age};
 use std::{num::NonZeroU32, path::PathBuf};
 pub(crate) use types::{Config, ConfigError, RunIntent, ServicePolicy, ServiceSettings, Settings};
 const DEFAULT_SERVICE_NAME: &str = "hMailServer";
-pub(crate) fn load_settings(args: &Args) -> Result<Settings, ConfigError> {
+pub(crate) struct LaunchSettings {
+    pub log_file: Option<PathBuf>,
+    pub cleanup: Result<Settings, ConfigError>,
+}
+pub(crate) fn load_launch(args: &Args) -> Result<LaunchSettings, ConfigError> {
     let (system, file) = input(args)?;
-    load_with_sources(args, &system, &file)
+    let log_file = log_file(args.options(), &system, &file)?;
+    Ok(LaunchSettings {
+        log_file,
+        cleanup: load_with_sources(args, &system, &file),
+    })
+}
+fn log_file(
+    options: &crate::args::Options,
+    system: &sources::Values,
+    file: &sources::Values,
+) -> Result<Option<PathBuf>, ConfigError> {
+    let log = options
+        .log_file
+        .clone()
+        .or_else(|| sources::value("HMAIL_LOG_FILE", system, file).map(PathBuf::from));
+    if log.as_ref().is_some_and(|p| !p.is_absolute()) {
+        return Err(ConfigError::Setting("HMAIL_LOG_FILE"));
+    }
+    Ok(log)
 }
 fn input(args: &Args) -> Result<(sources::Values, sources::Values), ConfigError> {
     let system = sources::environment()?;
@@ -141,13 +163,7 @@ pub(crate) fn load_with_sources(
             _ => return Err(ConfigError::Setting("HMAIL_SCAN")),
         },
     };
-    let log_file = options
-        .log_file
-        .clone()
-        .or_else(|| value("HMAIL_LOG_FILE").map(PathBuf::from));
-    if log_file.as_ref().is_some_and(|p| !p.is_absolute()) {
-        return Err(ConfigError::Setting("HMAIL_LOG_FILE"));
-    }
+    let log_file = log_file(options, system, file)?;
     Ok(Settings {
         database,
         data_dir,

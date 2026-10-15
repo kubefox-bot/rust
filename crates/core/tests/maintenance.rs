@@ -326,13 +326,14 @@ async fn full_preview_never_deletes() {
         .unwrap();
     assert_eq!(
         (
-            sum.orphan_metadata,
-            sum.orphan_recipients,
+            sum.selected_orphan_metadata,
+            sum.selected_orphan_recipients,
             sum.selected_orphan_files
         ),
         (1, 1, 1)
     );
     assert_eq!(sum.removed_files, 0);
+    assert_eq!((sum.orphan_metadata, sum.orphan_recipients), (0, 0));
     let s = s.lock().unwrap();
     assert!(s.metadata && s.recipients);
     assert_eq!(s.files.len(), 2);

@@ -108,6 +108,8 @@ pub struct Summary {
     pub deleted_recipients: u64,
     pub orphan_metadata: u64,
     pub orphan_recipients: u64,
+    pub selected_orphan_metadata: u64,
+    pub selected_orphan_recipients: u64,
     pub scanned_files: u64,
     pub selected_orphan_files: u64,
     pub removed_orphan_files: u64,

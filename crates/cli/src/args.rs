@@ -15,6 +15,7 @@ pub(crate) enum Scan {
 #[command(
     name = "hmail-cleaner",
     version,
+    args_conflicts_with_subcommands = true,
     about = "Delete old hMailServer messages: files first, then MySQL rows"
 )]
 pub(crate) struct Args {
@@ -39,7 +40,8 @@ enum Command {
 enum ServiceCommand {
     Run(Options),
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub(crate) enum Mode {
     Preview,
     Clean,
@@ -159,5 +161,15 @@ mod tests {
                     .is_err()
             );
         }
+    }
+}
+#[cfg(test)]
+mod root_regression {
+    use super::*;
+    #[test]
+    fn root_settings_are_not_silently_ignored_by_subcommands() {
+        assert!(Args::try_parse_from(["hmail-cleaner", "--older-than", "365d", "clean"]).is_err());
+        assert!(Args::try_parse_from(["hmail-cleaner", "--silence", "preview"]).is_err());
+        assert!(Args::try_parse_from(["hmail-cleaner", "--older-than", "365d"]).is_ok());
     }
 }

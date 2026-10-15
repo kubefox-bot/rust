@@ -36,7 +36,7 @@ async fn main() -> ExitCode {
         eprintln!("menu requires an interactive terminal and text output; use explicit preview/clean for unattended runs");
         return ExitCode::from(2);
     }
-    let settings = match config::load_settings(&args) {
+    let launch = match config::load_launch(&args) {
         Ok(s) => s,
         Err(error) => {
             if args.options().json {
@@ -59,11 +59,18 @@ async fn main() -> ExitCode {
     } else {
         OutputPolicy::Text
     };
-    let output = match Output::open(policy, settings.log_file.as_deref(), cancel.clone()) {
+    let output = match Output::open(policy, launch.log_file.as_deref(), cancel.clone()) {
         Ok(o) => o,
         Err(error) => {
             eprintln!("cannot open output: {error}");
             return ExitCode::from(2);
+        }
+    };
+    let settings = match launch.cleanup {
+        Ok(settings) => settings,
+        Err(error) => {
+            output.finish(&Report::invalid(error));
+            return ExitCode::from(if output.failed() { 1 } else { 2 });
         }
     };
     let signal_cancel = cancel.clone();

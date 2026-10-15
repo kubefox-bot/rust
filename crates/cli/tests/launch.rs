@@ -46,3 +46,21 @@ fn silent_preview_has_no_console_output_and_preserves_env() {
         .contains("\"type\":\"result\""));
     assert_eq!(std::fs::read_to_string(env).unwrap(), content);
 }
+#[test]
+fn silent_config_error_uses_explicit_log() {
+    let temp = tempfile::tempdir().unwrap();
+    let log = temp.path().join("failure.ndjson");
+    let output = Command::new(env!("CARGO_BIN_EXE_hmail-cleaner"))
+        .args(["preview", "--silence", "--log-file"])
+        .arg(&log)
+        .env_clear()
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.is_empty());
+    let report: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(log).unwrap()).unwrap();
+    assert_eq!(report["status"], "invalid");
+}
