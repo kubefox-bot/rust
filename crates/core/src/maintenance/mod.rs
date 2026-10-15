@@ -1,6 +1,7 @@
 mod database;
 mod files;
 mod limits;
+pub mod mail_service;
 mod ports;
 mod types;
 mod workflow;

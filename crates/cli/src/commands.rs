@@ -27,6 +27,21 @@ pub(crate) struct Report {
     pub exit_code: u8,
 }
 impl Report {
+    pub fn with_restore_failure(self, error: impl ToString) -> Self {
+        let reason = format!(
+            "mail service restore failed: {error}",
+            error = error.to_string()
+        );
+        Self {
+            status: Status::Failed,
+            exit_code: EXIT_FAILED,
+            error: Some(match self.error {
+                Some(original) => format!("{original}; {reason}"),
+                None => reason,
+            }),
+            ..self
+        }
+    }
     pub fn invalid(error: impl ToString) -> Self {
         Self {
             status: Status::Invalid,

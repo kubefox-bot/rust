@@ -1,4 +1,6 @@
+mod control;
 mod data_folder;
+pub use control::WindowsMailControl;
 #[cfg(windows)]
 mod windows;
 pub use data_folder::verify_data_folder;

@@ -75,7 +75,9 @@ async fn main() -> ExitCode {
                 ServicePolicy::RequireStopped
             },
         };
-        let report = run_intent(&settings, intent, &output, &cancel).await;
+        let report = run_intent(&settings, intent, &output, &cancel)
+            .await
+            .into_report();
         output.finish(&report);
         report.exit_code
     };
@@ -88,10 +90,10 @@ async fn run_intent(
     intent: RunIntent,
     output: &Output,
     cancel: &Cancellation,
-) -> Report {
+) -> app::RunResult {
     match settings.for_run(intent, chrono::Local::now()) {
         Ok(config) => app::run_once(&config, output, cancel).await,
-        Err(error) => Report::invalid(error),
+        Err(error) => app::RunResult::Finished(Report::invalid(error)),
     }
 }
 async fn run_menu(mut settings: config::Settings, output: &Output, cancel: &Cancellation) -> u8 {
@@ -128,7 +130,12 @@ async fn run_menu(mut settings: config::Settings, output: &Output, cancel: &Canc
                 return 2;
             }
         };
-        let report = run_intent(&settings, intent, output, cancel).await;
+        let result = run_intent(&settings, intent, output, cancel).await;
+        let fatal = result.is_fatal();
+        let report = result.into_report();
         output.finish(&report);
+        if fatal {
+            return report.exit_code.max(1);
+        }
     }
 }

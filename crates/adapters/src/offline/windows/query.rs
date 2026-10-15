@@ -4,7 +4,7 @@ use windows_service::{
     service_manager::{ServiceManager, ServiceManagerAccess},
 };
 
-pub(super) fn ensure_stopped(name: &str) -> PortResult<()> {
+pub(in crate::offline) fn ensure_stopped(name: &str) -> PortResult<()> {
     let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)?;
     let service = manager.open_service(name, ServiceAccess::QUERY_STATUS)?;
     let status = service.query_status()?;
