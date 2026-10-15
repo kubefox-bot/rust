@@ -1,4 +1,7 @@
-use hmail_cleaner_adapters::offline::{verify_data_folder, WindowsOffline};
+use hmail_cleaner_adapters::offline::verify_data_folder;
+#[cfg(not(windows))]
+use hmail_cleaner_adapters::offline::WindowsOffline;
+#[cfg(not(windows))]
 use hmail_cleaner_core::cleanup::OfflineGuard;
 use std::fs;
 

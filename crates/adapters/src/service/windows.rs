@@ -55,7 +55,7 @@ fn run_worker(
     stop: Arc<Cancellation>,
     handle: &windows_service::service_control_handler::ServiceStatusHandle,
 ) -> PortResult<()> {
-    status::set(&handle, ServiceState::StartPending, 1, false)?;
+    status::set(handle, ServiceState::StartPending, 1, false)?;
     let (sender, receiver) = mpsc::sync_channel(1);
     let worker_stop = stop.clone();
     let worker = std::thread::Builder::new()
@@ -65,7 +65,7 @@ fn run_worker(
                 .unwrap_or_else(|_| Err("SCM job panicked".into()));
             let _ = sender.send(result);
         })?;
-    let mut status_error = status::set(&handle, ServiceState::Running, 0, false).err();
+    let mut status_error = status::set(handle, ServiceState::Running, 0, false).err();
     if status_error.is_some() {
         stop.request();
     }
@@ -80,7 +80,7 @@ fn run_worker(
         }
         if stop.is_requested() && status_error.is_none() {
             checkpoint = checkpoint.saturating_add(1);
-            if let Err(error) = status::set(&handle, ServiceState::StopPending, checkpoint, false) {
+            if let Err(error) = status::set(handle, ServiceState::StopPending, checkpoint, false) {
                 status_error = Some(error);
             }
         }
