@@ -260,3 +260,10 @@ sc.exe stop hMailCleaner
 QUERY_STATUS/STOP/START на hMailServer. В БД служба подключается только на время
 прохода. Windows Server 2016 требует отдельной проверки на целевой машине;
 успешная сборка под Windows не подтверждает работу SCM на этом сервере.
+
+Параметры прямой команды указываются после неё, например
+`preview --older-than 30d --env-file ...`. Комбинация параметров перед подкомандой
+отклоняется, чтобы явно заданный период никогда не игнорировался.
+В full preview `selected_orphan_metadata`/`selected_orphan_recipients` показывают
+кандидатов; `orphan_metadata`/`orphan_recipients` — подтверждённые удаления и в
+preview остаются нулевыми. Итог выполнения содержит `mode=preview/clean`.
