@@ -25,11 +25,19 @@ pub(crate) struct Args {
 }
 #[derive(Debug, Subcommand)]
 enum Command {
+    Service {
+        #[command(subcommand)]
+        command: ServiceCommand,
+    },
     Menu(Options),
     #[command(about = "Report database-selected old messages without deletion")]
     Preview(Options),
     #[command(about = "Delete old messages while hMailServer is STOPPED")]
     Clean(Options),
+}
+#[derive(Debug, Subcommand)]
+enum ServiceCommand {
+    Run(Options),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Mode {
@@ -72,20 +80,30 @@ pub(crate) struct Options {
 impl Args {
     pub fn options(&self) -> &Options {
         match &self.command {
-            Some(Command::Preview(options) | Command::Clean(options) | Command::Menu(options)) => {
-                options
-            }
+            Some(
+                Command::Preview(options)
+                | Command::Clean(options)
+                | Command::Menu(options)
+                | Command::Service {
+                    command: ServiceCommand::Run(options),
+                },
+            ) => options,
             None => &self.options,
         }
     }
     pub fn mode(&self) -> Mode {
         match self.command {
             Some(Command::Clean(_)) => Mode::Clean,
-            Some(Command::Preview(_) | Command::Menu(_)) | None => Mode::Preview,
+            Some(Command::Preview(_) | Command::Menu(_) | Command::Service { .. }) | None => {
+                Mode::Preview
+            }
         }
     }
     pub fn is_menu(&self) -> bool {
         matches!(self.command, None | Some(Command::Menu(_)))
+    }
+    pub fn is_service(&self) -> bool {
+        matches!(self.command, Some(Command::Service { .. }))
     }
 }
 #[cfg(test)]

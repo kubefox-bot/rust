@@ -12,9 +12,13 @@ use hmail_cleaner_core::{
 };
 pub(crate) use retention::{before as parse_before, parse as parse_age};
 use std::{num::NonZeroU32, path::PathBuf};
-pub(crate) use types::{Config, ConfigError, RunIntent, ServicePolicy, Settings};
+pub(crate) use types::{Config, ConfigError, RunIntent, ServicePolicy, ServiceSettings, Settings};
 const DEFAULT_SERVICE_NAME: &str = "hMailServer";
 pub(crate) fn load_settings(args: &Args) -> Result<Settings, ConfigError> {
+    let (system, file) = input(args)?;
+    load_with_sources(args, &system, &file)
+}
+fn input(args: &Args) -> Result<(sources::Values, sources::Values), ConfigError> {
     let system = sources::environment()?;
     let file = args
         .options()
@@ -23,7 +27,54 @@ pub(crate) fn load_settings(args: &Args) -> Result<Settings, ConfigError> {
         .map(sources::read_file)
         .transpose()?
         .unwrap_or_default();
-    load_with_sources(args, &system, &file)
+    Ok((system, file))
+}
+pub(crate) fn load_service_settings(args: &Args) -> Result<ServiceSettings, ConfigError> {
+    if args
+        .options()
+        .env_file
+        .as_ref()
+        .is_none_or(|path| !path.is_absolute())
+        || args.options().json
+    {
+        return Err(ConfigError::Setting(
+            "service run requires an absolute --env-file and no --json",
+        ));
+    }
+    let (system, file) = input(args)?;
+    service_with_sources(args, &system, &file)
+}
+fn service_with_sources(
+    args: &Args,
+    system: &sources::Values,
+    file: &sources::Values,
+) -> Result<ServiceSettings, ConfigError> {
+    let cleanup = load_with_sources(args, system, file)?;
+    if cleanup.scan != ScanMode::Fast {
+        return Err(ConfigError::Setting("service requires HMAIL_SCAN=fast"));
+    }
+    if cleanup.log_file.is_none() {
+        return Err(ConfigError::Setting("HMAIL_LOG_FILE"));
+    }
+    if cleanup.service_name.eq_ignore_ascii_case("hMailCleaner") {
+        return Err(ConfigError::Setting(
+            "mail service must differ from hMailCleaner",
+        ));
+    }
+    let raw =
+        sources::value("HMAIL_RUN_AT", system, file).ok_or(ConfigError::Setting("HMAIL_RUN_AT"))?;
+    if raw.len() != 5
+        || raw.as_bytes()[2] != b':'
+        || !raw
+            .bytes()
+            .enumerate()
+            .all(|(index, byte)| index == 2 || byte.is_ascii_digit())
+    {
+        return Err(ConfigError::Setting("HMAIL_RUN_AT must be HH:MM"));
+    }
+    let run_at = chrono::NaiveTime::parse_from_str(raw, "%H:%M")
+        .map_err(|_| ConfigError::Setting("HMAIL_RUN_AT must be HH:MM"))?;
+    Ok(ServiceSettings { cleanup, run_at })
 }
 pub(crate) fn load_with_sources(
     args: &Args,

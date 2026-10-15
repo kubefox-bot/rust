@@ -27,6 +27,11 @@ pub(crate) struct Settings {
     pub workers: u8,
     pub log_file: Option<PathBuf>,
 }
+#[derive(Debug, Clone)]
+pub(crate) struct ServiceSettings {
+    pub cleanup: Settings,
+    pub run_at: chrono::NaiveTime,
+}
 #[derive(Debug)]
 pub(crate) struct Config {
     pub mode: Mode,

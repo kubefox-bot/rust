@@ -21,6 +21,15 @@ async fn main() -> ExitCode {
             return ExitCode::from(code);
         }
     };
+    if args.is_service() {
+        return match service::start(&args) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("service failed: {error}");
+                ExitCode::from(1)
+            }
+        };
+    }
     if args.is_menu()
         && (!std::io::stdin().is_terminal() || args.options().silence || args.options().json)
     {
@@ -139,3 +148,5 @@ async fn run_menu(mut settings: config::Settings, output: &Output, cancel: &Canc
         }
     }
 }
+
+mod service;

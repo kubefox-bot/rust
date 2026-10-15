@@ -233,3 +233,30 @@ env-файл не переписывается. Clean требует явног�
 таймаут после принятого Stop тоже вызывает попытку восстановления.
 Ошибка восстановления отражается отдельно от ошибки очистки и запрещает
 следующий автоматический проход.
+
+### Windows-служба hMailCleaner
+
+`service run --env-file 'C:\private\cleaner.env'` — точка входа для SCM, а не
+ручной бесконечный clean. Нужны абсолютный env-файл, абсолютный HMAIL_LOG_FILE,
+HMAIL_SCAN=fast и HMAIL_RUN_AT=HH:MM. HMAIL_SERVICE_NAME должен указывать на
+почтовую службу, а не на hMailCleaner.
+
+Служба ждёт будущего ежедневного локального слота; при запуске немедленной
+очистки нет. Пропущенные дни не догоняются, порции не выполняются параллельно.
+При Stop/Shutdown текущая порция завершается и выполняется восстановление почты,
+после чего SCM получает Stopped. Ошибка восстановления/журнала завершает службу
+с ошибкой и запрещает следующий запуск в этом процессе.
+
+Регистрацию выполняет администратор Windows с подходящей учётной записью:
+
+```powershell
+sc.exe create hMailCleaner binPath= '"C:\tools\hmail-cleaner.exe" service run --env-file "C:\private\cleaner.env"' start= auto
+sc.exe start hMailCleaner
+sc.exe query hMailCleaner
+sc.exe stop hMailCleaner
+```
+
+Учётной записи нужны доступ к Data/INI/журналу, MySQL SELECT/DELETE и права
+QUERY_STATUS/STOP/START на hMailServer. В БД служба подключается только на время
+прохода. Windows Server 2016 требует отдельной проверки на целевой машине;
+успешная сборка под Windows не подтверждает работу SCM на этом сервере.
