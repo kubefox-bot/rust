@@ -52,7 +52,7 @@ async fn scan_counts_fresh_and_referenced_files() {
 }
 
 #[tokio::test]
-async fn root_queue_and_public_are_excluded() {
+async fn public_and_root_queue_are_scanned() {
     let (_temp, root) = setup();
     write(&stored(&root, 1));
     let queue = root.join("{AB000000-0000-0000-0000-000000000002}.eml");
@@ -60,23 +60,78 @@ async fn root_queue_and_public_are_excluded() {
     let public = root.join("#Public/AB/{AB000000-0000-0000-0000-000000000003}.eml");
     fs::create_dir_all(public.parent().unwrap()).unwrap();
     fs::write(&public, b"public").unwrap();
-    let files = LocalFiles::new(root).unwrap();
+    let files = LocalFiles::new(root.clone()).unwrap();
+    assert_eq!(files.validate_tree().await.unwrap().examined_files, 3);
     let mut scan = files.open_scan().await.unwrap();
     let batch = scan.next_batch(1000).await.unwrap();
-    assert_eq!(batch.files.len(), 1);
+    assert_eq!(batch.files.len(), 3);
     assert!(queue.exists() && public.exists());
     scan.close().await.unwrap();
+    let public_files = batch
+        .files
+        .into_iter()
+        .filter(|file| file.path == public)
+        .collect();
+    let outcomes = files.delete_orphans(public_files, 2).await.unwrap();
+    assert_eq!(
+        outcomes[0].result,
+        DeletionResult::Removed { size_bytes: 6 }
+    );
+    assert!(!public.exists());
+    assert!(queue.exists());
+    assert!(stored(&root, 1).path.exists());
+    let pruning = files
+        .prune_empty(vec![public.parent().unwrap().to_path_buf()])
+        .await
+        .unwrap();
+    assert_eq!(pruning.removed, 2);
+    assert!(root.is_dir());
 }
 
 #[tokio::test]
-async fn bucket_mismatch_is_preserved() {
+async fn public_scan_accepts_extra_depth_and_arbitrary_bucket() {
+    let (_temp, root) = setup();
+    for relative in [
+        "#Public/CD/{AB000000-0000-0000-0000-000000000001}.eml",
+        "#Public/account/AB/{AB000000-0000-0000-0000-000000000002}.eml",
+    ] {
+        let path = root.join(relative);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, b"keep").unwrap();
+    }
+    let files = LocalFiles::new(root).unwrap();
+    let mut scan = files.open_scan().await.unwrap();
+    assert_eq!(scan.next_batch(1000).await.unwrap().files.len(), 2);
+    scan.close().await.unwrap();
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn public_symlink_is_not_followed() {
+    use std::os::unix::fs::symlink;
+    let (temp, root) = setup();
+    let outside = temp.path().join("outside");
+    let bucket = outside.join("AB");
+    fs::create_dir_all(&bucket).unwrap();
+    let path = bucket.join("{AB000000-0000-0000-0000-000000000001}.eml");
+    fs::write(&path, b"keep").unwrap();
+    symlink(outside, root.join("#Public")).unwrap();
+    let files = LocalFiles::new(root).unwrap();
+    let mut scan = files.open_scan().await.unwrap();
+    assert!(scan.next_batch(1000).await.unwrap().files.is_empty());
+    scan.close().await.unwrap();
+    assert!(path.exists());
+}
+
+#[tokio::test]
+async fn arbitrary_bucket_is_scanned() {
     let (_temp, root) = setup();
     let wrong = root.join("domain/account/CD/{AB000000-0000-0000-0000-000000000001}.eml");
     fs::create_dir_all(wrong.parent().unwrap()).unwrap();
     fs::write(&wrong, b"wrong bucket").unwrap();
     let files = LocalFiles::new(root).unwrap();
     let mut scan = files.open_scan().await.unwrap();
-    assert!(scan.next_batch(1000).await.unwrap().files.is_empty());
+    assert_eq!(scan.next_batch(1000).await.unwrap().files.len(), 1);
     scan.close().await.unwrap();
     assert!(wrong.exists());
 }
@@ -140,6 +195,15 @@ fn write(target: &FileTarget) {
     fs::write(&target.path, b"email").unwrap();
 }
 
+async fn delete(
+    files: &LocalFiles,
+    targets: Vec<FileTarget>,
+    workers: u8,
+) -> hmail_cleaner_core::cleanup::PortResult<Vec<hmail_cleaner_core::cleanup::FileOutcome>> {
+    let observed = files.inspect(targets, workers).await?;
+    files.delete(observed, workers).await
+}
+
 #[tokio::test]
 async fn removed_file_is_verified_and_counted_by_size() {
     let (_temp, root) = setup();
@@ -147,7 +211,7 @@ async fn removed_file_is_verified_and_counted_by_size() {
     fs::create_dir_all(selected.path.parent().unwrap()).unwrap();
     fs::write(&selected.path, b"1234567").unwrap();
     let files = LocalFiles::new(root).unwrap();
-    let outcomes = files.delete(vec![selected.clone()], 2).await.unwrap();
+    let outcomes = delete(&files, vec![selected.clone()], 2).await.unwrap();
     assert_eq!(
         outcomes[0].result,
         DeletionResult::Removed { size_bytes: 7 }
@@ -163,7 +227,7 @@ async fn removes_only_exact_targets() {
     write(&first);
     write(&second);
     let files = LocalFiles::new(root).unwrap();
-    let outcomes = files.delete(vec![first.clone()], 2).await.unwrap();
+    let outcomes = delete(&files, vec![first.clone()], 2).await.unwrap();
     assert_eq!(
         outcomes[0].result,
         DeletionResult::Removed { size_bytes: 5 }
@@ -176,7 +240,7 @@ async fn missing_target_is_already_absent() {
     let (_temp, root) = setup();
     let files = LocalFiles::new(root.clone()).unwrap();
     assert_eq!(
-        files.delete(vec![target(&root, 1)], 2).await.unwrap()[0].result,
+        delete(&files, vec![target(&root, 1)], 2).await.unwrap()[0].result,
         DeletionResult::AlreadyAbsent
     );
 }
@@ -186,7 +250,7 @@ async fn missing_root_is_not_missing_message() {
     let files = LocalFiles::new(root.clone()).unwrap();
     fs::remove_dir(&root).unwrap();
     assert!(matches!(
-        files.delete(vec![target(&root, 1)], 2).await.unwrap()[0].result,
+        delete(&files, vec![target(&root, 1)], 2).await.unwrap()[0].result,
         DeletionResult::Failed(_)
     ));
     assert!(LocalFiles::new(root).is_err());
@@ -217,7 +281,7 @@ async fn permission_error_is_failure() {
             .open(&first.path)
             .unwrap()
     };
-    let result = files.delete(vec![first.clone()], 1).await.unwrap();
+    let result = delete(&files, vec![first.clone()], 1).await.unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -248,7 +312,7 @@ async fn symlink_chain_is_rejected() {
     fs::create_dir_all(root.join("domain/account")).unwrap();
     symlink(&outside, root.join("domain/account/AB")).unwrap();
     let files = LocalFiles::new(root.clone()).unwrap();
-    let result = files.delete(vec![target(&root, 1)], 1).await.unwrap();
+    let result = delete(&files, vec![target(&root, 1)], 1).await.unwrap();
     assert!(
         matches!(&result[0].result,DeletionResult::Failed(failure) if failure.kind==FileFailureKind::InvalidPath)
     );
@@ -303,16 +367,16 @@ async fn outside_root_is_rejected_for_delete_and_prune() {
     fs::create_dir(&outside).unwrap();
     fs::write(outside.join("1.eml"), b"keep").unwrap();
     let files = LocalFiles::new(root).unwrap();
-    let result = files
-        .delete(
-            vec![FileTarget {
-                id: 1,
-                path: outside.join("1.eml"),
-            }],
-            1,
-        )
-        .await
-        .unwrap();
+    let result = delete(
+        &files,
+        vec![FileTarget {
+            id: 1,
+            path: outside.join("1.eml"),
+        }],
+        1,
+    )
+    .await
+    .unwrap();
     assert!(matches!(result[0].result, DeletionResult::Failed(_)));
     assert!(!files
         .prune_empty(vec![outside.clone()])
@@ -321,4 +385,25 @@ async fn outside_root_is_rejected_for_delete_and_prune() {
         .failures
         .is_empty());
     assert!(outside.join("1.eml").exists());
+}
+
+#[tokio::test]
+async fn changed_file_and_reappeared_absent_file_are_preserved() {
+    let (_temp, root) = setup();
+    let first = target(&root, 1);
+    let absent = target(&root, 2);
+    write(&first);
+    let files = LocalFiles::new(root).unwrap();
+    let observed = files
+        .inspect(vec![first.clone(), absent.clone()], 2)
+        .await
+        .unwrap();
+    fs::write(&first.path, b"a changed message after inspection").unwrap();
+    write(&absent);
+    let outcomes = files.delete(observed, 2).await.unwrap();
+    assert!(outcomes
+        .iter()
+        .all(|file| matches!(file.result, DeletionResult::Failed(_))));
+    assert!(first.path.exists());
+    assert!(absent.path.exists());
 }

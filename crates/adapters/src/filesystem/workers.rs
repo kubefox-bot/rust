@@ -1,5 +1,8 @@
+#[cfg(test)]
 use super::validation;
-use hmail_cleaner_core::cleanup::{DeletionResult, FileOutcome, FileTarget, PortResult};
+use hmail_cleaner_core::cleanup::PortResult;
+#[cfg(test)]
+use hmail_cleaner_core::cleanup::{DeletionResult, FileOutcome, FileTarget};
 use std::sync::Arc;
 pub(super) async fn run<T, O, F, R>(
     groups: Vec<Vec<T>>,
@@ -49,7 +52,8 @@ where
     }
     Ok(outcomes)
 }
-pub(super) fn failed(file: FileTarget, message: String) -> FileOutcome {
+#[cfg(test)]
+fn failed(file: FileTarget, message: String) -> FileOutcome {
     FileOutcome {
         id: file.id,
         path: file.path,

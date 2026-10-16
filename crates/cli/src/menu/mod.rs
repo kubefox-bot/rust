@@ -20,8 +20,9 @@ pub(crate) fn next_action(
     settings: &Settings,
 ) -> Result<MenuAction, MenuError> {
     loop {
-        writeln!(writer,"\nData: {}\nRetention: {:?}\n1 Preview fast\n2 Preview full (hMailServer STOPPED)\n3 Clean fast\n4 Clean full\n5 Change retention\n0 Exit",settings.data_dir.display(),settings.retention)?;
-        let Some(choice) = input::ask(reader, writer, "Choose: ")? else {
+        writeln!(writer,"\n hMail Cleaner {}\nКорень: {}\nПериод: {}\n1 Предпросмотр — быстрый\n2 Предпросмотр — полный\n3 Быстрая очистка\n4 Полная очистка\n5 Настройки текущего запуска: период\n0 Выход", env!("HMAIL_BUILD_VERSION"),settings.data_dir.display(),period::description(settings.retention))?;
+        let Some(choice) = input::ask(reader, writer, "Выберите действие: ")?
+        else {
             return Ok(MenuAction::Exit);
         };
         match choice.as_str() {
@@ -37,16 +38,16 @@ pub(crate) fn next_action(
                 let Some(manage) = input::ask(
                     reader,
                     writer,
-                    "Stop and restore hMailServer automatically? [yes/no]: ",
+                    "Остановить и восстановить hMailServer автоматически? [да/нет]: ",
                 )?
                 else {
                     return Ok(MenuAction::Exit);
                 };
                 let service_policy = match manage.as_str() {
-                    "yes" => ServicePolicy::Manage,
-                    "no" => ServicePolicy::RequireStopped,
+                    "yes" | "да" => ServicePolicy::Manage,
+                    "no" | "нет" => ServicePolicy::RequireStopped,
                     _ => {
-                        writeln!(writer, "Enter yes or no.")?;
+                        writeln!(writer, "Введите да или нет.")?;
                         continue;
                     }
                 };
@@ -55,30 +56,39 @@ pub(crate) fn next_action(
                     settings.retention,
                 )
                 .map_err(io::Error::other)?;
-                writeln!(writer, "Local cutoff now: {cutoff}; strictly earlier. Age cutoff is recalculated after confirmation.")?;
+                writeln!(writer, "Дата создания строго раньше: {cutoff} (местное время). Для периода граница пересчитывается после подтверждения.")?;
                 writeln!(
                     writer,
-                    "Cleanup {:?}; service {:?}; retention {:?}.",
-                    scan, service_policy, settings.retention
+                    "Очистка: {}; управление службой: {}; период: {}.",
+                    match scan {
+                        ScanMode::Fast => "быстрая",
+                        ScanMode::Full => "полная",
+                    },
+                    match service_policy {
+                        ServicePolicy::Manage => "автоматическое",
+                        ServicePolicy::RequireStopped => "служба уже остановлена",
+                    },
+                    period::description(settings.retention)
                 )?;
                 let Some(confirmation) = input::ask(
                     reader,
                     writer,
-                    "Permanently delete selected mail? Type DELETE: ",
+                    "Удалить выбранные письма безвозвратно? Введите УДАЛИТЬ: ",
                 )?
                 else {
                     return Ok(MenuAction::Exit);
                 };
-                if confirmation == "DELETE" {
+                if matches!(confirmation.as_str(), "DELETE" | "УДАЛИТЬ") {
                     return Ok(MenuAction::Clean {
                         scan,
                         service_policy,
                     });
                 }
-                writeln!(writer, "Cleanup cancelled.")?;
+                writeln!(writer, "Очистка отменена.")?;
             }
             "5" => {
-                let Some(raw) = input::ask(reader, writer, "Age (30d/1mo/1y) or local date: ")?
+                let Some(raw) =
+                    input::ask(reader, writer, "Период (30d/1mo/1y) или точная дата: ")?
                 else {
                     return Ok(MenuAction::Exit);
                 };
@@ -87,7 +97,7 @@ pub(crate) fn next_action(
                     Err(error) => writeln!(writer, "{error}")?,
                 }
             }
-            _ => writeln!(writer, "Invalid choice.")?,
+            _ => writeln!(writer, "Неверный выбор.")?,
         }
     }
 }
@@ -127,7 +137,7 @@ mod tests {
         ));
         assert!(String::from_utf8(output)
             .unwrap()
-            .contains("Invalid choice"));
+            .contains("Неверный выбор"));
     }
     #[test]
     fn menu_eof_exits_without_cleanup() {

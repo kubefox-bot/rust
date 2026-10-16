@@ -21,7 +21,8 @@ fn journal_writes_result_without_url_secrets() {
     .unwrap();
     output.finish(&Report::invalid("invalid DATABASE_URL"));
     let text = std::fs::read_to_string(path).unwrap();
-    assert!(text.contains("\"type\":\"result\""));
+    assert!(text.contains("ошибка настроек"));
+    assert!(!text.contains("\"type\":\"result\""));
     assert!(!text.contains("secret-marker"));
     assert!(!output.failed());
 }

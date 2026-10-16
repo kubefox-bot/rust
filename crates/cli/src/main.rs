@@ -25,7 +25,7 @@ async fn main() -> ExitCode {
         return match service::start(&args) {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
-                eprintln!("service failed: {error}");
+                eprintln!("Ошибка службы: {error}");
                 ExitCode::from(1)
             }
         };
@@ -33,7 +33,7 @@ async fn main() -> ExitCode {
     if args.is_menu()
         && (!std::io::stdin().is_terminal() || args.options().silence || args.options().json)
     {
-        eprintln!("menu requires an interactive terminal and text output; use explicit preview/clean for unattended runs");
+        eprintln!("Меню требует интерактивной консоли и текстового вывода. Для автоматического запуска используйте preview или clean");
         return ExitCode::from(2);
     }
     let launch = match config::load_launch(&args) {
@@ -56,13 +56,15 @@ async fn main() -> ExitCode {
         OutputPolicy::Silent
     } else if args.options().json {
         OutputPolicy::Json
+    } else if args.options().plain {
+        OutputPolicy::Plain
     } else {
         OutputPolicy::Text
     };
     let output = match Output::open(policy, launch.log_file.as_deref(), cancel.clone()) {
         Ok(o) => o,
         Err(error) => {
-            eprintln!("cannot open output: {error}");
+            eprintln!("Не удалось открыть вывод: {error}");
             return ExitCode::from(2);
         }
     };
@@ -150,6 +152,15 @@ async fn run_menu(mut settings: config::Settings, output: &Output, cancel: &Canc
         let fatal = result.is_fatal();
         let report = result.into_report();
         output.finish(&report);
+        if !cancel.is_requested() {
+            use std::io::Write;
+            print!("Нажмите Enter для возврата в меню...");
+            let _ = std::io::stdout().flush();
+            let mut line = String::new();
+            if std::io::stdin().read_line(&mut line).unwrap_or(0) == 0 {
+                return report.exit_code;
+            }
+        }
         if fatal {
             return report.exit_code.max(1);
         }

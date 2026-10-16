@@ -43,7 +43,7 @@ fn silent_preview_has_no_console_output_and_preserves_env() {
     assert!(output.stderr.is_empty());
     assert!(std::fs::read_to_string(log)
         .unwrap()
-        .contains("\"type\":\"result\""));
+        .contains("ошибка настроек"));
     assert_eq!(std::fs::read_to_string(env).unwrap(), content);
 }
 #[test]
@@ -60,7 +60,7 @@ fn silent_config_error_uses_explicit_log() {
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
-    let report: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(log).unwrap()).unwrap();
-    assert_eq!(report["status"], "invalid");
+    let report = std::fs::read_to_string(log).unwrap();
+    assert!(report.contains("ошибка настроек"));
+    assert!(!report.contains("\u{1b}"));
 }

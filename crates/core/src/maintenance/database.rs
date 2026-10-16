@@ -15,6 +15,7 @@ pub(super) async fn run<R: FullRepository, G: OfflineGuard, P: Fn(Progress) + Se
 ) -> Result<(), CleanupError> {
     for table in [OrphanTable::Metadata, OrphanTable::Recipients] {
         workflow::cancelled(cancel, *summary)?;
+        workflow::emit(Stage::OrphanDatabase, *summary, progress);
         let upper_id = workflow::at(
             repository.orphan_upper_id(table).await,
             Stage::OrphanDatabase,

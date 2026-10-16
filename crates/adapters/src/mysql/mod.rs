@@ -2,11 +2,13 @@ mod config;
 mod delete;
 mod duplicates;
 mod ids;
+mod inventory;
 mod orphans;
 mod references;
 mod registry;
 mod schema;
 mod select;
+mod storage;
 mod transaction;
 
 pub use config::{DatabaseConfig, DatabaseConfigError};
@@ -20,6 +22,8 @@ use std::collections::HashSet;
 use thiserror::Error;
 
 const DELIVERED_STATE: i8 = 2;
+// Created, delivering, and held queue messages all use root storage for bare names.
+const QUEUE_STATES: &[i8] = &[0, 1, 3];
 pub(super) const MAX_BATCH_SIZE: usize = hmail_cleaner_core::cleanup::MAX_BATCH_SIZE as usize;
 const LOCK_QUERY: &str = "SELECT GET_LOCK(CONCAT('hmail-clean:', LEFT(SHA2(DATABASE(),256),48)),0)";
 
@@ -27,6 +31,8 @@ const LOCK_QUERY: &str = "SELECT GET_LOCK(CONCAT('hmail-clean:', LEFT(SHA2(DATAB
 pub(super) enum RepositoryError {
     #[error("another cleanup instance holds the database lock")]
     Busy,
+    #[error("Некорректный путь записи БД {id}: {reason}")]
+    InvalidStoredPath { id: i64, reason: String },
     #[error("the server could not obtain a cleanup lock")]
     LockUnavailable,
     #[error("unsupported hMailServer schema: {0}")]
@@ -170,5 +176,39 @@ impl hmail_cleaner_core::maintenance::FullRepository for MySqlRepository {
         limit: usize,
     ) -> PortResult<hmail_cleaner_core::maintenance::FileReferences> {
         references::load(&mut self.connection, limit).await
+    }
+}
+
+impl hmail_cleaner_core::maintenance::recursive::TreeRepository for MySqlRepository {
+    async fn stored_messages(
+        &mut self,
+        root: &std::path::Path,
+        limit: usize,
+    ) -> PortResult<Vec<hmail_cleaner_core::maintenance::StoredMessage>> {
+        // Recursive matching uses exact paths; the legacy basename GROUP BY is unnecessary.
+        // Keep registry and all rows in one read-only snapshot while hMailServer is stopped.
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+            .execute(&mut self.connection)
+            .await?;
+        let mut transaction = self.connection.begin().await?;
+        let upper_id: i64 =
+            sqlx::query_scalar("SELECT COALESCE(MAX(messageid),0) FROM hm_messages")
+                .fetch_one(&mut *transaction)
+                .await?;
+        let registry = registry::load(&mut transaction).await?;
+        let rows = inventory::load(&mut transaction, &registry, root, upper_id, limit).await?;
+        transaction.commit().await?;
+        Ok(rows)
+    }
+    async fn delete_stored(
+        &mut self,
+        rows: &[hmail_cleaner_core::maintenance::StoredMessage],
+    ) -> PortResult<DeleteResult> {
+        let candidates = rows.iter().map(|r| r.candidate.clone()).collect::<Vec<_>>();
+        let types = rows
+            .iter()
+            .map(|r| (r.candidate.id, r.message_type))
+            .collect();
+        delete::batch_with_types(&mut self.connection, &candidates, &types).await
     }
 }

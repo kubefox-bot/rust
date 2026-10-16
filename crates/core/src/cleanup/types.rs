@@ -7,9 +7,16 @@ pub struct Candidate {
     pub id: i64,
     pub account_id: i32,
     pub folder_id: i32,
-    pub account_address: String,
+    pub storage: MessageStorage,
     pub filename: String,
     pub created_at: NaiveDateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MessageStorage {
+    Queue,
+    Account { address: String },
+    Public,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -40,6 +47,20 @@ pub struct RowFailure {
 pub struct FileTarget {
     pub id: i64,
     pub path: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileMetadata {
+    pub created_at: std::time::SystemTime,
+    pub modified_at: std::time::SystemTime,
+    pub size_bytes: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileInspection {
+    pub id: i64,
+    pub path: PathBuf,
+    pub result: Result<Option<FileMetadata>, FileFailure>,
 }
 
 #[derive(Debug)]
@@ -97,6 +118,12 @@ pub struct DeletedRows {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 pub struct Summary {
+    pub selected_bytes: u64,
+    pub selected_files: u64,
+    pub total_scan_files: Option<u64>,
+    pub verified_files: u64,
+    pub remaining_old_files: Option<u64>,
+    pub examined_messages: u64,
     pub selected: u64,
     pub removed_files: u64,
     pub absent_files: u64,
@@ -118,6 +145,7 @@ pub struct Summary {
 #[derive(Debug)]
 pub struct RunOptions {
     pub cutoff: NaiveDateTime,
+    pub file_cutoff: std::time::SystemTime,
     pub batch_size: NonZeroU32,
     pub workers: u8,
     pub data_directory: PathBuf,

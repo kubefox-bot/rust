@@ -1,6 +1,5 @@
 [workspace]
 members = ["crates/core", "crates/adapters", "crates/cli"]
-exclude = ["src-tauri"]
 resolver = "2"
 
 [workspace.package]

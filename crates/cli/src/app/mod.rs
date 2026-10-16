@@ -22,6 +22,13 @@ struct Prepared<'a> {
 }
 impl lifecycle::PreparedRun for Prepared<'_> {
     async fn execute(&mut self) -> Report {
+        self.output.mail_state(
+            if self.config.scan.requires_stopped(self.config.mode.action()) {
+                "остановлена; обработка файлов"
+            } else {
+                "быстрый предпросмотр без управления службой"
+            },
+        );
         commands::execute_scan(
             self.config.mode,
             Dependencies {
@@ -36,6 +43,12 @@ impl lifecycle::PreparedRun for Prepared<'_> {
         )
         .await
     }
+    fn mail_state(&self, state: &str) {
+        self.output.mail_state(state);
+    }
+    fn action(&self, message: &str) {
+        self.output.action(message);
+    }
     fn output_failed(&self) -> bool {
         self.output.failed()
     }
@@ -49,8 +62,9 @@ pub(crate) async fn run_once(
     cancel: &Cancellation,
 ) -> RunResult {
     if output.failed() {
-        return RunResult::Fatal(Report::invalid("output is unavailable"));
+        return RunResult::Fatal(Report::invalid("Вывод недоступен"));
     }
+    output.begin(config);
     let prepared = match prepare(config, output, cancel).await {
         Ok(prepared) => prepared,
         Err(report) => return RunResult::Finished(*report),
@@ -63,12 +77,21 @@ async fn prepare<'a>(
     output: &'a Output,
     cancel: &'a Cancellation,
 ) -> Result<(Prepared<'a>, Option<WindowsMailControl>), Box<Report>> {
-    verify_data_folder(&config.options.data_directory, &config.hmail_ini)
-        .map_err(Report::invalid)?;
-    let files = LocalFiles::new(config.options.data_directory.clone()).map_err(Report::invalid)?;
+    verify_data_folder(&config.options.data_directory, &config.hmail_ini).map_err(|error| {
+        Report::invalid(format!(
+            "Не удалось проверить DataFolder и INI {}: {error}",
+            config.hmail_ini.display()
+        ))
+    })?;
+    let files = LocalFiles::new(config.options.data_directory.clone()).map_err(|error| {
+        Report::invalid(format!(
+            "Не удалось открыть корень {}: {error}",
+            config.options.data_directory.display()
+        ))
+    })?;
     if config.mode == Mode::Preview && config.service_policy == ServicePolicy::Manage {
         return Err(Box::new(Report::invalid(
-            "--manage-service is only valid for clean",
+            "--manage-service допустим только для clean",
         )));
     }
     let control = match config.service_policy {
@@ -78,19 +101,21 @@ async fn prepare<'a>(
         ServicePolicy::RequireStopped => None,
     };
     let guard = WindowsOffline::new(config.service_name.clone());
-    if control.is_none()
-        && (config.mode == Mode::Clean
-            || matches!(
-                config.scan,
-                hmail_cleaner_core::maintenance::ScanOptions::Full { .. }
-            ))
-    {
+    if control.is_none() && config.scan.requires_stopped(config.mode.action()) {
         use hmail_cleaner_core::cleanup::OfflineGuard;
-        guard.ensure_stopped().await.map_err(Report::invalid)?;
+        guard.ensure_stopped().await.map_err(|error| {
+            Report::invalid(format!(
+                "Для работы почтовая служба должна быть остановлена: {error}"
+            ))
+        })?;
     }
     let mut repository = MySqlRepository::connect(&config.database)
         .await
-        .map_err(Report::invalid)?;
+        .map_err(|error| {
+            Report::invalid(format!(
+                "Не удалось подключиться к БД или проверить её схему: {error}"
+            ))
+        })?;
     output.server(repository.server_version(), config.options.cutoff);
     if config.mode == Mode::Clean {
         if let Err(error) = repository.verify_delete_access().await {
@@ -102,7 +127,7 @@ async fn prepare<'a>(
         }
     }
     if output.failed() || cancel.is_requested() {
-        let report = Report::invalid("cancelled before mail service stop");
+        let report = Report::invalid("Запуск отменён до остановки почтовой службы");
         return Err(Box::new(match repository.close().await {
             Ok(()) => report,
             Err(error) => report.with_close_failure(error),

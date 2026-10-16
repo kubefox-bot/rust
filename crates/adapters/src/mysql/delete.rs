@@ -39,6 +39,17 @@ pub(super) async fn batch(
     connection: &mut MySqlConnection,
     candidates: &[Candidate],
 ) -> PortResult<DeleteResult> {
+    let types = candidates
+        .iter()
+        .map(|row| (row.id, DELIVERED_STATE))
+        .collect();
+    batch_with_types(connection, candidates, &types).await
+}
+pub(super) async fn batch_with_types(
+    connection: &mut MySqlConnection,
+    candidates: &[Candidate],
+    types: &HashMap<i64, i8>,
+) -> PortResult<DeleteResult> {
     if candidates.is_empty() {
         return Ok(DeleteResult::Committed(DeletedRows::default()));
     }
@@ -50,7 +61,7 @@ pub(super) async fn batch(
         return Err(RepositoryError::InvalidBatch("duplicate IDs").into());
     }
     let mut transaction = connection.begin().await?;
-    let rows = match execute(&mut transaction, candidates).await {
+    let rows = match execute(&mut transaction, candidates, types).await {
         Ok(rows) => rows,
         Err(original) => {
             return transaction::rollback(transaction, original).await;
@@ -62,6 +73,7 @@ pub(super) async fn batch(
 async fn execute(
     transaction: &mut Transaction<'_, MySql>,
     candidates: &[Candidate],
+    types: &HashMap<i64, i8>,
 ) -> PortResult<DeletedRows> {
     let expected: HashMap<_, _> = candidates
         .iter()
@@ -69,8 +81,9 @@ async fn execute(
         .collect();
     let mut query = QueryBuilder::<MySql>::new(
         "SELECT m.messageid,m.messageaccountid,m.messagefolderid,m.messagefilename,
-         m.messagecreatetime,m.messagetype,a.accountaddress
+         m.messagecreatetime,m.messagetype,a.accountaddress,f.folderaccountid
          FROM hm_messages m LEFT JOIN hm_accounts a ON a.accountid=m.messageaccountid
+         LEFT JOIN hm_imapfolders f ON f.folderid=m.messagefolderid
          WHERE m.messageid IN (",
     );
     bind_ids(&mut query, candidates.iter().map(|message| message.id));
@@ -84,17 +97,28 @@ async fn execute(
         let Some(message) = expected.get(&id) else {
             return Err(RepositoryError::StaleBatch.into());
         };
+        let account_id = row.try_get("messageaccountid")?;
+        let folder_id = row.try_get("messagefolderid")?;
+        let address: Option<String> = row.try_get("accountaddress")?;
+        let message_type: i8 = row.try_get("messagetype")?;
         let current = Candidate {
             id,
-            account_id: row.try_get("messageaccountid")?,
-            folder_id: row.try_get("messagefolderid")?,
+            account_id,
+            folder_id,
             filename: row.try_get("messagefilename")?,
             created_at: row.try_get("messagecreatetime")?,
-            account_address: row
-                .try_get::<Option<String>, _>("accountaddress")?
-                .ok_or(RepositoryError::StaleBatch)?,
+            storage: if message_type == DELIVERED_STATE {
+                super::storage::resolve(
+                    account_id,
+                    folder_id,
+                    address.as_deref(),
+                    row.try_get("folderaccountid")?,
+                )?
+            } else {
+                hmail_cleaner_core::cleanup::MessageStorage::Queue
+            },
         };
-        if &current != *message || row.try_get::<i8, _>("messagetype")? != DELIVERED_STATE {
+        if &current != *message || Some(&message_type) != types.get(&id) {
             return Err(RepositoryError::StaleBatch.into());
         }
     }

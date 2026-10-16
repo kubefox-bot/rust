@@ -44,3 +44,37 @@ pub(super) fn run(root: &Path, parents: Vec<PathBuf>) -> PruneOutcome {
     }
     outcome
 }
+
+/// The recursive walker still owns ancestor directory handles. Remove only fully visited directories.
+pub(super) fn completed(root: &Path, paths: Vec<PathBuf>) -> PruneOutcome {
+    let mut outcome = PruneOutcome::default();
+    for path in paths {
+        if path == root {
+            continue;
+        }
+        match validation::chain(root, &path) {
+            Ok(false) => continue,
+            Err(error) => {
+                outcome.failures.push(DirectoryFailure {
+                    path,
+                    reason: error.message,
+                });
+                continue;
+            }
+            Ok(true) => {}
+        }
+        match fs::remove_dir(&path) {
+            Ok(()) => outcome.removed += 1,
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::DirectoryNotEmpty | io::ErrorKind::NotFound
+                ) => {}
+            Err(error) => outcome.failures.push(DirectoryFailure {
+                path,
+                reason: error.to_string(),
+            }),
+        }
+    }
+    outcome
+}

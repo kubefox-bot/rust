@@ -30,7 +30,7 @@ pub(crate) struct Report {
 impl Report {
     pub fn with_restore_failure(self, error: impl ToString) -> Self {
         let reason = format!(
-            "mail service restore failed: {error}",
+            "Не удалось восстановить почтовую службу: {error}",
             error = error.to_string()
         );
         Self {
@@ -69,8 +69,10 @@ impl Report {
         }
         let close_error = error.to_string();
         let message = match &self.error {
-            Some(original) => format!("{original}; database close also failed: {close_error}"),
-            None => format!("database close also failed: {close_error}"),
+            Some(original) => {
+                format!("{original}; Закрытие БД также завершилось ошибкой: {close_error}")
+            }
+            None => format!("Закрытие БД также завершилось ошибкой: {close_error}"),
         };
         Self {
             error: Some(message),
@@ -92,13 +94,21 @@ pub(crate) async fn execute<
     progress: P,
 ) -> Report {
     let result = match mode {
-        Mode::Preview => cleanup::preview(dependencies.repository, options, progress).await,
+        Mode::Preview => {
+            cleanup::preview(
+                dependencies.repository,
+                dependencies.files,
+                options,
+                progress,
+            )
+            .await
+        }
         Mode::Clean => cleanup::clean(dependencies, options, cancel, progress).await,
     };
     result_report(mode, result)
 }
 pub(crate) async fn execute_scan<
-    R: hmail_cleaner_core::maintenance::FullRepository,
+    R: hmail_cleaner_core::maintenance::recursive::TreeRepository,
     F: hmail_cleaner_core::maintenance::FullFileStore,
     G: OfflineGuard,
     P: Fn(Progress) + Send + Sync,
@@ -110,17 +120,20 @@ pub(crate) async fn execute_scan<
     cancel: &Cancellation,
     progress: P,
 ) -> Report {
-    use hmail_cleaner_core::maintenance;
     result_report(
         mode,
-        match mode {
-            Mode::Preview => {
-                maintenance::preview(dependencies, options, scan, cancel, progress).await
-            }
-            Mode::Clean => maintenance::clean(dependencies, options, scan, cancel, progress).await,
-        },
+        hmail_cleaner_core::maintenance::recursive::run(
+            dependencies,
+            options,
+            scan,
+            cancel,
+            progress,
+            mode.action(),
+        )
+        .await,
     )
 }
+
 fn result_report(mode: Mode, result: Result<Summary, CleanupError>) -> Report {
     match result {
         Ok(summary) if summary.failed == 0 => Report {
@@ -218,9 +231,12 @@ mod tests {
     }
     struct NoFiles;
     impl FileStore for NoFiles {
+        async fn inspect(&self, _: Vec<FileTarget>, _: u8) -> PortResult<Vec<FileInspection>> {
+            panic!("no file calls expected")
+        }
         async fn delete(
             &self,
-            _files: Vec<FileTarget>,
+            _files: Vec<FileInspection>,
             _workers: u8,
         ) -> PortResult<Vec<FileOutcome>> {
             panic!("no file calls expected")
@@ -239,6 +255,7 @@ mod tests {
         RunOptions {
             cutoff: NaiveDateTime::parse_from_str("2026-09-07 12:00:00", "%Y-%m-%d %H:%M:%S")
                 .unwrap(),
+            file_cutoff: std::time::SystemTime::now(),
             batch_size: NonZeroU32::new(1000).unwrap(),
             workers: 2,
             data_directory: PathBuf::from("/Data"),

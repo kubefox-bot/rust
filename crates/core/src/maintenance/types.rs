@@ -10,7 +10,16 @@ pub enum ScanMode {
 #[derive(Debug, Clone, Copy)]
 pub enum ScanOptions {
     Fast,
-    Full { file_cutoff: std::time::SystemTime },
+    Full,
+}
+impl ScanOptions {
+    pub fn requires_stopped(self, operation: super::workflow::Operation) -> bool {
+        use super::workflow::Operation;
+        match (self, operation) {
+            (Self::Fast, Operation::Preview) => false,
+            (Self::Fast | Self::Full, Operation::Clean) | (Self::Full, Operation::Preview) => true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -42,6 +51,7 @@ pub struct FileObservation {
     pub guid: Uuid,
     pub size_bytes: u64,
     pub modified_at: std::time::SystemTime,
+    pub created_at: std::time::SystemTime,
 }
 #[derive(Debug, Default)]
 pub struct ScanStats {
@@ -49,6 +59,7 @@ pub struct ScanStats {
 }
 #[derive(Debug)]
 pub struct ScanBatch {
+    pub completed_directories: Vec<std::path::PathBuf>,
     pub visited_entries: u64,
     pub examined_files: u64,
     pub files: Vec<FileObservation>,
@@ -58,4 +69,12 @@ pub struct ScanBatch {
 pub struct OrphanFileOutcome {
     pub observation: FileObservation,
     pub result: crate::cleanup::DeletionResult,
+}
+
+/// A database row and its resolved physical location, including queue entries.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoredMessage {
+    pub candidate: crate::cleanup::Candidate,
+    pub message_type: i8,
+    pub path: std::path::PathBuf,
 }

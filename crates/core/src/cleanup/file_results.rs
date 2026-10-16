@@ -2,26 +2,14 @@ use super::{
     batch::{self, Resolved},
     *,
 };
-use std::{collections::HashSet, path::PathBuf};
+use std::path::PathBuf;
 pub(super) fn accept<P: Fn(Progress)>(
     mut planned: Resolved,
     outcomes: Vec<FileOutcome>,
     summary: &mut Summary,
     progress: &P,
 ) -> PortResult<(Vec<Candidate>, Vec<PathBuf>)> {
-    if planned.len() != outcomes.len() {
-        return Err("file store returned an incomplete batch".into());
-    }
-    let mut seen = HashSet::new();
-    for outcome in &outcomes {
-        if !seen.insert(outcome.id)
-            || !planned
-                .get(&outcome.id)
-                .is_some_and(|(_, path)| *path == outcome.path)
-        {
-            return Err("file store returned an unexpected ID or path".into());
-        }
-    }
+    batch::validate_files(&planned, outcomes.iter().map(|file| (file.id, &file.path)))?;
     let mut eligible = Vec::new();
     let mut parents = Vec::new();
     for outcome in outcomes {

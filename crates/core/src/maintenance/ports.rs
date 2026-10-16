@@ -38,6 +38,12 @@ pub trait FileScan: Send {
 }
 pub trait FullFileStore: crate::cleanup::FileStore {
     type Scan: FileScan;
+    fn prune_completed(
+        &self,
+        paths: Vec<std::path::PathBuf>,
+    ) -> impl Future<Output = PortResult<crate::cleanup::PruneOutcome>> + Send {
+        self.prune_empty(paths)
+    }
     fn validate_tree(&self) -> impl Future<Output = PortResult<super::types::ScanStats>> + Send;
     fn open_scan(&self) -> impl Future<Output = PortResult<Self::Scan>> + Send;
     fn delete_orphans(

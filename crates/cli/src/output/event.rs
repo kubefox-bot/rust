@@ -5,6 +5,9 @@ use serde::Serialize;
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(super) enum Event<'a> {
+    Action {
+        message: &'a str,
+    },
     Server {
         mysql_version: &'a str,
         cutoff: NaiveDateTime,

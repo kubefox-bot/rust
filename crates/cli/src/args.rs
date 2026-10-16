@@ -14,9 +14,9 @@ pub(crate) enum Scan {
 #[derive(Debug, Parser)]
 #[command(
     name = "hmail-cleaner",
-    version,
+    version = env!("HMAIL_BUILD_VERSION"),
     args_conflicts_with_subcommands = true,
-    about = "Delete old hMailServer messages: files first, then MySQL rows"
+    about = "Очистка hMailServer: сначала файлы, затем записи MySQL"
 )]
 pub(crate) struct Args {
     #[command(subcommand)]
@@ -31,9 +31,9 @@ enum Command {
         command: ServiceCommand,
     },
     Menu(Options),
-    #[command(about = "Report database-selected old messages without deletion")]
+    #[command(about = "Предпросмотр файлов и записей без удаления")]
     Preview(Options),
-    #[command(about = "Delete old messages while hMailServer is STOPPED")]
+    #[command(about = "Удаление старых писем при остановленном hMailServer")]
     Clean(Options),
 }
 #[derive(Debug, Subcommand)]
@@ -46,14 +46,23 @@ pub(crate) enum Mode {
     Preview,
     Clean,
 }
+impl Mode {
+    pub fn action(self) -> hmail_cleaner_core::maintenance::recursive::Action {
+        use hmail_cleaner_core::maintenance::recursive::Action;
+        match self {
+            Self::Preview => Action::Preview,
+            Self::Clean => Action::Clean,
+        }
+    }
+}
 #[derive(Debug, Default, ClapArgs)]
 #[command(group(ArgGroup::new("retention").multiple(false)))]
 pub(crate) struct Options {
     #[arg(long, value_enum)]
     pub scan: Option<Scan>,
-    #[arg(long,group="retention",value_parser=crate::config::parse_age,help="Retention age: 30d, 1mo (calendar month), 1y")]
+    #[arg(long,group="retention",value_parser=crate::config::parse_age,help="Период хранения: 30d, 1mo (календарный месяц), 1y")]
     pub older_than: Option<Retention>,
-    #[arg(long,group="retention",value_parser=crate::config::parse_before,help="Strict local cutoff: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")]
+    #[arg(long,group="retention",value_parser=crate::config::parse_before,help="Строгая граница местного времени: YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS")]
     pub before: Option<NaiveDateTime>,
     #[arg(long)]
     pub data_dir: Option<PathBuf>,
@@ -71,12 +80,14 @@ pub(crate) struct Options {
     pub manage_service: bool,
     #[arg(long, conflicts_with = "json")]
     pub silence: bool,
+    #[arg(long, conflicts_with_all = ["json", "silence"], help = "Обычный текст без полноэкранной панели")]
+    pub plain: bool,
     #[arg(
         long,
-        help = "Read DATABASE_URL only from this explicitly selected env file (system env overrides it)"
+        help = "Файл настроек; по умолчанию cleaner.env рядом с EXE; окружение имеет приоритет"
     )]
     pub env_file: Option<PathBuf>,
-    #[arg(long, help = "Emit NDJSON events and final result")]
+    #[arg(long, help = "Машинный вывод NDJSON: события и итог")]
     pub json: bool,
 }
 impl Args {

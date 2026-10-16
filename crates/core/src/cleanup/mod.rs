@@ -1,3 +1,4 @@
+mod age;
 mod batch;
 mod file_results;
 mod limits;
@@ -12,6 +13,6 @@ pub use workflow::{clean, preview, Dependencies};
 pub use ports::{FileStore, OfflineGuard, PortResult, Repository};
 pub use types::{
     Batch, Candidate, DeleteResult, DeletedRows, DeletionResult, DirectoryFailure, FileFailure,
-    FileFailureKind, FileOutcome, FileTarget, PruneOutcome, RowFailure, RunOptions, Selection,
-    Snapshot, Summary,
+    FileFailureKind, FileInspection, FileMetadata, FileOutcome, FileTarget, MessageStorage,
+    PruneOutcome, RowFailure, RunOptions, Selection, Snapshot, Summary,
 };

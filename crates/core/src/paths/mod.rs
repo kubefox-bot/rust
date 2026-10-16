@@ -4,10 +4,11 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::cleanup::Candidate;
+use crate::cleanup::{Candidate, MessageStorage};
 use absolute::Absolute;
 
 const MESSAGE_EXTENSION: &str = ".eml";
+pub const PUBLIC_DIRECTORY: &str = "#Public";
 const BRACED_GUID_LENGTH: usize = 38;
 const WINDOWS_INVALID_CHARACTERS: &[char] = &['<', '>', '"', ':', '|', '?', '*', '/', '\\'];
 const WINDOWS_DEVICE_NAMES: &[&str] = &["CON", "PRN", "AUX", "NUL"];
@@ -43,17 +44,25 @@ pub fn resolve_path(root: &Path, candidate: &Candidate) -> Result<PathBuf, PathE
         return Ok(resolved);
     }
 
-    let (account, domain) = candidate
-        .account_address
-        .rsplit_once('@')
-        .ok_or(PathError::InvalidAddress)?;
+    let bucket = guid_bucket(filename)?;
+    let mut resolved = root.to_path_buf();
+    let address = match &candidate.storage {
+        MessageStorage::Queue => {
+            resolved.push(filename);
+            return Ok(resolved);
+        }
+        MessageStorage::Public => {
+            resolved.extend([PUBLIC_DIRECTORY, bucket, filename]);
+            return Ok(resolved);
+        }
+        MessageStorage::Account { address } => address,
+    };
+    let (account, domain) = address.rsplit_once('@').ok_or(PathError::InvalidAddress)?;
     validate_component(account).map_err(|_| PathError::InvalidAddress)?;
     validate_component(domain).map_err(|_| PathError::InvalidAddress)?;
     if account.contains('@') || domain.contains('@') {
         return Err(PathError::InvalidAddress);
     }
-    let bucket = guid_bucket(filename)?;
-    let mut resolved = root.to_path_buf();
     resolved.extend([domain, account, bucket, filename]);
     Ok(resolved)
 }

@@ -1,4 +1,5 @@
 mod delete;
+mod inspect;
 mod orphans;
 mod prune;
 mod removal;
@@ -7,7 +8,9 @@ mod scan;
 mod validation;
 mod workers;
 
-use hmail_cleaner_core::cleanup::{FileOutcome, FileStore, FileTarget, PortResult, PruneOutcome};
+use hmail_cleaner_core::cleanup::{
+    FileInspection, FileOutcome, FileStore, FileTarget, PortResult, PruneOutcome,
+};
 use hmail_cleaner_core::maintenance::{
     FileObservation, FullFileStore, OrphanFileOutcome, ScanStats,
 };
@@ -18,6 +21,10 @@ pub struct LocalFiles {
 }
 impl FullFileStore for LocalFiles {
     type Scan = scan::Session;
+    async fn prune_completed(&self, paths: Vec<PathBuf>) -> PortResult<PruneOutcome> {
+        let root = self.root.clone();
+        Ok(tokio::task::spawn_blocking(move || prune::completed(&root, paths)).await?)
+    }
     async fn validate_tree(&self) -> PortResult<ScanStats> {
         scan::check(self.root.clone()).await
     }
@@ -45,7 +52,21 @@ impl LocalFiles {
     }
 }
 impl FileStore for LocalFiles {
-    async fn delete(&self, files: Vec<FileTarget>, workers: u8) -> PortResult<Vec<FileOutcome>> {
+    async fn inspect(
+        &self,
+        files: Vec<FileTarget>,
+        workers: u8,
+    ) -> PortResult<Vec<FileInspection>> {
+        if !(1..=hmail_cleaner_core::cleanup::MAX_WORKERS).contains(&workers) {
+            return Err("workers must be between 1 and 8".into());
+        }
+        inspect::run(self.root.clone(), files, workers).await
+    }
+    async fn delete(
+        &self,
+        files: Vec<FileInspection>,
+        workers: u8,
+    ) -> PortResult<Vec<FileOutcome>> {
         if !(1..=hmail_cleaner_core::cleanup::MAX_WORKERS).contains(&workers) {
             return Err("workers must be between 1 and 8".into());
         }

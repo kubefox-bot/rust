@@ -10,7 +10,7 @@ const QUERY: &str =
     "SELECT messageid,messageaccountid,messagefolderid,messagefilename,messagecreatetime
      FROM hm_messages FORCE INDEX (PRIMARY)
      WHERE messageid>? AND messageid<=? AND messagetype=?
-       AND messageaccountid>0 AND messagecreatetime<?
+       AND messageaccountid>=0
      ORDER BY messageid LIMIT ?";
 
 pub(super) async fn next(
@@ -31,7 +31,6 @@ pub(super) async fn next(
         .bind(cursor)
         .bind(selection.upper_id)
         .bind(DELIVERED_STATE)
-        .bind(selection.cutoff)
         .bind(limit)
         .fetch_all(connection)
         .await?;
@@ -67,13 +66,12 @@ fn candidate(
     let folder_id: i32 = row.try_get("messagefolderid")?;
     let filename: String = row.try_get("messagefilename")?;
     let created_at: NaiveDateTime = row.try_get("messagecreatetime")?;
-    let Some(address) = registry.accounts.get(&account_id) else {
-        return Err("account is absent".into());
-    };
-    let owner = registry.folders.get(&folder_id);
-    if owner.copied() != u32::try_from(account_id).ok() {
-        return Err("IMAP folder is absent or belongs to another account".into());
-    }
+    let storage = super::storage::resolve(
+        account_id,
+        folder_id,
+        registry.accounts.get(&account_id).map(String::as_str),
+        registry.folders.get(&folder_id).copied(),
+    )?;
     if duplicate_names.contains(&duplicates::basename(&filename)) {
         return Err("filename has multiple database references".into());
     }
@@ -81,7 +79,7 @@ fn candidate(
         id,
         account_id,
         folder_id,
-        account_address: address.clone(),
+        storage,
         filename,
         created_at,
     })

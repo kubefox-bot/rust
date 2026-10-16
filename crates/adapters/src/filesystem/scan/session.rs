@@ -1,4 +1,4 @@
-use super::layout::{self, Level};
+use super::layout;
 use crate::filesystem::validation;
 use hmail_cleaner_core::{
     cleanup::{PortResult, MAX_BATCH_SIZE},
@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 
 struct Frame {
     entries: fs::ReadDir,
-    level: Level,
+    path: PathBuf,
 }
 struct Walker {
     stack: Vec<Frame>,
@@ -23,13 +23,14 @@ impl Walker {
         validation::directory(&root).map_err(|error| error.message)?;
         Ok(Self {
             stack: vec![Frame {
-                entries: fs::read_dir(root)?,
-                level: Level::Root,
+                entries: fs::read_dir(&root)?,
+                path: root,
             }],
         })
     }
     fn batch(&mut self, limit: u32) -> PortResult<ScanBatch> {
         let mut batch = ScanBatch {
+            completed_directories: Vec::new(),
             visited_entries: 0,
             examined_files: 0,
             files: Vec::new(),
@@ -40,37 +41,39 @@ impl Walker {
                 batch.finished = true;
                 break;
             };
-            let level = frame.level;
             let Some(entry) = frame.entries.next() else {
-                self.stack.pop();
+                if let Some(frame) = self.stack.pop() {
+                    batch.completed_directories.push(frame.path);
+                }
                 continue;
             };
-            let entry = entry?;
+            let entry = entry.map_err(|error| {
+                format!(
+                    "Не удалось прочитать каталог {}: {error}",
+                    frame.path.display()
+                )
+            })?;
             batch.visited_entries += 1;
-            let name = entry.file_name();
-            if matches!(level, Level::Root)
-                && name
-                    .to_str()
-                    .is_some_and(|name| name.eq_ignore_ascii_case("#Public"))
-            {
+            let path = entry.path();
+            let metadata = fs::symlink_metadata(&path).map_err(|error| {
+                format!("Не удалось прочитать атрибуты {}: {error}", path.display())
+            })?;
+            if validation::linked(&metadata) {
                 continue;
             }
-            let path = entry.path();
-            let metadata = fs::symlink_metadata(&path)?;
-            if matches!(level, Level::Bucket) {
-                if metadata.is_file() && !validation::linked(&metadata) {
-                    batch.examined_files += 1;
-                    if let Some(file) = layout::observation(&path, &metadata)? {
-                        batch.files.push(file);
-                    }
+            if metadata.is_file() {
+                batch.examined_files += 1;
+                if let Some(file) = layout::observation(&path, &metadata).map_err(|error| {
+                    format!("Не удалось прочитать даты {}: {error}", path.display())
+                })? {
+                    batch.files.push(file);
                 }
-            } else if let Some(level) = name
-                .to_str()
-                .and_then(|name| layout::child_directory(level, name, &metadata))
-            {
+            } else if metadata.is_dir() {
                 self.stack.push(Frame {
-                    entries: fs::read_dir(path)?,
-                    level,
+                    entries: fs::read_dir(&path).map_err(|error| {
+                        format!("Не удалось открыть каталог {}: {error}", path.display())
+                    })?,
+                    path,
                 });
             }
         }

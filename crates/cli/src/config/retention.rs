@@ -11,16 +11,16 @@ pub(crate) fn parse(value: &str) -> Result<Retention, String> {
     } else if let Some(count) = value.strip_suffix('y') {
         (count, "y")
     } else {
-        return Err("use a positive age such as 30d, 1mo or 1y".into());
+        return Err("Укажите положительный период: 30d, 1mo или 1y".into());
     };
     if !count.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Err("age must be a positive integer".into());
+        return Err("Период должен быть положительным целым числом".into());
     }
     let count = count
         .parse::<u32>()
         .ok()
         .and_then(NonZeroU32::new)
-        .ok_or("age must be a positive integer within u32")?;
+        .ok_or("Период должен быть положительным целым числом в диапазоне u32")?;
     match unit {
         "d" => Ok(Retention::Days(count)),
         "mo" => Ok(Retention::Months(count)),
@@ -32,10 +32,12 @@ pub(crate) fn before(value: &str) -> Result<NaiveDateTime, String> {
     if let Ok(date) = NaiveDate::parse_from_str(value, DATE_FORMAT) {
         return date
             .and_hms_opt(0, 0, 0)
-            .ok_or_else(|| "invalid local date".into());
+            .ok_or_else(|| "Некорректная местная дата".into());
     }
     TIME_FORMATS
         .iter()
         .find_map(|format| NaiveDateTime::parse_from_str(value, format).ok())
-        .ok_or_else(|| "use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS in server-local time".into())
+        .ok_or_else(|| {
+            "Укажите YYYY-MM-DD или YYYY-MM-DDTHH:MM:SS в местном времени сервера".into()
+        })
 }

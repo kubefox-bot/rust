@@ -3,11 +3,11 @@ rust = "1.98.1"
 
 [tasks.fmt]
 description = "Format the Rust workspace"
-run = "cargo fmt --all"
+run = ["cargo fmt --all", "rustfmt --edition 2021 tools/build-exe/main.rs"]
 
 [tasks."fmt:check"]
 description = "Check Rust formatting"
-run = "cargo fmt --all -- --check"
+run = ["cargo fmt --all -- --check", "rustfmt --edition 2021 --check tools/build-exe/main.rs"]
 
 [tasks.test]
 description = "Run portable workspace tests"
@@ -19,7 +19,7 @@ run = "cargo clippy --workspace --all-targets --locked"
 
 [tasks.check]
 description = "Run formatting, tests and Clippy"
-depends = ["fmt:check", "test", "lint"]
+depends = ["fmt:check", "test", "lint", "test:build"]
 
 [tasks.build]
 description = "Build the standalone CLI in release mode"
@@ -48,3 +48,15 @@ description = "Run integration tests against disposable MySQL"
 depends = ["db:up"]
 env.HMAIL_TEST_DATABASE_URL = "{{ env.HMAIL_TEST_DATABASE_URL | default(value='mysql://root:hmail_fixture@127.0.0.1:13306/mysql?ssl-mode=disabled') }}"
 run = "cargo test -p hmail-cleaner-adapters --locked -- --ignored --test-threads=1"
+
+[tasks."build:exe"]
+description = "Собрать Windows EXE и SHA-256 в корень проекта"
+dir = "{{ config_root }}"
+run = "sh tools/build-exe.sh"
+run_windows = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build-exe.ps1"
+
+[tasks."test:build"]
+description = "Проверить публикацию EXE и передачу исходников без env-файлов"
+dir = "{{ config_root }}"
+run = "sh tools/build-exe.sh --test"
+run_windows = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build-exe.ps1 -Test"

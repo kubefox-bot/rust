@@ -1,7 +1,8 @@
 use std::{error::Error, future::Future, path::PathBuf};
 
 use super::types::{
-    Batch, Candidate, DeleteResult, FileOutcome, FileTarget, PruneOutcome, Selection, Snapshot,
+    Batch, Candidate, DeleteResult, FileInspection, FileOutcome, FileTarget, PruneOutcome,
+    Selection, Snapshot,
 };
 
 pub type PortResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
@@ -22,9 +23,14 @@ pub trait Repository {
 }
 
 pub trait FileStore {
-    fn delete(
+    fn inspect(
         &self,
         files: Vec<FileTarget>,
+        workers: u8,
+    ) -> impl Future<Output = PortResult<Vec<FileInspection>>> + Send;
+    fn delete(
+        &self,
+        files: Vec<FileInspection>,
         workers: u8,
     ) -> impl Future<Output = PortResult<Vec<FileOutcome>>> + Send;
     fn prune_empty(

@@ -11,3 +11,6 @@ pub use types::{FileObservation, OrphanFileOutcome, ScanBatch, ScanStats};
 pub use types::{FileReferences, OrphanBatch, OrphanRow, OrphanSelection, OrphanTable};
 pub use types::{ScanMode, ScanOptions};
 pub use workflow::{clean, preview};
+
+pub mod recursive;
+pub use types::StoredMessage;

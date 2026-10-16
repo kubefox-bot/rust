@@ -5,6 +5,26 @@ use std::{
     path::PathBuf,
 };
 pub(super) type Resolved = BTreeMap<i64, (Candidate, PathBuf)>;
+
+pub(super) fn validate_files<'a>(
+    planned: &Resolved,
+    outcomes: impl IntoIterator<Item = (i64, &'a PathBuf)>,
+) -> PortResult<()> {
+    let mut seen = HashSet::new();
+    for (id, path) in outcomes {
+        if !seen.insert(id)
+            || !planned
+                .get(&id)
+                .is_some_and(|(_, expected)| expected == path)
+        {
+            return Err("file store returned an unexpected ID or path".into());
+        }
+    }
+    if seen.len() != planned.len() {
+        return Err("file store returned an incomplete batch".into());
+    }
+    Ok(())
+}
 pub(super) fn validate_options(options: &RunOptions) -> PortResult<()> {
     if options.batch_size.get() > MAX_BATCH_SIZE {
         return Err("batch size exceeds 10000".into());
@@ -43,7 +63,9 @@ pub(super) fn resolve<P: Fn(Progress)>(
     summary: &mut Summary,
     progress: &P,
 ) -> Resolved {
-    summary.selected += (batch.candidates.len() + batch.rejected.len()) as u64;
+    let examined = (batch.candidates.len() + batch.rejected.len()) as u64;
+    summary.examined_messages += examined;
+    summary.selected += examined;
     for row in batch.rejected {
         failure(
             summary,

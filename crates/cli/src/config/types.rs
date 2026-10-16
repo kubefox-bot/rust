@@ -17,6 +17,7 @@ pub(crate) struct RunIntent {
 }
 #[derive(Debug, Clone)]
 pub(crate) struct Settings {
+    pub env_file: Option<PathBuf>,
     pub database: DatabaseConfig,
     pub data_dir: PathBuf,
     pub hmail_ini: PathBuf,
@@ -34,6 +35,7 @@ pub(crate) struct ServiceSettings {
 }
 #[derive(Debug)]
 pub(crate) struct Config {
+    pub env_file: Option<PathBuf>,
     pub mode: Mode,
     pub service_policy: ServicePolicy,
     pub scan: hmail_cleaner_core::maintenance::ScanOptions,
@@ -44,22 +46,22 @@ pub(crate) struct Config {
 }
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum ConfigError {
-    #[error("DATABASE_URL is required; set it in the environment or use --env-file")]
+    #[error("Не задан DATABASE_URL: укажите его в cleaner.env рядом с EXE, окружении или через --env-file")]
     MissingDatabase,
     #[error(transparent)]
     Database(#[from] DatabaseConfigError),
-    #[error("DATABASE_URL is not valid Unicode")]
+    #[error("Переменная окружения содержит некорректный Unicode")]
     InvalidEnvironment,
-    #[error("cannot read or parse the explicit env file")]
-    EnvFile,
-    #[error("retention boundary must be a valid MySQL date between years 1000 and 9999")]
+    #[error("Не удалось прочитать или разобрать файл настроек env: {0}")]
+    EnvFile(PathBuf),
+    #[error("Граница даты должна быть допустимой датой MySQL между 1000 и 9999 годом")]
     TimeRange,
-    #[error("DataFolder and hMailServer.ini paths must be absolute")]
+    #[error("Пути DataFolder и hMailServer.ini должны быть абсолютными")]
     Paths,
-    #[error("one retention option is required")]
+    #[error("Задайте период хранения или точную границу даты")]
     Retention,
-    #[error("file cutoff is ambiguous or nonexistent in the server local timezone")]
+    #[error("Граница даты неоднозначна или не существует в часовом поясе сервера")]
     LocalTime,
-    #[error("missing or invalid setting {0}")]
+    #[error("Не задана или некорректна настройка {0}")]
     Setting(&'static str),
 }

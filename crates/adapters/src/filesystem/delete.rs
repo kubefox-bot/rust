@@ -1,11 +1,11 @@
 use super::validation;
-use hmail_cleaner_core::cleanup::{DeletionResult, FileOutcome, FileTarget, PortResult};
+use hmail_cleaner_core::cleanup::{DeletionResult, FileInspection, FileOutcome, PortResult};
 use std::{collections::BTreeMap, path::PathBuf};
 
-type Group = Vec<FileTarget>;
+type Group = Vec<FileInspection>;
 pub(super) async fn run(
     root: PathBuf,
-    files: Vec<FileTarget>,
+    files: Vec<FileInspection>,
     workers: u8,
 ) -> PortResult<Vec<FileOutcome>> {
     let mut groups: BTreeMap<PathBuf, Group> = BTreeMap::new();
@@ -20,7 +20,11 @@ pub(super) async fn run(
         groups,
         usize::from(workers),
         move |group| remove_group(&root, group),
-        super::workers::failed,
+        |file, message| FileOutcome {
+            id: file.id,
+            path: file.path,
+            result: DeletionResult::Failed(validation::invalid(&message)),
+        },
     )
     .await
 }
@@ -32,8 +36,17 @@ fn remove_group(root: &std::path::Path, group: Group) -> Vec<FileOutcome> {
         .map(|file| {
             let result = match &valid {
                 Err(error) => DeletionResult::Failed(error.clone()),
-                Ok(false) => DeletionResult::AlreadyAbsent,
-                Ok(true) => super::removal::remove(&file.path),
+                Ok(_) => match (&file.result, super::inspect::metadata(&file.path)) {
+                    (Err(error), _) => DeletionResult::Failed(error.clone()),
+                    (_, Err(error)) => DeletionResult::Failed(error),
+                    (Ok(_), Ok(None)) => DeletionResult::AlreadyAbsent,
+                    (Ok(Some(expected)), Ok(Some(current))) if *expected == current => {
+                        super::removal::remove(&file.path)
+                    }
+                    (Ok(_), Ok(Some(_))) => DeletionResult::Failed(validation::invalid(
+                        "file changed since age inspection",
+                    )),
+                },
             };
             FileOutcome {
                 id: file.id,

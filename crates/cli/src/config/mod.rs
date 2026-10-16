@@ -19,11 +19,14 @@ pub(crate) struct LaunchSettings {
     pub cleanup: Result<Settings, ConfigError>,
 }
 pub(crate) fn load_launch(args: &Args) -> Result<LaunchSettings, ConfigError> {
-    let (system, file) = input(args)?;
+    let (system, file, env_file) = input(args)?;
     let log_file = log_file(args.options(), &system, &file)?;
     Ok(LaunchSettings {
         log_file,
-        cleanup: load_with_sources(args, &system, &file),
+        cleanup: load_with_sources(args, &system, &file).map(|settings| Settings {
+            env_file,
+            ..settings
+        }),
     })
 }
 fn log_file(
@@ -40,32 +43,33 @@ fn log_file(
     }
     Ok(log)
 }
-fn input(args: &Args) -> Result<(sources::Values, sources::Values), ConfigError> {
+fn input(args: &Args) -> Result<(sources::Values, sources::Values, Option<PathBuf>), ConfigError> {
     let system = sources::environment()?;
-    let file = args
-        .options()
-        .env_file
-        .as_deref()
-        .map(sources::read_file)
-        .transpose()?
-        .unwrap_or_default();
-    Ok((system, file))
+    let executable = std::env::current_exe()
+        .map_err(|_| ConfigError::Setting("Не удалось определить путь EXE"))?;
+    let (file, path) = sources::selected_file(args.options().env_file.as_deref(), &executable)?;
+    Ok((system, file, path))
 }
 pub(crate) fn load_service_settings(args: &Args) -> Result<ServiceSettings, ConfigError> {
+    if args.options().json {
+        return Err(ConfigError::Setting("служба не поддерживает --json"));
+    }
     if args
         .options()
         .env_file
         .as_ref()
-        .is_none_or(|path| !path.is_absolute())
-        || args.options().json
+        .is_some_and(|path| !path.is_absolute())
     {
         return Err(ConfigError::Setting(
-            "service run requires an absolute --env-file and no --json",
+            "для службы --env-file должен быть абсолютным",
         ));
     }
-    let (system, file) = input(args)?;
-    service_with_sources(args, &system, &file)
+    let (system, file, env_file) = input(args)?;
+    let mut settings = service_with_sources(args, &system, &file)?;
+    settings.cleanup.env_file = env_file;
+    Ok(settings)
 }
+
 fn service_with_sources(
     args: &Args,
     system: &sources::Values,
@@ -73,14 +77,14 @@ fn service_with_sources(
 ) -> Result<ServiceSettings, ConfigError> {
     let cleanup = load_with_sources(args, system, file)?;
     if cleanup.scan != ScanMode::Fast {
-        return Err(ConfigError::Setting("service requires HMAIL_SCAN=fast"));
+        return Err(ConfigError::Setting("Для службы требуется HMAIL_SCAN=fast"));
     }
     if cleanup.log_file.is_none() {
         return Err(ConfigError::Setting("HMAIL_LOG_FILE"));
     }
     if cleanup.service_name.eq_ignore_ascii_case("hMailCleaner") {
         return Err(ConfigError::Setting(
-            "mail service must differ from hMailCleaner",
+            "Почтовая служба должна отличаться от hMailCleaner",
         ));
     }
     let raw =
@@ -92,10 +96,12 @@ fn service_with_sources(
             .enumerate()
             .all(|(index, byte)| index == 2 || byte.is_ascii_digit())
     {
-        return Err(ConfigError::Setting("HMAIL_RUN_AT must be HH:MM"));
+        return Err(ConfigError::Setting(
+            "HMAIL_RUN_AT должен иметь формат HH:MM",
+        ));
     }
     let run_at = chrono::NaiveTime::parse_from_str(raw, "%H:%M")
-        .map_err(|_| ConfigError::Setting("HMAIL_RUN_AT must be HH:MM"))?;
+        .map_err(|_| ConfigError::Setting("HMAIL_RUN_AT должен иметь формат HH:MM"))?;
     Ok(ServiceSettings { cleanup, run_at })
 }
 pub(crate) fn load_with_sources(
@@ -165,6 +171,7 @@ pub(crate) fn load_with_sources(
     };
     let log_file = log_file(options, system, file)?;
     Ok(Settings {
+        env_file: None,
         database,
         data_dir,
         hmail_ini,
@@ -191,17 +198,17 @@ impl Settings {
         }
         let scan = match intent.scan {
             ScanMode::Fast => ScanOptions::Fast,
-            ScanMode::Full => ScanOptions::Full {
-                file_cutoff: file_cutoff(&Local, cutoff)?,
-            },
+            ScanMode::Full => ScanOptions::Full,
         };
         Ok(Config {
+            env_file: self.env_file.clone(),
             mode: intent.mode,
             scan,
             service_policy: intent.service_policy,
             database: self.database.clone(),
             options: RunOptions {
                 cutoff,
+                file_cutoff: file_cutoff(&Local, cutoff)?,
                 batch_size: self.batch_size,
                 workers: self.workers,
                 data_directory: self.data_dir.clone(),

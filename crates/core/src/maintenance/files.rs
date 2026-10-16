@@ -79,7 +79,7 @@ async fn iterate<S: FileScan, F: FullFileStore, G: OfflineGuard, P: Fn(Progress)
         let selected = batch
             .files
             .into_iter()
-            .filter(|file| file.modified_at < *cutoff && !references.contains(&file.guid))
+            .filter(|file| file.created_at < *cutoff && !references.contains(&file.guid))
             .collect::<Vec<_>>();
         summary.selected_orphan_files += selected.len() as u64;
         if *operation == Operation::Clean && !selected.is_empty() {

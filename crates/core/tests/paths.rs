@@ -1,5 +1,8 @@
 use chrono::NaiveDateTime;
-use hmail_cleaner_core::{cleanup::Candidate, paths::resolve_path};
+use hmail_cleaner_core::{
+    cleanup::{Candidate, MessageStorage},
+    paths::resolve_path,
+};
 use std::path::{Path, PathBuf};
 
 const NAME: &str = "{6C2CD4A9-683F-4EB4-91D7-9E2FD3700000}.eml";
@@ -30,7 +33,9 @@ fn message(address: &str, filename: &str) -> Candidate {
         id: 1,
         account_id: 2,
         folder_id: 3,
-        account_address: address.into(),
+        storage: MessageStorage::Account {
+            address: address.into(),
+        },
         filename: filename.into(),
         created_at: NaiveDateTime::parse_from_str("2026-09-01 10:00:00", "%Y-%m-%d %H:%M:%S")
             .unwrap(),
@@ -43,6 +48,35 @@ fn guid_resolves_to_account_bucket() {
         resolve_path(Path::new("/data"), &message("info@chem.orp", NAME)).unwrap(),
         PathBuf::from("/data/chem.orp/info/6C").join(NAME)
     );
+}
+
+#[test]
+fn public_guid_resolves_without_an_account_directory() {
+    let public = Candidate {
+        account_id: 0,
+        storage: MessageStorage::Public,
+        ..message("unused", NAME)
+    };
+    assert_eq!(
+        resolve_path(Path::new("/data"), &public).unwrap(),
+        PathBuf::from("/data/#Public/6C").join(NAME)
+    );
+    let legacy = Candidate {
+        filename: format!(r"D:\Data\#Public\6C\{NAME}"),
+        ..public
+    };
+    assert_eq!(
+        resolve_path(Path::new(r"D:\Data"), &legacy).unwrap(),
+        Path::new(r"D:\Data").join("#Public").join("6C").join(NAME)
+    );
+    assert!(resolve_path(
+        Path::new("/data"),
+        &Candidate {
+            filename: format!("../{NAME}"),
+            ..legacy
+        }
+    )
+    .is_err());
 }
 
 #[test]

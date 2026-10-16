@@ -1,16 +1,39 @@
-# Tauri + Vue + TypeScript
+# hMail Cleaner
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Консольная программа на Rust для очистки файлов и MySQL-базы hMailServer.
+Сначала удаляет файлы и подтверждает их отсутствие, затем очищает связанные
+записи БД. Работает непосредственно на Windows-сервере с почтовым хранилищем.
 
-## Recommended IDE Setup
+```cmd
+hmail-cleaner.exe
+```
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+Без аргументов открывает русское меню. Настройки по умолчанию читает из
+`cleaner.env` рядом с EXE. Образец: [cleaner.env.example](cleaner.env.example).
 
-## Type Support For `.vue` Imports in TS
+```cmd
+hmail-cleaner preview
+hmail-cleaner clean --manage-service
+hmail-cleaner clean --scan full --before "2024-09-15T23:00:00" --manage-service
+```
 
-Since TypeScript cannot handle type information for `.vue` imports, they are shimmed to be a generic Vue component type by default. In most cases this is fine if you don't really care about component prop types outside of templates. However, if you wish to get actual prop types in `.vue` imports (for example to get props validation when using manual `h(...)` calls), you can enable Volar's Take Over mode by following these steps:
+Оба режима рекурсивно проверяют корень Data и все вложенные папки по дате
+создания файла. `full` дополнительно проверяет исторические записи без родителя
+и сверяет оставшиеся старые файлы. Быстрый предпросмотр доступен при работающей
+почте. Для полного предпросмотра служба должна быть остановлена; очистка
+с `--manage-service` останавливает и восстанавливает её сама.
 
-1. Run `Extensions: Show Built-in Extensions` from VS Code's command palette, look for `TypeScript and JavaScript Language Features`, then right click and select `Disable (Workspace)`. By default, Take Over mode will enable itself if the default TypeScript extension is disabled.
-2. Reload the VS Code window by running `Developer: Reload Window` from the command palette.
+## Разработка и сборка
 
-You can learn more about Take Over mode [here](https://github.com/johnsoncodehk/volar/discussions/471).
+```sh
+mise run check
+mise run test:db
+mise run build:exe
+```
+
+Последняя команда создаёт `hmail-cleaner.exe` и `hmail-cleaner.exe.sha256`
+в корне проекта. На Windows нужны MSVC Build Tools и Windows SDK; на macOS
+нужен работающий Docker. Первый cross-build загружает Rust и Windows SDK,
+следующие используют кэш. Node.js, Yarn, Tauri и WebView2 не нужны.
+
+Подробности, настройки службы и ограничения: [инструкция CLI](docs/cleanup-cli.md).

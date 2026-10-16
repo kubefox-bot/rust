@@ -47,20 +47,18 @@ pub async fn clean<R: Repository, F: FileStore, G: OfflineGuard, P: Fn(Progress)
         )? {
             break;
         }
-        at(guard.ensure_stopped().await, Stage::Preflight, summary)?;
         cursor = batch.last_id;
         let planned = batch::resolve(batch, options, &mut summary, &progress);
+        let (planned, targets) = at(
+            super::age::select(planned, files, options, &mut summary, &progress).await,
+            Stage::Selection,
+            summary,
+        )?;
         emit(Stage::Selection, summary, &progress);
         if planned.is_empty() {
             continue;
         }
-        let targets = planned
-            .iter()
-            .map(|(id, (_, path))| FileTarget {
-                id: *id,
-                path: path.clone(),
-            })
-            .collect();
+        at(guard.ensure_stopped().await, Stage::Preflight, summary)?;
         let outcomes = at(
             files.delete(targets, options.workers).await,
             Stage::Files,
@@ -130,8 +128,9 @@ pub async fn clean<R: Repository, F: FileStore, G: OfflineGuard, P: Fn(Progress)
     emit(Stage::Complete, summary, &progress);
     Ok(summary)
 }
-pub async fn preview<R: Repository, P: Fn(Progress) + Send + Sync>(
+pub async fn preview<R: Repository, F: FileStore, P: Fn(Progress) + Send + Sync>(
     repository: &mut R,
+    files: &F,
     options: &RunOptions,
     progress: P,
 ) -> Result<Summary, CleanupError> {
@@ -159,7 +158,12 @@ pub async fn preview<R: Repository, P: Fn(Progress) + Send + Sync>(
             break;
         }
         cursor = batch.last_id;
-        batch::resolve(batch, options, &mut summary, &progress);
+        let planned = batch::resolve(batch, options, &mut summary, &progress);
+        at(
+            super::age::select(planned, files, options, &mut summary, &progress).await,
+            Stage::Selection,
+            summary,
+        )?;
         emit(Stage::Selection, summary, &progress);
     }
     emit(Stage::Complete, summary, &progress);

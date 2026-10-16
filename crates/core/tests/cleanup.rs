@@ -26,7 +26,9 @@ fn candidate(id: i64) -> Candidate {
         id,
         account_id: 1,
         folder_id: 10,
-        account_address: "info@chem.orp".into(),
+        storage: MessageStorage::Account {
+            address: "info@chem.orp".into(),
+        },
         filename: format!("{{AB000000-0000-0000-0000-{id:012X}}}.eml"),
         created_at: date("2026-01-01 12:00:00"),
     }
@@ -34,6 +36,7 @@ fn candidate(id: i64) -> Candidate {
 fn options() -> RunOptions {
     RunOptions {
         cutoff: date("2026-09-07 12:00:00"),
+        file_cutoff: std::time::SystemTime::now(),
         batch_size: NonZeroU32::new(2).unwrap(),
         workers: 2,
         data_directory: PathBuf::from("/Data"),
@@ -124,9 +127,49 @@ struct Files {
     absent: Mutex<HashSet<i64>>,
     failures: HashSet<i64>,
     cancel: Option<Arc<Cancellation>>,
+    created_at: BTreeMap<i64, std::time::SystemTime>,
+    inspection_failures: HashSet<i64>,
+    incomplete_inspection: bool,
 }
 impl FileStore for Files {
-    async fn delete(&self, files: Vec<FileTarget>, _workers: u8) -> PortResult<Vec<FileOutcome>> {
+    async fn inspect(&self, files: Vec<FileTarget>, _: u8) -> PortResult<Vec<FileInspection>> {
+        let mut observed = files
+            .into_iter()
+            .map(|file| FileInspection {
+                id: file.id,
+                path: file.path,
+                result: if self.inspection_failures.contains(&file.id) {
+                    Err(FileFailure {
+                        kind: FileFailureKind::Io,
+                        message: "CreationTime unavailable".into(),
+                    })
+                } else {
+                    Ok(if self.absent.lock().unwrap().contains(&file.id) {
+                        None
+                    } else {
+                        Some(FileMetadata {
+                            created_at: self
+                                .created_at
+                                .get(&file.id)
+                                .copied()
+                                .unwrap_or(std::time::SystemTime::UNIX_EPOCH),
+                            modified_at: std::time::SystemTime::UNIX_EPOCH,
+                            size_bytes: 7,
+                        })
+                    })
+                },
+            })
+            .collect::<Vec<_>>();
+        if self.incomplete_inspection {
+            observed.pop();
+        }
+        Ok(observed)
+    }
+    async fn delete(
+        &self,
+        files: Vec<FileInspection>,
+        _workers: u8,
+    ) -> PortResult<Vec<FileOutcome>> {
         self.events
             .lock()
             .unwrap()
@@ -193,6 +236,9 @@ impl Scenario {
                 absent: Mutex::new(HashSet::new()),
                 failures: HashSet::new(),
                 cancel: None,
+                created_at: BTreeMap::new(),
+                inspection_failures: HashSet::new(),
+                incomplete_inspection: false,
             },
             guard: Guard(events.clone()),
             events,
@@ -329,7 +375,7 @@ async fn cancel_finishes_started_batch() {
 #[tokio::test]
 async fn preview_has_no_delete_calls() {
     let mut s = Scenario::new(3);
-    let summary = preview(&mut s.repository, &options(), |_| {})
+    let summary = preview(&mut s.repository, &s.files, &options(), |_| {})
         .await
         .unwrap();
     assert_eq!(summary.selected, 3);
@@ -379,4 +425,69 @@ async fn invalid_paths_are_reported_and_preserved() {
         .unwrap()
         .iter()
         .any(|event| matches!(event, Event::Files(_) | Event::Delete(_) | Event::Prune)));
+}
+
+#[tokio::test]
+async fn creation_time_overrides_database_date_in_both_directions() {
+    let mut s = Scenario::new(2);
+    s.repository.rows.get_mut(&1).unwrap().created_at = date("2026-10-01 12:00:00");
+    s.files.created_at.insert(
+        2,
+        options().file_cutoff + std::time::Duration::from_secs(3600),
+    );
+    let planned = preview(&mut s.repository, &s.files, &options(), |_| {})
+        .await
+        .unwrap();
+    assert_eq!(planned.selected, 1);
+    assert_eq!(planned.examined_messages, 2);
+    assert_eq!(planned.removed_files, 0);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.selected, 1);
+    assert_eq!(summary.deleted_messages, 1);
+    assert_eq!(
+        s.repository.rows.keys().copied().collect::<Vec<_>>(),
+        vec![2]
+    );
+}
+
+#[tokio::test]
+async fn missing_files_use_database_age_without_removing_fresh_records() {
+    let mut s = Scenario::new(2);
+    s.files.absent.lock().unwrap().extend([1, 2]);
+    s.repository.rows.get_mut(&2).unwrap().created_at = options().cutoff;
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.selected, 1);
+    assert_eq!(summary.absent_files, 1);
+    assert_eq!(summary.deleted_messages, 1);
+    assert!(s.repository.rows.contains_key(&2));
+}
+
+#[tokio::test]
+async fn failed_creation_time_inspection_preserves_the_message() {
+    let mut s = Scenario::new(1);
+    s.files.inspection_failures.insert(1);
+    let summary = s.run(&Cancellation::default()).await.unwrap();
+    assert_eq!(summary.failed, 1);
+    assert_eq!(summary.deleted_messages, 0);
+    assert!(s.repository.rows.contains_key(&1));
+    assert!(!s
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|event| matches!(event, Event::Files(_) | Event::Delete(_))));
+}
+
+#[tokio::test]
+async fn incomplete_inspection_blocks_file_and_database_deletion() {
+    let mut s = Scenario::new(2);
+    s.files.incomplete_inspection = true;
+    assert!(s.run(&Cancellation::default()).await.is_err());
+    assert_eq!(s.repository.rows.len(), 2);
+    assert!(!s
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|event| matches!(event, Event::Files(_) | Event::Delete(_))));
 }

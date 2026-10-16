@@ -1,0 +1,56 @@
+use std::{
+    process::Command,
+    time::{SystemTime, UNIX_EPOCH},
+};
+fn revision() -> String {
+    if let Ok(revision) = std::env::var("HMAIL_SOURCE_REVISION") {
+        return revision;
+    }
+    let revision = Command::new("git")
+        .args(["rev-parse", "--short=12", "HEAD"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+        .unwrap_or_else(|| "source".into());
+    let dirty = Command::new("git")
+        .args([
+            "diff",
+            "--quiet",
+            "HEAD",
+            "--",
+            "../../crates",
+            "../../Cargo.lock",
+        ])
+        .status()
+        .is_ok_and(|s| !s.success());
+    format!("{revision}{}", if dirty { "-dirty" } else { "" })
+}
+fn main() {
+    println!("cargo:rerun-if-changed=../../.git/HEAD");
+    if let Ok(reference) = Command::new("git")
+        .args(["symbolic-ref", "--quiet", "HEAD"])
+        .output()
+    {
+        if reference.status.success() {
+            println!(
+                "cargo:rerun-if-changed=../../.git/{}",
+                String::from_utf8_lossy(&reference.stdout).trim()
+            );
+        }
+    }
+    for path in ["src", "../core/src", "../adapters/src", "../../Cargo.lock"] {
+        println!("cargo:rerun-if-changed={path}");
+    }
+    println!("cargo:rerun-if-env-changed=HMAIL_SOURCE_REVISION");
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("build clock before epoch")
+        .as_secs();
+    println!(
+        "cargo:rustc-env=HMAIL_BUILD_VERSION={}+{}.{}",
+        env!("CARGO_PKG_VERSION"),
+        revision(),
+        timestamp
+    );
+}

@@ -120,7 +120,10 @@ impl FullRepository for Repo {
     }
 }
 impl FileStore for Files {
-    async fn delete(&self, _: Vec<FileTarget>, _: u8) -> PortResult<Vec<FileOutcome>> {
+    async fn inspect(&self, _: Vec<FileTarget>, _: u8) -> PortResult<Vec<FileInspection>> {
+        panic!("no messages")
+    }
+    async fn delete(&self, _: Vec<FileInspection>, _: u8) -> PortResult<Vec<FileOutcome>> {
         panic!("no messages")
     }
     async fn prune_empty(&self, _: Vec<PathBuf>) -> PortResult<PruneOutcome> {
@@ -174,6 +177,7 @@ impl FileScan for Scan {
             return Err("scan failed".into());
         }
         Ok(ScanBatch {
+            completed_directories: Vec::new(),
             visited_entries: s.files.len() as u64,
             examined_files: s.files.len() as u64,
             files: s.files.clone(),
@@ -195,6 +199,7 @@ fn observation(id: u128, age: u64) -> FileObservation {
         guid: Uuid::from_u128(id),
         size_bytes: 7,
         modified_at: SystemTime::UNIX_EPOCH + Duration::from_secs(age),
+        created_at: SystemTime::UNIX_EPOCH + Duration::from_secs(age),
     }
 }
 fn setup() -> Shared {
@@ -218,6 +223,7 @@ async fn run(
             .unwrap()
             .and_hms_opt(0, 0, 0)
             .unwrap(),
+        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
         batch_size: NonZeroU32::new(1000).unwrap(),
         workers: 2,
         data_directory: PathBuf::from("/Data"),
@@ -234,9 +240,7 @@ async fn run(
     }
 }
 fn full() -> ScanOptions {
-    ScanOptions::Full {
-        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
-    }
+    ScanOptions::Full
 }
 #[tokio::test]
 async fn cancel_finishes_current_orphan_batch() {
@@ -370,4 +374,21 @@ async fn unexpected_orphan_outcome_blocks_pruning() {
     assert_eq!(err.summary.removed_orphan_files, 0);
     assert!(!s.lock().unwrap().trace.contains(&"prune"));
     assert!(s.lock().unwrap().closed);
+}
+
+#[tokio::test]
+async fn orphan_age_uses_creation_time_instead_of_modification_time() {
+    let s = setup();
+    {
+        let mut state = s.lock().unwrap();
+        state.files[0].modified_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1000);
+        state.files[1].modified_at = SystemTime::UNIX_EPOCH;
+    }
+    let summary = run(&s, false, full(), &Cancellation::default())
+        .await
+        .unwrap();
+    assert_eq!(summary.removed_orphan_files, 1);
+    let state = s.lock().unwrap();
+    assert_eq!(state.files.len(), 1);
+    assert_eq!(state.files[0].guid, Uuid::from_u128(2));
 }

@@ -1,7 +1,7 @@
 use super::*;
 use crate::cleanup::{self, *};
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum Operation {
+pub enum Operation {
     Preview,
     Clean,
 }
@@ -19,7 +19,7 @@ pub(super) fn at<T>(
 pub(super) fn cancelled(cancel: &Cancellation, summary: Summary) -> Result<(), CleanupError> {
     at(
         if cancel.is_requested() {
-            Err("cancelled after completing the started batch".into())
+            Err("Операция отменена после завершения текущего пакета".into())
         } else {
             Ok(())
         },
@@ -75,10 +75,12 @@ async fn run<
     progress: P,
     operation: Operation,
 ) -> Result<Summary, CleanupError> {
-    let ScanOptions::Full { file_cutoff } = scan else {
+    let ScanOptions::Full = scan else {
         return match operation {
             Operation::Clean => cleanup::clean(deps, options, cancel, progress).await,
-            Operation::Preview => cleanup::preview(deps.repository, options, progress).await,
+            Operation::Preview => {
+                cleanup::preview(deps.repository, deps.files, options, progress).await
+            }
         };
     };
     cancelled(cancel, Summary::default())?;
@@ -106,7 +108,9 @@ async fn run<
             )
             .await?
         }
-        Operation::Preview => cleanup::preview(deps.repository, options, prefix).await?,
+        Operation::Preview => {
+            cleanup::preview(deps.repository, deps.files, options, prefix).await?
+        }
     };
     database::run(
         deps.repository,
@@ -139,7 +143,7 @@ async fn run<
             files: deps.files,
             guard: deps.guard,
             options,
-            cutoff: file_cutoff,
+            cutoff: options.file_cutoff,
             references: &references,
             cancel,
             progress: &progress,

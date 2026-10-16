@@ -37,7 +37,7 @@ jobs:
         with:
           version: 2026.10.3
       - run: mise run check
-      - run: mise run build:windows
+      - run: mise run build:exe
       - run: mise exec -- cargo build -p hmail-cleaner-adapters --example scm_fixture --locked
       - name: Test isolated SCM host
         shell: pwsh
@@ -45,9 +45,11 @@ jobs:
           $env:HMAIL_SCM_FIXTURE_EXE = (Resolve-Path target/debug/examples/scm_fixture.exe).Path
           mise exec -- cargo test -p hmail-cleaner-adapters --test service --locked -- --ignored --test-threads=1
           exit $LASTEXITCODE
-      - run: .\target\x86_64-pc-windows-msvc\release\hmail-cleaner.exe --help
+      - run: .\hmail-cleaner.exe --help
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: hmail-cleaner-windows-x64
-          path: target/x86_64-pc-windows-msvc/release/hmail-cleaner.exe
+          path: |
+            hmail-cleaner.exe
+            hmail-cleaner.exe.sha256
           if-no-files-found: error

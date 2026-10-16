@@ -1,8 +1,12 @@
 mod fixtures;
+#[path = "mysql/public_messages.rs"]
+mod public_messages;
+#[path = "mysql/recursive.rs"]
+mod recursive;
 
 use fixtures::{date, name, Fixture};
 use hmail_cleaner_adapters::mysql::{DatabaseConfig, MySqlRepository};
-use hmail_cleaner_core::cleanup::{DeleteResult, Repository, Selection};
+use hmail_cleaner_core::cleanup::{DeleteResult, MessageStorage, Repository, Selection};
 use hmail_cleaner_core::maintenance::{FullRepository, OrphanSelection, OrphanTable};
 use sqlx::Executor;
 
@@ -191,7 +195,7 @@ fn config_debug_hides_credentials() {
 
 #[tokio::test]
 #[ignore = "requires mise run test:db disposable MySQL 5.7.21"]
-async fn selects_only_old_delivered_accounts_across_folders() {
+async fn selects_all_delivered_account_and_public_messages() {
     let mut fixture = Fixture::create().await;
     for (id, account, folder, state, created) in [
         (1, 1, 10, 2, OLD),
@@ -218,10 +222,21 @@ async fn selects_only_old_delivered_accounts_across_folders() {
             .iter()
             .map(|row| row.id)
             .collect::<Vec<_>>(),
-        vec![1, 2, 3]
+        vec![1, 2, 3, 5, 6, 7]
     );
-    assert_eq!(batch.candidates[0].account_address, "info@chem.orp");
-    assert_eq!(batch.candidates[2].account_address, "sales@chem.orp");
+    assert_eq!(
+        batch.candidates[0].storage,
+        MessageStorage::Account {
+            address: "info@chem.orp".into()
+        }
+    );
+    assert_eq!(
+        batch.candidates[2].storage,
+        MessageStorage::Account {
+            address: "sales@chem.orp".into()
+        }
+    );
+    assert_eq!(batch.candidates[3].storage, MessageStorage::Public);
     assert!(batch.rejected.is_empty());
     repository.close().await.unwrap();
     fixture.finish().await;
@@ -441,7 +456,7 @@ async fn snapshot_excludes_later_insertions_and_query_uses_primary_range() {
             .collect::<Vec<_>>(),
         vec![1]
     );
-    let explain = sqlx::query("EXPLAIN SELECT messageid,messageaccountid,messagefolderid,messagefilename,messagecreatetime FROM hm_messages FORCE INDEX(PRIMARY) WHERE messageid>0 AND messageid<=2 AND messagetype=2 AND messageaccountid>0 AND messagecreatetime<'2026-09-07 12:00:00' ORDER BY messageid LIMIT 1000").fetch_one(&mut fixture.admin).await.unwrap();
+    let explain = sqlx::query("EXPLAIN SELECT messageid,messageaccountid,messagefolderid,messagefilename,messagecreatetime FROM hm_messages FORCE INDEX(PRIMARY) WHERE messageid>0 AND messageid<=2 AND messagetype=2 AND messageaccountid>=0 ORDER BY messageid LIMIT 1000").fetch_one(&mut fixture.admin).await.unwrap();
     // MySQL 5.7 EXPLAIN metadata does not populate SQLx's name lookup.
     let value = |name: &str| {
         let index = explain
@@ -513,10 +528,15 @@ async fn lost_commit_acknowledgement_stops_then_repeat_preserves_other_rows() {
     let parent = root.join("chem.orp/info/00");
     std::fs::create_dir_all(&parent).unwrap();
     std::fs::write(parent.join(name(1)), b"old").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
     std::fs::write(parent.join(name(2)), b"new").unwrap();
     let files = LocalFiles::new(root.clone()).unwrap();
     let options = RunOptions {
         cutoff: date(BOUNDARY),
+        file_cutoff: std::fs::metadata(parent.join(name(2)))
+            .unwrap()
+            .created()
+            .unwrap(),
         batch_size: std::num::NonZeroU32::new(1).unwrap(),
         workers: 2,
         data_directory: root,
@@ -576,6 +596,7 @@ async fn real_sql_rollback_after_file_deletion_is_reconciled_on_repeat() {
     let files = LocalFiles::new(root.clone()).unwrap();
     let options = RunOptions {
         cutoff: date(BOUNDARY),
+        file_cutoff: std::time::SystemTime::now() + std::time::Duration::from_secs(1),
         batch_size: std::num::NonZeroU32::new(1).unwrap(),
         workers: 2,
         data_directory: root.clone(),
@@ -731,21 +752,27 @@ async fn full_cleanup_reconciles_database_and_real_account_files() {
     let root = temp.path().join("data");
     let bucket = root.join("chem.orp/info/00");
     fs::create_dir_all(&bucket).unwrap();
-    for id in [1, 2, 4, 5] {
+    for id in [1, 4] {
+        fs::write(bucket.join(name(id)), b"1234567").unwrap();
+    }
+    std::thread::sleep(Duration::from_millis(20));
+    for id in [2, 5] {
         fs::write(bucket.join(name(id)), b"1234567").unwrap();
     }
     let orphan = bucket.join(name(4));
     let handle = fs::OpenOptions::new().write(true).open(&orphan).unwrap();
     handle
-        .set_times(
-            fs::FileTimes::new().set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1)),
-        )
+        .set_times(fs::FileTimes::new().set_modified(SystemTime::now() + Duration::from_secs(3600)))
         .unwrap();
     drop(handle);
     let files = LocalFiles::new(root.clone()).unwrap();
     let mut repo = fixture.repository().await;
     let options = RunOptions {
         cutoff: date(BOUNDARY),
+        file_cutoff: fs::metadata(bucket.join(name(2)))
+            .unwrap()
+            .created()
+            .unwrap(),
         batch_size: NonZeroU32::new(2).unwrap(),
         workers: 2,
         data_directory: root,
@@ -757,9 +784,7 @@ async fn full_cleanup_reconciles_database_and_real_account_files() {
             guard: &Stopped,
         },
         &options,
-        ScanOptions::Full {
-            file_cutoff: SystemTime::now() - Duration::from_secs(60),
-        },
+        ScanOptions::Full,
         &Cancellation::default(),
         |_| {},
     )
