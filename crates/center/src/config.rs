@@ -8,6 +8,7 @@ const DEFAULT_LISTEN: &str = "0.0.0.0:8443";
 pub(crate) const AGENT_PACKAGES_DIRECTORY: &str = "/opt/hmail/agent-packages";
 const CONFIG_FILE: &str = "center.json";
 const MAX_CONFIG_BYTES: u64 = 8192;
+const DEFAULT_STATIC_DIR: &str = "/opt/hmail/web";
 pub struct CenterArgs {
     pub data_dir: PathBuf,
 }
@@ -16,6 +17,7 @@ pub struct CenterConfig {
     pub data_dir: PathBuf,
     pub listen: SocketAddr,
     pub origin: BrowserOrigin,
+    pub static_dir: PathBuf,
 }
 #[derive(Clone)]
 pub struct BrowserOrigin {
@@ -67,6 +69,11 @@ impl BrowserOrigin {
 struct Wire {
     origin: String,
     listen: SocketAddr,
+    #[serde(default = "default_static_dir")]
+    static_dir: PathBuf,
+}
+fn default_static_dir() -> PathBuf {
+    DEFAULT_STATIC_DIR.into()
 }
 #[derive(Debug, thiserror::Error)]
 #[error("invalid center configuration")]
@@ -86,16 +93,18 @@ impl CenterConfig {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Wire {
                 origin: DEFAULT_ORIGIN.into(),
                 listen: DEFAULT_LISTEN.parse().map_err(|_| ConfigError)?,
+                static_dir: default_static_dir(),
             },
             Err(_) => return Err(ConfigError),
         };
-        if wire.listen.port() == 0 {
+        if wire.listen.port() == 0 || !wire.static_dir.is_absolute() {
             return Err(ConfigError);
         }
         Ok(Self {
             data_dir: args.data_dir.clone(),
             listen: wire.listen,
             origin: BrowserOrigin::parse(&wire.origin)?,
+            static_dir: wire.static_dir,
         })
     }
     pub fn create(path: &Path, origin: &str, listen: SocketAddr) -> Result<(), ConfigError> {
@@ -107,6 +116,7 @@ impl CenterConfig {
         let wire = Wire {
             origin: origin.canonical,
             listen,
+            static_dir: default_static_dir(),
         };
         let bytes = serde_json::to_vec_pretty(&wire).map_err(|_| ConfigError)?;
         let mut file = std::fs::OpenOptions::new()

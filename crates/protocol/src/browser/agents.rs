@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct HealthView {
     pub agent_id: crate::AgentId,
@@ -9,7 +9,7 @@ pub struct HealthView {
     pub version: Option<String>,
     pub observed_at: Option<chrono::DateTime<chrono::Utc>>,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AgentView {
     pub agent_id: crate::AgentId,

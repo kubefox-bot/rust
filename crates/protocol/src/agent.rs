@@ -52,7 +52,7 @@ impl ValidatedProfile {
         &self.0.mail_profile
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProfileValidationResponse {
     pub mail_state: crate::ObservedMailState,
@@ -126,7 +126,7 @@ pub struct AgentIdentityInstall {
     pub server_name: String,
     pub certificate_pem: String,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IdentityReceipt {
     pub agent_id: AgentId,

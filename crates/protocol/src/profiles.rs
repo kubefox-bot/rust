@@ -2,7 +2,9 @@ use crate::limits::{MAX_PASSWORD_BYTES, MAX_PROFILE_TEXT_BYTES};
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum DatabaseTls {
     #[default]

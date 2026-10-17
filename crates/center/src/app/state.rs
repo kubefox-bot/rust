@@ -15,8 +15,13 @@ pub struct AppState {
     pub jobs: crate::jobs::JobService,
     pub enrollment: crate::enrollment::EnrollmentService,
     pub(crate) account: crate::account::AccountService,
+    pub(crate) static_dir: Option<crate::http::static_files::StaticDir>,
 }
 impl AppState {
+    pub fn with_static_dir(mut self, directory: crate::http::static_files::StaticDir) -> Self {
+        self.static_dir = Some(directory);
+        self
+    }
     pub fn authority(&self) -> &Arc<SessionAuthority> {
         &self.authority
     }
@@ -53,6 +58,7 @@ impl AppState {
             crate::enrollment::NativeSsh,
         );
         Ok(Self {
+            static_dir: None,
             account: crate::account::AccountService::new(store.clone(), authority.clone()),
             store,
             authority,

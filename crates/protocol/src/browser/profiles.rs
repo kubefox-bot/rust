@@ -1,6 +1,6 @@
 use crate::{AgentId, Counter, DatabaseTls, ProfileId, ServerId};
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(
     tag = "kind",
     content = "value",
@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 )]
 pub enum PasswordPatch {
     Keep,
-    Replace(zeroize::Zeroizing<String>),
+    Replace(#[schemars(with = "String")] zeroize::Zeroizing<String>),
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProfilePatch {
     pub mysql_host: String,
@@ -24,7 +24,7 @@ pub struct ProfilePatch {
     pub hmail_ini: String,
     pub service_name: String,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EditableProfile {
     pub id: ProfileId,
@@ -41,7 +41,7 @@ pub struct EditableProfile {
     pub hmail_ini: String,
     pub service_name: String,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ServerView {
     pub id: ServerId,
@@ -49,13 +49,13 @@ pub struct ServerView {
     pub agent_id: AgentId,
     pub profile_id: ProfileId,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SaveProfileRequest {
     pub expected_version: Counter,
     pub profile: ProfilePatch,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProfileVersion {
     pub id: ProfileId,

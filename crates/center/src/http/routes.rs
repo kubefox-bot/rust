@@ -9,6 +9,11 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::csrf::CsrfLayer;
 const LOGIN_BODY_BYTES: usize = 8192;
 pub fn router(state: AppState) -> Router {
+    let static_routes = state
+        .static_dir
+        .clone()
+        .map(super::static_files::routes)
+        .unwrap_or_default();
     let api = Router::new()
         .route("/auth/login", post(crate::auth::http::login))
         .route("/auth/logout", post(crate::auth::http::logout))
@@ -34,6 +39,7 @@ pub fn router(state: AppState) -> Router {
         .layer(middleware::from_fn(super::csrf::deadline))
         .layer(middleware::from_fn(super::csrf::no_store));
     Router::new()
+        .merge(static_routes)
         .nest("/api/v1", api)
         .route("/healthz", get(|| async { "ok" }))
         .with_state(state)

@@ -1,0 +1,23 @@
+{
+  "name": "@hmail/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "bun run --bun astro check && bun run --bun svelte-check --tsconfig ./tsconfig.json && bun run test:unit",
+    "build": "bun run --bun astro build",
+    "dev": "bun run --bun astro dev --host 127.0.0.1",
+    "test": "bun run test:unit",
+    "browser:install": "PLAYWRIGHT_SKIP_BROWSER_GC=1 bun run --bun playwright install chromium",
+    "test:unit": "bun test tests/contracts.test.ts tests/events.test.ts tests/request.test.ts",
+    "test:browser": "bun run build && bun test tests/shell.browser.test.ts"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@astrojs/svelte": "9.1.0",
+    "astro": "7.4.0",
+    "playwright": "1.64.1",
+    "svelte": "5.57.2",
+    "svelte-check": "4.7.7",
+    "typescript": "6.0.3"
+  }
+}

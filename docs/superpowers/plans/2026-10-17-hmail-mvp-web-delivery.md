@@ -54,7 +54,7 @@
 - Produces: frontend checks mise run web:check, build mise run web:build, воспроизводимая генерация mise run contracts:check.
 - Produces: Rust-раздача /, /login, /history, /settings и assets из явно заданного StaticDir; API 404 не превращается в HTML.
 
-- [ ] **Step 1: Написать tests контрактов/событий и сетевые assertions shell.**
+- [x] **Step 1: Написать tests контрактов/событий и сетевые assertions shell.**
 
 ~~~ts
 // counters_remain_exact
@@ -70,8 +70,8 @@ expect(resyncRequestsAfterEpochChange).toBe(1);
 ~~~
 
   Schema test отклоняет неизвестный phase, invalid UUID/counter overflow; generated output не содержит AgentCredentials/private-key DTO. На странице очистки до открытия history/settings число их API-запросов и загрузок island chunks равно нулю.
-- [ ] **Step 2: Проверить RED.** bun test --cwd apps/web tests/contracts.test.ts tests/events.test.ts после создания минимального test entry. Ожидается FAIL до client implementation.
-- [ ] **Step 3: Собрать shell и generation.** Root package private с workspaces=["apps/web"]; Cargo/Bun lockfiles отдельные. Закрепить Bun 1.4.3 и последние стабильные совместимые версии Astro/Svelte/integration на момент выполнения в lockfile, без canary и floating latest в build. Проверить registry engines/peerDependencies. Astro output=static, без adapter; четыре prerendered страницы. Выбрать обычные MPA-переходы без автоматического prefetch: отдельная страница загружает свой остров при открытии. Основная очистка client:load; history/settings не импортируются её entry.
+- [x] **Step 2: Проверить RED.** bun test --cwd apps/web tests/contracts.test.ts tests/events.test.ts после создания минимального test entry. Ожидается FAIL до client implementation.
+- [x] **Step 3: Собрать shell и generation.** Root package private с workspaces=["apps/web"]; Cargo/Bun lockfiles отдельные. Закрепить Bun 1.4.3 и последние стабильные совместимые версии Astro/Svelte/integration на момент выполнения в lockfile, без canary и floating latest в build. Проверить registry engines/peerDependencies. Astro output=static, без adapter; четыре prerendered страницы. Выбрать обычные MPA-переходы без автоматического prefetch: отдельная страница загружает свой остров при открытии. Основная очистка client:load; history/settings не импортируются её entry.
 
   JSON Schema генерируется из allowlist Rust browser DTO (schemars), TypeScript — json-schema-to-typescript, validators — Ajv standalone. Для формата uint64-decimal зарегистрировать проверку канонической десятичной строки и диапазона через BigInt; одной проверки string/pattern недостаточно. У Bun нет встроенного генератора этих контрактов; npm-инструменты запускаются Bun и не остаются в runtime-контейнере. Проверить генерацию без Node в PATH. Не дублировать DTO вручную. Изменения типов/fixtures должны попадать в тот же коммит.
 
@@ -82,8 +82,8 @@ expect(resyncRequestsAfterEpochChange).toBe(1);
   и не открывает /data через traversal. Отдельной SPA fallback на /api нет.
   Реальное состояние сессии загружается
   из API, placeholder SA не означает авторизацию.
-- [ ] **Step 4: Проверить GREEN.** bun install --frozen-lockfile; mise run contracts:check; mise run web:check; mise run web:build; cargo test -p hmail-cleaner-center --test static_files --locked. Эти команды создать в mise/package.json здесь; первичное разрешение зависимостей выполняется перед frozen install и фиксируется lockfile. web:check выполняет Astro/Svelte/TS checks и Bun tests; bundle не содержит fixture-secret sentinels или Node server output. Передавать серверные данные при сборке не требуется.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: build static Astro shell and typed browser api".
+- [x] **Step 4: Проверить GREEN.** bun install --frozen-lockfile; mise run contracts:check; mise run web:check; mise run web:build; cargo test -p hmail-cleaner-center --test static_files --locked. Эти команды создать в mise/package.json здесь; первичное разрешение зависимостей выполняется перед frozen install и фиксируется lockfile. web:check выполняет Astro/Svelte/TS checks и Bun tests; bundle не содержит fixture-secret sentinels или Node server output. Передавать серверные данные при сборке не требуется.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: build static Astro shell and typed browser api".
 
 ## C2. Очистка, подтверждение, прогресс и раскрываемый журнал
 

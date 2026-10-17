@@ -28,3 +28,6 @@ dist
 /hmail-cleaner.exe.sha256
 /.hmail-cleaner.exe*.new
 /.hmail-cleaner.exe*.previous
+
+# Astro generated metadata
+/apps/web/.astro/

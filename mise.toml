@@ -1,5 +1,6 @@
 [tools]
 rust = "1.99.1"
+bun = "1.4.3"
 
 [tasks.fmt]
 description = "Format the Rust workspace"
@@ -76,3 +77,19 @@ run_windows = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/bui
 [tasks."build:center"]
 description = "Build the standalone center without mail/Windows cleanup dependencies"
 run = "cargo build --release -p hmail-cleaner --no-default-features --features center --locked"
+
+[tasks."contracts:generate"]
+description = "Generate browser schemas, TypeScript and standalone validators from Rust DTOs"
+run = "bun run contracts:generate"
+
+[tasks."contracts:check"]
+description = "Verify generated browser contracts are current"
+run = "bun run contracts:check"
+
+[tasks."web:check"]
+description = "Check Astro, Svelte, TypeScript and browser API tests"
+run = "bun run web:check"
+
+[tasks."web:build"]
+description = "Build static Astro pages and Svelte islands"
+run = "bun run web:build"

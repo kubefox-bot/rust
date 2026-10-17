@@ -4,9 +4,15 @@ use uuid::Uuid;
 
 macro_rules! identifier {
     ($name:ident) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, JsonSchema)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
         #[serde(transparent)]
         pub struct $name(Uuid);
+        impl JsonSchema for $name {
+            fn schema_name() -> std::borrow::Cow<'static, str> { stringify!($name).into() }
+            fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+                schemars::json_schema!({"type":"string", "format":"canonical-uuid"})
+            }
+        }
         impl $name {
             pub fn new() -> Self {
                 Self(Uuid::new_v4())

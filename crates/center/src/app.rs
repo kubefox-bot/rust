@@ -27,6 +27,9 @@ pub async fn run(config: CenterConfig, cancel: Arc<Cancellation>) -> Result<(), 
     let state = AppState::new(store, config.origin.clone())
         .await
         .map_err(|_| CenterError)?;
+    let state = state.with_static_dir(
+        http::static_files::StaticDir::open(&config.static_dir).map_err(|_| CenterError)?,
+    );
     state
         .enrollment
         .recover_interrupted()
