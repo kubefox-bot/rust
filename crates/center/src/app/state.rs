@@ -12,6 +12,7 @@ pub struct AppState {
     pub origin: BrowserOrigin,
     pub(crate) limiter: Arc<LoginLimiter>,
     pub(crate) monitor: crate::agents::HealthMonitor,
+    pub jobs: crate::jobs::JobService,
 }
 impl AppState {
     pub async fn new(store: CenterStore, origin: BrowserOrigin) -> Result<Self, StatusCode> {
@@ -35,12 +36,14 @@ impl AppState {
             .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?,
         );
         let monitor = crate::agents::HealthMonitor::new(store.clone());
+        let jobs = crate::jobs::JobService::new(store.clone());
         Ok(Self {
             store,
             authority,
             origin,
             limiter: Arc::new(LoginLimiter::new(clock)),
             monitor,
+            jobs,
         })
     }
 }

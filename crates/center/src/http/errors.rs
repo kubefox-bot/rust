@@ -1,3 +1,4 @@
+use crate::jobs::SubmitError;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -6,6 +7,12 @@ use axum::{
 use hmail_cleaner_protocol::{ErrorCode, PublicError};
 pub(crate) struct ApiError(StatusCode, ErrorCode);
 impl ApiError {
+    pub(crate) fn busy() -> Self {
+        Self(StatusCode::CONFLICT, ErrorCode::Busy)
+    }
+    pub(crate) fn conflict() -> Self {
+        Self(StatusCode::CONFLICT, ErrorCode::Conflict)
+    }
     pub fn bad_request() -> Self {
         Self(StatusCode::BAD_REQUEST, ErrorCode::BadRequest)
     }
@@ -53,5 +60,19 @@ impl From<crate::agents::AgentError> for ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         (self.0, Json(PublicError::new(self.1))).into_response()
+    }
+}
+
+impl From<SubmitError> for ApiError {
+    fn from(error: SubmitError) -> Self {
+        use axum::http::StatusCode;
+        match error {
+            SubmitError::Busy => ApiError::busy(),
+            SubmitError::Conflict => ApiError::conflict(),
+            SubmitError::Invalid => ApiError::bad_request(),
+            SubmitError::Unauthorized => StatusCode::UNAUTHORIZED.into(),
+            SubmitError::NotFound => StatusCode::NOT_FOUND.into(),
+            SubmitError::Storage | SubmitError::Protocol => ApiError::unavailable(),
+        }
     }
 }

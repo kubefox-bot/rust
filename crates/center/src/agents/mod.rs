@@ -1,6 +1,9 @@
 mod types;
 pub use types::{AgentCredentials, AgentEndpoint, EndpointError};
 mod client;
+mod frames;
+mod jobs;
+pub(crate) mod stream;
 pub use client::{AgentClient, AgentError};
 mod health;
 pub use health::HealthTracker;

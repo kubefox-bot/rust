@@ -240,6 +240,8 @@ pub struct JobSnapshot {
     pub stage: Option<JobStage>,
     pub summary: SummaryDto,
     pub mail_state: ObservedMailState,
+    #[serde(default)]
+    pub initial_mail_state: Option<ObservedMailState>,
     pub error: Option<PublicError>,
     pub observed_at: DateTime<Utc>,
 }

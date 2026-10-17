@@ -8,6 +8,7 @@ rust-version.workspace = true
 cli = ["dep:clap", "dep:rpassword"]
 
 [dependencies]
+bytes = "1"
 futures-util = "0.3"
 chrono.workspace = true
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json"] }

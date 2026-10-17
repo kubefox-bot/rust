@@ -25,6 +25,14 @@ impl JobRepository {
             snapshot.summary = summary;
         }
         if let Some(state) = mail {
+            if snapshot.initial_mail_state.is_none()
+                && matches!(
+                    state,
+                    ObservedMailState::Running | ObservedMailState::Stopped
+                )
+            {
+                snapshot.initial_mail_state = Some(state);
+            }
             snapshot.mail_state = state;
             if state == ObservedMailState::Restoring {
                 snapshot.phase = JobPhase::Restoring;

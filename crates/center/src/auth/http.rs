@@ -74,6 +74,9 @@ pub(crate) async fn login(
         .path("/")
         .build();
     cookies.add(cookie);
+    if let Ok(current) = state.authority.authenticate(&grant.token) {
+        state.jobs.resume(&current);
+    }
     Ok(Json(SessionView {
         authenticated: true,
         generation: Some(grant.generation.into()),

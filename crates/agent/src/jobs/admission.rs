@@ -58,6 +58,7 @@ impl JobRepository {
             stage: None,
             summary: SummaryDto::default(),
             mail_state: ObservedMailState::Unknown,
+            initial_mail_state: None,
             error: None,
             observed_at: Utc::now(),
         };

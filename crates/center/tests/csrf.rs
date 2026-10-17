@@ -102,6 +102,7 @@ async fn unsafe_requests_require_exact_origin_host_custom_header_and_json() {
 #[tokio::test]
 async fn real_https_login_cookie_failed_login_replacement_and_restart() {
     let root = tempfile::tempdir().unwrap();
+    let lease = DataDirectory::acquire(root.path()).unwrap();
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
     let origin = format!("https://localhost:{port}");
@@ -110,7 +111,6 @@ async fn real_https_login_cookie_failed_login_replacement_and_restart() {
         data_dir: root.path().to_path_buf(),
     })
     .unwrap();
-    let lease = DataDirectory::acquire(root.path()).unwrap();
     let store = CenterStore::open(&lease).await.unwrap();
     initialize(
         &store,

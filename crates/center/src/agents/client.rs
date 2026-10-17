@@ -28,9 +28,9 @@ pub enum AgentError {
 }
 pub struct AgentClient {
     client: reqwest::Client,
-    credentials: AgentCredentials,
-    lease: SessionLease,
-    trust: ConnectionTrust,
+    pub(super) credentials: AgentCredentials,
+    pub(super) lease: SessionLease,
+    pub(super) trust: ConnectionTrust,
 }
 impl AgentClient {
     pub async fn new(

@@ -61,6 +61,35 @@ async fn cancel_unknown_blocks_late_accept() {
 }
 
 #[tokio::test]
+async fn initial_service_observation_survives_stop_restore_and_agent_restart() {
+    use hmail_cleaner_protocol::ObservedMailState;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("jobs.sqlite3");
+    let repo = JobRepository::open(&path).await.unwrap();
+    let job = validate_job(fixture()).unwrap();
+    let id = job.command().job_id;
+    repo.accept(&job, repo.fingerprint(&job)).await.unwrap();
+    for state in [
+        ObservedMailState::Running,
+        ObservedMailState::Unknown,
+        ObservedMailState::Stopped,
+        ObservedMailState::Restoring,
+    ] {
+        repo.observe(id, None, Some(state)).await.unwrap();
+    }
+    repo.close().await;
+    let restarted = JobRepository::open(&path).await.unwrap();
+    restarted.recover_interrupted().await.unwrap();
+    let snapshot = restarted.lookup(id).await.unwrap().unwrap();
+    assert_eq!(
+        snapshot.initial_mail_state,
+        Some(ObservedMailState::Running)
+    );
+    assert_eq!(snapshot.mail_state, ObservedMailState::Unknown);
+    assert_eq!(snapshot.phase, JobPhase::Interrupted);
+}
+
+#[tokio::test]
 async fn restart_interrupts_without_resuming_and_preserves_tombstones() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("jobs.sqlite3");

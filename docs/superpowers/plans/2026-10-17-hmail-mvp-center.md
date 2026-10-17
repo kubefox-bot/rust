@@ -213,7 +213,7 @@ assert_eq!(received_profile_bytes, 0);
 - Produces: POST /api/v1/servers/{id}/jobs; GET /api/v1/jobs/{id}; POST /api/v1/jobs/{id}/cancel; POST /api/v1/jobs/{id}/reconcile.
 - Produces: GET /api/v1/servers/{id}/history?cursor=...&limit=...; GET /api/v1/events?server_id=...; browser snapshot + события с revision.
 
-- [ ] **Step 1: Написать dispatch/reconnect tests с двумя fake agents и SQLite.**
+- [x] **Step 1: Написать dispatch/reconnect tests с двумя fake agents и SQLite.**
 
 ~~~rust
 // lost_accept_response_does_not_duplicate_cleanup
@@ -234,10 +234,10 @@ assert_eq!(new_snapshot.phase, JobPhase::Interrupted);
 ~~~
 
   Проверить изменённый cutoff/scan/service_policy против preview, отрицательный/неуспешный preview, версии профиля; login revoke во время submit; медленный subscriber/overflow → bounded queue + resync; counter events не продлевают сессию. History сохраняет null remaining_old_files и различает selected/removed/free disk.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test dispatch; cargo test -p hmail-cleaner-center --test reconciliation; cargo test -p hmail-cleaner-center --test event_limits.
-- [ ] **Step 3: Реализовать последовательность.** До сетевого submit сохранить intent и резервирование в SQLite. Стабильный job_id не заменять при timeout; повтор browser submit с тем же ID возвращает тот же запуск. После рестарта/входа только lookup. GET 404 оставляет unknown; явный cancel использует долговечную tombstone A2. Слот освобождается после согласованного terminal и наблюдаемого состояния агента/службы, не по обрыву сети. Сохранять terminal result до SSE. Переподключение/lag требует снимок; raw core errors не публиковать. Клиент/подписки привязать к поколению сессии, освобождать на logout.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test dispatch --locked; cargo test -p hmail-cleaner-center --test reconciliation --locked; cargo test -p hmail-cleaner-center --test event_limits --locked; cargo test -p hmail-cleaner-center --test history --locked. Проверить два tabs/server IDs, выход при принятом задании и agent restart → Interrupted без resubmit.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: orchestrate manual jobs with durable reconciliation and sse".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test dispatch; cargo test -p hmail-cleaner-center --test reconciliation; cargo test -p hmail-cleaner-center --test event_limits.
+- [x] **Step 3: Реализовать последовательность.** До сетевого submit сохранить intent и резервирование в SQLite. Стабильный job_id не заменять при timeout; повтор browser submit с тем же ID возвращает тот же запуск. После рестарта/входа только lookup. GET 404 оставляет unknown; явный cancel использует долговечную tombstone A2. Слот освобождается после согласованного terminal и наблюдаемого состояния агента/службы, не по обрыву сети. Сохранять terminal result до SSE. Переподключение/lag требует снимок; raw core errors не публиковать. Клиент/подписки привязать к поколению сессии, освобождать на logout.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test dispatch --locked; cargo test -p hmail-cleaner-center --test reconciliation --locked; cargo test -p hmail-cleaner-center --test event_limits --locked; cargo test -p hmail-cleaner-center --test history --locked. Проверить два tabs/server IDs, выход при принятом задании и agent restart → Interrupted без resubmit.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: orchestrate manual jobs with durable reconciliation and sse".
 
 ## B6. SSH-установка и ручное обновление агента
 

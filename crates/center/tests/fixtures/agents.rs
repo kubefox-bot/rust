@@ -30,6 +30,14 @@ impl Drop for TlsAgent {
     }
 }
 pub async fn start(center: &CenterFixture, id: AgentId) -> TlsAgent {
+    start_router(center, id, Router::new(), uuid::Uuid::new_v4()).await
+}
+pub(crate) async fn start_router(
+    center: &CenterFixture,
+    id: AgentId,
+    extra: Router,
+    epoch: uuid::Uuid,
+) -> TlsAgent {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let address = listener.local_addr().unwrap();
@@ -67,7 +75,6 @@ pub async fn start(center: &CenterFixture, id: AgentId) -> TlsAgent {
     let counter = received.clone();
     let health_calls = Arc::new(AtomicUsize::new(0));
     let health_counter = health_calls.clone();
-    let epoch = uuid::Uuid::new_v4();
     let app = Router::new()
         .route(
             "/agent/v1/health",
@@ -98,7 +105,8 @@ pub async fn start(center: &CenterFixture, id: AgentId) -> TlsAgent {
                     })
                 }
             }),
-        );
+        )
+        .merge(extra);
     let handle = axum_server::Handle::new();
     let task_handle = handle.clone();
     let task = tokio::spawn(async move {
