@@ -125,10 +125,10 @@ async fn real_https_login_cookie_failed_login_replacement_and_restart() {
         .await
         .unwrap();
     let clock = std::sync::Arc::new(ManualClock(std::sync::atomic::AtomicU64::new(0)));
-    state.authority = std::sync::Arc::new(
+    state = state.with_authority(std::sync::Arc::new(
         hmail_cleaner_center::auth::SessionAuthority::new(1, 15, clock.clone()).unwrap(),
-    );
-    let authority = state.authority.clone();
+    ));
+    let authority = state.authority().clone();
     let cancel = std::sync::Arc::new(hmail_cleaner_core::cleanup::Cancellation::default());
     let server_cancel = cancel.clone();
     let server = tokio::spawn(async move {
@@ -240,7 +240,7 @@ async fn real_https_login_cookie_failed_login_replacement_and_restart() {
         .split_once('=')
         .unwrap()
         .1;
-    assert!(restarted.authority.authenticate(second_cookie).is_err());
+    assert!(restarted.authority().authenticate(second_cookie).is_err());
     let mut revoked = authority.authenticate(second_cookie).unwrap().revocation();
     clock.0.store(901, std::sync::atomic::Ordering::SeqCst);
     tokio::time::timeout(std::time::Duration::from_secs(3), revoked.changed())

@@ -296,7 +296,7 @@ assert_eq!(replaced_executables, 0);
 - Produces: restore(&CenterStore, &RecoveryKey, &mut impl SecretPrompt) -> Result<RecoveryReceipt, AccountError>; команда center recover при остановленном центре.
 - Produces: POST /api/v1/account/password; POST /api/v1/account/recovery/prepare; POST /api/v1/account/recovery/confirm.
 
-- [ ] **Step 1: Написать credential/recovery race tests.**
+- [x] **Step 1: Написать credential/recovery race tests.**
 
 ~~~rust
 // password_change_rewraps_only
@@ -314,10 +314,10 @@ assert!(previous_recovery_result.is_ok());
 ~~~
 
   Проверить candidate TTL 10 минут, logout/restart cancellation, duplicate confirm, потерю ответа после commit, corrupt wrap, recovery с запущенным центром → отказ без изменения БД. Локальный recover заменяет password+recovery, сохраняет DEK и требует обычного входа.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test credential_changes; cargo test -p hmail-cleaner-center --test races; cargo test -p hmail-cleaner-center --test recovery.
-- [ ] **Step 3: Реализовать атомарную смену.** Кандидат хранит только необходимый временный secret, связан с session/account revision; выдаётся один раз, подтверждается до commit. Все KDF идут последовательно через общий gate. Короткая транзакция CAS фиксирует verifier/wraps/revision, credential barrier защищает final admission/отзыв. После успешной смены отозвать сессию и очистить её DEK; profiles не перешифровывать. Не заявлять отзыв старых backup или DEK. Recover имеет тот же OS lock и скрытый ввод, что init.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test credential_changes --locked; cargo test -p hmail-cleaner-center --test recovery --locked; cargo test -p hmail-cleaner-center --test races --locked. Проверить БД/WAL/backup на sentinels и отсутствие recovery/password в argv/logs. Ожидается PASS.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: change and recover center credentials atomically".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test credential_changes; cargo test -p hmail-cleaner-center --test races; cargo test -p hmail-cleaner-center --test recovery.
+- [x] **Step 3: Реализовать атомарную смену.** Кандидат хранит только необходимый временный secret, связан с session/account revision; выдаётся один раз, подтверждается до commit. Все KDF идут последовательно через общий gate. Короткая транзакция CAS фиксирует verifier/wraps/revision, credential barrier защищает final admission/отзыв. После успешной смены отозвать сессию и очистить её DEK; profiles не перешифровывать. Не заявлять отзыв старых backup или DEK. Recover имеет тот же OS lock и скрытый ввод, что init.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test credential_changes --locked; cargo test -p hmail-cleaner-center --test recovery --locked; cargo test -p hmail-cleaner-center --test races --locked. Проверить БД/WAL/backup на sentinels и отсутствие recovery/password в argv/logs. Ожидается PASS.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: change and recover center credentials atomically".
 
 ## Готовность части B
 

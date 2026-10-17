@@ -19,6 +19,7 @@ pub fn router(state: AppState) -> Router {
             get(super::settings::read).patch(super::settings::update),
         )
         .merge(crate::profiles::http::routes())
+        .merge(crate::account::http::routes())
         .merge(crate::agents::http::routes())
         .merge(crate::jobs::http::routes())
         .merge(crate::history::http::routes())

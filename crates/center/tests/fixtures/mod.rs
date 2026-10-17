@@ -11,13 +11,15 @@ pub struct CenterFixture {
     pub authority: Arc<SessionAuthority>,
     pub lease: SessionLease,
     pub token: SecretText,
+    pub recovery: SecretText,
 }
-struct Prompt;
+struct Prompt(Option<SecretText>);
 impl SecretPrompt for Prompt {
     fn password(&mut self) -> Result<SecretText, String> {
         Ok(SecretText::new("fixture-center-password".into()))
     }
-    fn confirm_recovery(&mut self, _: &SecretText) -> Result<bool, String> {
+    fn confirm_recovery(&mut self, key: &SecretText) -> Result<bool, String> {
+        self.0 = Some(key.clone());
         Ok(true)
     }
 }
@@ -25,12 +27,13 @@ pub async fn center() -> CenterFixture {
     let root = tempfile::tempdir().unwrap();
     let directory = DataDirectory::acquire(root.path()).unwrap();
     let store = CenterStore::open(&directory).await.unwrap();
+    let mut prompt = Prompt(None);
     initialize(
         &store,
         &InitInput {
             login: "admin".into(),
         },
-        &mut Prompt,
+        &mut prompt,
     )
     .await
     .unwrap();
@@ -51,6 +54,7 @@ pub async fn center() -> CenterFixture {
         authority,
         lease,
         token: grant.token,
+        recovery: prompt.0.unwrap(),
     }
 }
 pub fn csr() -> (rcgen::KeyPair, String) {

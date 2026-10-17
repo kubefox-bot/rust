@@ -8,14 +8,23 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct AppState {
     pub store: CenterStore,
-    pub authority: Arc<SessionAuthority>,
+    pub(crate) authority: Arc<SessionAuthority>,
     pub origin: BrowserOrigin,
     pub(crate) limiter: Arc<LoginLimiter>,
     pub(crate) monitor: crate::agents::HealthMonitor,
     pub jobs: crate::jobs::JobService,
     pub enrollment: crate::enrollment::EnrollmentService,
+    pub(crate) account: crate::account::AccountService,
 }
 impl AppState {
+    pub fn authority(&self) -> &Arc<SessionAuthority> {
+        &self.authority
+    }
+    pub fn with_authority(mut self, authority: Arc<SessionAuthority>) -> Self {
+        self.account = crate::account::AccountService::new(self.store.clone(), authority.clone());
+        self.authority = authority;
+        self
+    }
     pub async fn new(store: CenterStore, origin: BrowserOrigin) -> Result<Self, StatusCode> {
         let account = store
             .account()
@@ -44,6 +53,7 @@ impl AppState {
             crate::enrollment::NativeSsh,
         );
         Ok(Self {
+            account: crate::account::AccountService::new(store.clone(), authority.clone()),
             store,
             authority,
             origin,

@@ -6,6 +6,17 @@ use axum::{
 };
 use hmail_cleaner_protocol::{ErrorCode, PublicError};
 pub(crate) struct ApiError(StatusCode, ErrorCode);
+impl From<crate::account::AccountError> for ApiError {
+    fn from(error: crate::account::AccountError) -> Self {
+        use crate::account::AccountError;
+        match error {
+            AccountError::Invalid => Self::bad_request(),
+            AccountError::Stale => Self::conflict(),
+            AccountError::Busy => Self::busy(),
+            AccountError::Unavailable => Self::unavailable(),
+        }
+    }
+}
 impl ApiError {
     pub(crate) fn busy() -> Self {
         Self(StatusCode::CONFLICT, ErrorCode::Busy)

@@ -236,7 +236,7 @@ async fn http_profile_body_limit_and_authorization_preserve_secret_redaction() {
     )
     .await
     .unwrap();
-    state.authority = fixture.authority.clone();
+    state = state.with_authority(fixture.authority.clone());
     let app = hmail_cleaner_center::http::router(state);
     let path = format!("/api/v1/servers/{server_id}/profile");
     let response = app

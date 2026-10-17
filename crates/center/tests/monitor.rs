@@ -34,7 +34,7 @@ async fn authorized_reads_coalesce_probes_and_preserve_last_observation_after_re
     )
     .await
     .unwrap();
-    state.authority = fixture.authority.clone();
+    state = state.with_authority(fixture.authority.clone());
     let app = router(state);
     let cookie = format!("__Host-hmail-session={}", fixture.token.as_str());
     let response = app

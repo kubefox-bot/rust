@@ -121,6 +121,17 @@ fn expire(state: &mut State, now: Duration) {
     }
 }
 impl SessionAuthority {
+    pub(crate) fn advance_revision(&self, expected: i64, next: i64) -> Result<(), AuthError> {
+        let mut state = self.state.lock().map_err(|_| AuthError)?;
+        if state.revision != expected || expected.checked_add(1) != Some(next) {
+            return Err(AuthError);
+        }
+        if let Some(session) = state.current.take() {
+            session.lease.owner.revoke();
+        }
+        state.revision = next;
+        Ok(())
+    }
     pub(crate) fn shutdown(&self) {
         let mut state = self
             .state

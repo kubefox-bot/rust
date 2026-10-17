@@ -30,6 +30,10 @@ enum Command {
         #[arg(long)]
         data_dir: PathBuf,
     },
+    Recover {
+        #[arg(long)]
+        data_dir: PathBuf,
+    },
 }
 struct TerminalPrompt;
 fn line(label: &str) -> io::Result<String> {
@@ -92,10 +96,20 @@ pub async fn run(
 }
 async fn execute(command: Command) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let data_dir = match &command {
-        Command::Init { data_dir, .. } | Command::Run { data_dir } => data_dir.clone(),
+        Command::Init { data_dir, .. }
+        | Command::Run { data_dir }
+        | Command::Recover { data_dir } => data_dir.clone(),
     };
     let config = CenterConfig::load(&CenterArgs { data_dir })?;
     match command {
+        Command::Recover { .. } => {
+            let lease = DataDirectory::acquire(&config.data_dir)?;
+            let store = CenterStore::open(&lease).await?;
+            let secret = SecretText::new(rpassword::prompt_password("Recovery key: ")?);
+            let key = crate::vault::RecoveryKey::parse(&secret)?;
+            account::restore(&store, &key, &mut TerminalPrompt).await?;
+            println!("Пароль и recovery key заменены. Запустите центр и войдите заново.");
+        }
         Command::Init { origin, listen, .. } => {
             let lease = DataDirectory::acquire(&config.data_dir)?;
             let store = CenterStore::open(&lease).await?;

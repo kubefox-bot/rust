@@ -61,7 +61,7 @@ async fn http_stream_filters_server_scope_and_closes_on_logout() {
     )
     .await
     .unwrap();
-    state.authority = center.authority.clone();
+    state = state.with_authority(center.authority.clone());
     let hub = state.jobs.events().clone();
     let app = hmail_cleaner_center::http::router(state);
     let response = app

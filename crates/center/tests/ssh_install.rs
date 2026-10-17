@@ -114,7 +114,7 @@ async fn http_probe_requires_session_and_csrf_and_never_authenticates_the_os_use
     )
     .await
     .unwrap();
-    state.authority = center.authority.clone();
+    state = state.with_authority(center.authority.clone());
     let app = hmail_cleaner_center::http::router(state);
     for (cookie, csrf, expected) in [(false, true, 401), (true, false, 403), (true, true, 200)] {
         let request = Request::post("/api/v1/enrollment/probe")
