@@ -215,7 +215,7 @@ assert_eq!(completed_events_after_disk_error, 0);
 - Produces: агентский пакет dist/agent/windows-x64 с EXE, manifest.json, SHA-256; manifest содержит product, build, target, protocol_min=1, protocol_max=1, sha256.
 - Build helper принимает --component cli|agent; существующий вызов без аргумента сохраняет прежний CLI артефакт и поведение при неудачной сборке.
 
-- [ ] **Step 1: Написать миграционные тесты и SCM fixture.**
+- [x] **Step 1: Написать миграционные тесты и SCM fixture.**
 
 ~~~rust
 // service_start_waits_for_manual_command
@@ -230,10 +230,10 @@ assert!(trace.iter().position(|x| x == "legacy stopped").unwrap()
     < trace.iter().position(|x| x == "agent enabled").unwrap());
 ~~~
 
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-agent --test service; mise run test:build после добавления agent packaging assertions. Native fixture пометить ignored с требованием отдельной Windows-среды.
-- [ ] **Step 3: Реализовать ожидание команд в SCM.** Переиспользовать host и кооперативную Cancellation. Service STOP отменяет текущую работу и ждёт безопасного завершения. При миграции проверять принадлежность старой службы hMailCleaner, дождаться её корректной остановки/restore и отключить расписание до активации агента; неизвестная служба или ошибка миграции блокируют установку. Не переиспользовать или перезаписывать её наугад. Пакет не содержит env, базы или секретов; SHA-256 сверяется с доверенным manifest центра.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-agent --locked; mise run test:build; mise run build:agent. Новую mise build:agent добавить здесь. На Windows собрать service_fixture, выполнить cargo test -p hmail-cleaner-agent --test service -- --ignored --test-threads=1 в выделенной среде. Проверить startup/no command/no deletion и STOP/restore. Отдельно выполнить на Server 2016 и отметить реальный результат.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: package a manual Windows cleanup agent".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-agent --test service; mise run test:build после добавления agent packaging assertions. Native fixture пометить ignored с требованием отдельной Windows-среды.
+- [x] **Step 3: Реализовать ожидание команд в SCM.** Переиспользовать host и кооперативную Cancellation. Service STOP отменяет текущую работу и ждёт безопасного завершения. При миграции проверять принадлежность старой службы hMailCleaner, дождаться её корректной остановки/restore и отключить расписание до активации агента; неизвестная служба или ошибка миграции блокируют установку. Не переиспользовать или перезаписывать её наугад. Пакет не содержит env, базы или секретов; SHA-256 сверяется с доверенным manifest центра.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-agent --locked; mise run test:build; mise run build:agent. Новую mise build:agent добавить здесь. На Windows собрать service_fixture, выполнить cargo test -p hmail-cleaner-agent --test service -- --ignored --test-threads=1 в выделенной среде. Проверить startup/no command/no deletion и STOP/restore. Отдельно выполнить на Server 2016 и отметить реальный результат.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: package a manual Windows cleanup agent".
 
 ## Готовность части A
 

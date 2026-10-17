@@ -41,6 +41,14 @@ impl JobRepository {
             transaction.commit().await?;
             return Ok(AcceptOutcome::Busy);
         }
+        let maintenance: i64 =
+            sqlx::query_scalar("SELECT maintenance FROM coordination WHERE id = 1")
+                .fetch_one(&mut *transaction)
+                .await?;
+        if maintenance != 0 {
+            transaction.commit().await?;
+            return Ok(AcceptOutcome::Busy);
+        }
         let snapshot = JobSnapshot {
             job_id: id,
             job: Some(job.public()),

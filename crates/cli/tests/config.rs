@@ -1,3 +1,4 @@
+#![cfg(feature = "local-cli")]
 use std::{fs, process::Command};
 fn command() -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_hmail-cleaner"));

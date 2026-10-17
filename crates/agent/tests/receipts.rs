@@ -238,3 +238,26 @@ async fn independent_connections_share_the_single_active_constraint() {
         1
     );
 }
+
+#[tokio::test]
+async fn maintenance_gate_is_durable_and_cannot_freeze_an_active_job() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("jobs.sqlite");
+    let repo = JobRepository::open(&path).await.unwrap();
+    assert!(repo.begin_maintenance().await.unwrap());
+    let job = validate_job(fixture()).unwrap();
+    assert_eq!(
+        repo.accept(&job, repo.fingerprint(&job)).await.unwrap(),
+        AcceptOutcome::Busy
+    );
+    repo.close().await;
+    let repo = JobRepository::open(&path).await.unwrap();
+    assert!(repo.in_maintenance().await.unwrap());
+    repo.end_maintenance().await.unwrap();
+    assert_eq!(
+        repo.accept(&job, repo.fingerprint(&job)).await.unwrap(),
+        AcceptOutcome::New
+    );
+    assert!(!repo.begin_maintenance().await.unwrap());
+    assert!(!repo.in_maintenance().await.unwrap());
+}

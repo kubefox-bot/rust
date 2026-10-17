@@ -847,6 +847,7 @@ dependencies = [
  "crossterm",
  "dotenvy",
  "hmail-cleaner-adapters",
+ "hmail-cleaner-agent",
  "hmail-cleaner-core",
  "hmail-cleaner-runner",
  "serde",
@@ -887,6 +888,7 @@ dependencies = [
  "axum-server",
  "chrono",
  "chrono-tz",
+ "clap",
  "futures-util",
  "getrandom 0.4.3",
  "hmac",
@@ -909,6 +911,9 @@ dependencies = [
  "tower",
  "url",
  "uuid",
+ "widestring",
+ "windows-service",
+ "windows-sys 0.59.0",
  "zeroize",
 ]
 

@@ -37,3 +37,7 @@ mise run build:exe
 следующие используют кэш. Node.js, Yarn, Tauri и WebView2 не нужны.
 
 Подробности, настройки службы и ограничения: [инструкция CLI](docs/cleanup-cli.md).
+
+Отдельный ручной агент центра собирается через `mise run build:agent` в
+`dist/agent/windows-x64`. Установка, mTLS bootstrap, миграция и проверки:
+[инструкция агента](docs/agent-installation.md).

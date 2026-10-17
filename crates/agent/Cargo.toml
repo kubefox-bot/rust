@@ -4,8 +4,12 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+cli = ["dep:clap"]
+
 [dependencies]
 hmail-cleaner-protocol = { path = "../protocol" }
+clap = { version = "4", optional = true, features = ["derive"] }
 hmail-cleaner-adapters = { path = "../adapters", default-features = false, features = ["mail", "mtls"] }
 hmail-cleaner-core = { path = "../core" }
 hmail-cleaner-runner = { path = "../runner" }
@@ -35,3 +39,8 @@ tempfile = "3"
 chrono-tz = "0.10"
 tower = { version = "0.5", features = ["util"] }
 url = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows-service = "0.8"
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_System_Services"] }
+widestring = "1"

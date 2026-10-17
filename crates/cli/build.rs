@@ -27,6 +27,7 @@ fn revision() -> String {
     format!("{revision}{}", if dirty { "-dirty" } else { "" })
 }
 fn main() {
+    println!("cargo:rerun-if-env-changed=HMAIL_BUILD_VERSION");
     println!("cargo:rerun-if-changed=../../.git/HEAD");
     if let Ok(reference) = Command::new("git")
         .args(["symbolic-ref", "--quiet", "HEAD"])
@@ -47,6 +48,18 @@ fn main() {
         .duration_since(UNIX_EPOCH)
         .expect("build clock before epoch")
         .as_secs();
+    if let Ok(version) = std::env::var("HMAIL_BUILD_VERSION") {
+        assert!(
+            !version.is_empty()
+                && version.len() <= 128
+                && version
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || b".+_-".contains(&byte)),
+            "invalid explicit build version"
+        );
+        println!("cargo:rustc-env=HMAIL_BUILD_VERSION={version}");
+        return;
+    }
     println!(
         "cargo:rustc-env=HMAIL_BUILD_VERSION={}+{}.{}",
         env!("CARGO_PKG_VERSION"),

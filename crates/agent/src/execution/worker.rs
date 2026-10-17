@@ -8,6 +8,8 @@ use std::sync::{
 };
 use tokio::sync::{broadcast, Mutex, Notify};
 const EVENT_CAPACITY: usize = 16;
+const HEALTH_READY_REVISION: u64 = 1;
+const HEALTH_UNAVAILABLE_REVISION: u64 = 2;
 
 pub(super) struct Active {
     pub id: JobId,
@@ -15,6 +17,7 @@ pub(super) struct Active {
 }
 pub(super) struct State<E> {
     pub agent_id: AgentId,
+    pub version: String,
     pub repository: Arc<JobRepository>,
     pub executor: E,
     pub active: Mutex<Option<Active>>,
@@ -31,9 +34,23 @@ impl<E> Clone for Worker<E> {
 }
 impl<E: Executor> Worker<E> {
     pub fn new(agent_id: AgentId, repository: Arc<JobRepository>, executor: E) -> Self {
+        Self::configured(
+            agent_id,
+            repository,
+            executor,
+            env!("CARGO_PKG_VERSION").into(),
+        )
+    }
+    pub(crate) fn configured(
+        agent_id: AgentId,
+        repository: Arc<JobRepository>,
+        executor: E,
+        version: String,
+    ) -> Self {
         let (events, _) = broadcast::channel(EVENT_CAPACITY);
         Self(Arc::new(State {
             agent_id,
+            version,
             repository,
             executor,
             active: Mutex::new(None),
@@ -44,7 +61,7 @@ impl<E: Executor> Worker<E> {
         }))
     }
     pub fn is_healthy(&self) -> bool {
-        self.0.healthy.load(Ordering::Acquire)
+        self.0.healthy.load(Ordering::Acquire) && !self.0.stopping.load(Ordering::Acquire)
     }
     pub fn subscribe(&self) -> broadcast::Receiver<JobSnapshot> {
         self.0.events.subscribe()
@@ -54,6 +71,23 @@ impl<E: Executor> Worker<E> {
     }
     pub fn epoch(&self) -> uuid::Uuid {
         self.0.repository.epoch()
+    }
+    pub(crate) fn health(&self) -> hmail_cleaner_protocol::AgentHealth {
+        let healthy = self.is_healthy();
+        hmail_cleaner_protocol::AgentHealth {
+            agent_id: self.agent_id(),
+            version: self.0.version.clone(),
+            protocol_min: hmail_cleaner_protocol::PROTOCOL_VERSION,
+            protocol_max: hmail_cleaner_protocol::PROTOCOL_VERSION,
+            stream_epoch: self.epoch(),
+            revision: if healthy {
+                HEALTH_READY_REVISION
+            } else {
+                HEALTH_UNAVAILABLE_REVISION
+            }
+            .into(),
+            healthy,
+        }
     }
     pub async fn lookup(&self, id: JobId) -> Result<Option<JobSnapshot>, AgentError> {
         Ok(self.0.repository.lookup(id).await?)
@@ -70,7 +104,7 @@ impl<E: Executor> Worker<E> {
             return Err(AgentError::Invalid);
         }
         let mut active = self.0.active.try_lock().map_err(|_| AgentError::Busy)?;
-        if !self.is_healthy() || self.0.stopping.load(Ordering::Acquire) {
+        if !self.is_healthy() {
             return Err(AgentError::Unavailable);
         }
         let id = job.command().job_id;
@@ -207,5 +241,28 @@ mod tests {
         assert!(repo.lookup(id).await.unwrap().is_some());
         worker.shutdown().await;
         pool.close().await;
+    }
+}
+
+#[cfg(test)]
+mod health_tests {
+    use super::*;
+    #[tokio::test]
+    async fn draining_health_changes_revision_without_claiming_readiness() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = Arc::new(
+            JobRepository::open(&dir.path().join("jobs.sqlite"))
+                .await
+                .unwrap(),
+        );
+        let worker = Worker::new(AgentId::new(), repo, crate::execution::NativeExecutor);
+        let ready = worker.health();
+        assert!(ready.healthy);
+        worker.shutdown().await;
+        let draining = worker.health();
+        assert!(!draining.healthy);
+        assert!(draining.revision > ready.revision);
+        assert_eq!(draining.stream_epoch, ready.stream_epoch);
+        assert_eq!(worker.health().revision, draining.revision);
     }
 }

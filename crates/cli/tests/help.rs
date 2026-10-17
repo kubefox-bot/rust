@@ -1,3 +1,4 @@
+#![cfg(feature = "local-cli")]
 use std::process::Command;
 #[test]
 fn help_is_available_without_a_database() {

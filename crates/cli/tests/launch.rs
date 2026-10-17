@@ -1,3 +1,4 @@
+#![cfg(feature = "local-cli")]
 use std::process::{Command, Stdio};
 #[test]
 fn legacy_service_run_is_rejected_before_loading_configuration() {

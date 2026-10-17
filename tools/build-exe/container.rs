@@ -98,10 +98,18 @@ pub(super) fn build(settings: &Settings) -> io::Result<PathBuf> {
         .status()?
         .success();
     let source_revision = format!("{revision}{}", if dirty { "-dirty" } else { "" });
-    let script = format!("rustup toolchain install {RUST} --profile minimal --no-self-update && rustup target add --toolchain {RUST} {TARGET} && cargo +{RUST} xwin build --release -p hmail-cleaner --target {TARGET} --locked");
+    let flags = settings.component.arguments().join(" ");
+    let script = format!("rustup toolchain install {RUST} --profile minimal --no-self-update && rustup target add --toolchain {RUST} {TARGET} && cargo +{RUST} xwin build --release -p hmail-cleaner --target {TARGET} --locked {flags}");
+    let build_environment = settings
+        .build_version
+        .as_ref()
+        .map(|version| format!("HMAIL_BUILD_VERSION={version}"))
+        .into_iter()
+        .flat_map(|value| ["--env".to_owned(), value]);
     let created = docker(settings)
+        .arg("create")
+        .args(build_environment)
         .args([
-            "create",
             "--workdir",
             "/work",
             "--mount",

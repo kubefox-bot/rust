@@ -29,11 +29,11 @@ fn hash(path: &Path) -> io::Result<String> {
     }
     Ok(digest)
 }
-pub(super) fn publish(source: &Path, root: &Path) -> io::Result<()> {
-    let executable = root.join("hmail-cleaner.exe");
-    let checksum = root.join("hmail-cleaner.exe.sha256");
-    let staged = root.join(".hmail-cleaner.exe.new");
-    let staged_sum = root.join(".hmail-cleaner.exe.sha256.new");
+pub(super) fn publish(source: &Path, root: &Path, name: &str) -> io::Result<()> {
+    let executable = root.join(name);
+    let checksum = root.join(format!("{name}.sha256"));
+    let staged = root.join(format!(".{name}.new"));
+    let staged_sum = root.join(format!(".{name}.sha256.new"));
     for destination in [&executable, &checksum] {
         match fs::symlink_metadata(destination) {
             Ok(meta) if !meta.is_file() || meta.file_type().is_symlink() => {
@@ -46,12 +46,9 @@ pub(super) fn publish(source: &Path, root: &Path) -> io::Result<()> {
         }
     }
     fs::copy(source, &staged)?;
-    fs::write(
-        &staged_sum,
-        format!("{}  hmail-cleaner.exe\n", hash(&staged)?),
-    )?;
-    let backup = root.join(".hmail-cleaner.exe.previous");
-    let backup_sum = root.join(".hmail-cleaner.exe.sha256.previous");
+    fs::write(&staged_sum, format!("{}  {name}\n", hash(&staged)?))?;
+    let backup = root.join(format!(".{name}.previous"));
+    let backup_sum = root.join(format!(".{name}.sha256.previous"));
     if backup.exists() || backup_sum.exists() {
         return Err(io::Error::other(
             "Найдена предыдущая резервная копия сборки; проверьте .hmail-cleaner.exe*.previous",
@@ -126,7 +123,7 @@ mod tests {
         fs::write(&source, b"new executable").unwrap();
         fs::write(root.join("hmail-cleaner.exe"), b"old executable").unwrap();
         fs::write(root.join("hmail-cleaner.exe.sha256"), b"old checksum").unwrap();
-        assert!(publish(&root.join("missing.exe"), root).is_err());
+        assert!(publish(&root.join("missing.exe"), root, "hmail-cleaner.exe").is_err());
         assert_eq!(
             fs::read(root.join("hmail-cleaner.exe")).unwrap(),
             b"old executable"
@@ -135,7 +132,7 @@ mod tests {
             fs::read(root.join("hmail-cleaner.exe.sha256")).unwrap(),
             b"old checksum"
         );
-        publish(&source, root).unwrap();
+        publish(&source, root, "hmail-cleaner.exe").unwrap();
         assert_eq!(
             fs::read(root.join("hmail-cleaner.exe")).unwrap(),
             b"new executable"
@@ -145,5 +142,34 @@ mod tests {
             format!("{}  hmail-cleaner.exe\n", hash(&source).unwrap())
         );
         assert!(!root.join(".hmail-cleaner.exe.previous").exists());
+    }
+}
+
+#[cfg(test)]
+mod agent_tests {
+    use super::*;
+    #[test]
+    fn agent_publication_is_separate_from_the_manual_cli_pair() {
+        let root = std::env::temp_dir().join(format!("hmail-agent-publish-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let package = root.join("dist/agent/windows-x64");
+        fs::create_dir_all(&package).unwrap();
+        fs::write(root.join("hmail-cleaner.exe"), b"existing CLI").unwrap();
+        let source = root.join("source.exe");
+        fs::write(&source, b"fixture agent").unwrap();
+        publish(&source, &package, "hmail-cleaner-agent.exe").unwrap();
+        assert_eq!(
+            fs::read(package.join("hmail-cleaner-agent.exe")).unwrap(),
+            b"fixture agent"
+        );
+        assert_eq!(
+            fs::read(root.join("hmail-cleaner.exe")).unwrap(),
+            b"existing CLI"
+        );
+        assert_eq!(
+            fs::read_to_string(package.join("hmail-cleaner-agent.exe.sha256")).unwrap(),
+            format!("{}  hmail-cleaner-agent.exe\n", hash(&source).unwrap())
+        );
+        fs::remove_dir_all(root).unwrap();
     }
 }

@@ -1,5 +1,7 @@
 mod artifact;
 mod container;
+mod manifest;
+mod package;
 mod settings;
 use settings::{Settings, TARGET};
 use std::{
@@ -30,7 +32,14 @@ fn build() -> io::Result<()> {
                 TARGET,
                 "--locked",
             ])
+            .args(settings.component.arguments())
             .env("CARGO_TARGET_DIR", root.join("target"))
+            .envs(
+                settings
+                    .build_version
+                    .as_ref()
+                    .map(|version| ("HMAIL_BUILD_VERSION", version)),
+            )
             .env("RUSTFLAGS", "-C target-feature=+crt-static"))?;
         root.join("target")
             .join(TARGET)
@@ -39,7 +48,20 @@ fn build() -> io::Result<()> {
         println!("Сборка Windows EXE через cargo-xwin 0.23.1; первый запуск загружает Rust и Windows SDK.");
         container::build(&settings)?
     };
-    artifact::publish(&source, root)
+    match settings.component {
+        settings::Component::Cli => {
+            artifact::publish(&source, root, settings.component.executable())
+        }
+        settings::Component::Agent => {
+            let version = settings
+                .build_version
+                .as_deref()
+                .ok_or_else(|| io::Error::other("Missing build version"))?;
+            package::publish(&source, &root.join("dist/agent"), |stage| {
+                manifest::write(root, stage, version)
+            })
+        }
+    }
 }
 fn main() -> ExitCode {
     match build() {

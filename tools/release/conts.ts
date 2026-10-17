@@ -1,0 +1,10 @@
+export const AGENT_EXECUTABLE = "hmail-cleaner-agent.exe";
+export const AGENT_PRODUCT = "hmail-cleaner-agent";
+export const AGENT_TARGET = "x86_64-pc-windows-msvc";
+export const PROTOCOL_MIN = 1;
+export const PROTOCOL_MAX = 1;
+export const BUILD_PATTERN = /^[0-9A-Za-z.+_-]{1,128}$/;
+export const REVISION_PATTERN = /^[0-9a-f]{12}$/;
+export const PE_DOS_MAGIC = [0x4d, 0x5a] as const;
+export const MANIFEST_FILE_MODE = 0o600;
+export const MILLISECONDS_PER_SECOND = 1000;

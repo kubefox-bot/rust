@@ -2,6 +2,7 @@ mod admission;
 mod cancellation;
 mod fingerprint;
 mod keys;
+mod maintenance;
 mod observation;
 mod recovery;
 mod repository;

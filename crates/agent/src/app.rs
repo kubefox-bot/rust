@@ -10,10 +10,19 @@ const SHUTDOWN_POLL: Duration = Duration::from_millis(250);
 const HTTP_DRAIN: Duration = Duration::from_secs(1);
 
 pub async fn run(config: AgentConfig, cancellation: Arc<Cancellation>) -> Result<(), AgentError> {
+    let _process_owner = crate::runtime_lock::acquire(&config.data_directory)?;
     let repository =
         Arc::new(JobRepository::open(&config.data_directory.join("jobs.sqlite")).await?);
     repository.recover_interrupted().await?;
-    let worker = Worker::new(config.agent_id, repository, NativeExecutor);
+    if repository.in_maintenance().await? {
+        return Err(AgentError::Unavailable);
+    }
+    let worker = Worker::configured(
+        config.agent_id,
+        repository,
+        NativeExecutor,
+        config.build_version,
+    );
     let handle = axum_server::Handle::new();
     let listener = std::net::TcpListener::bind(config.listen)?;
     let server = http::transport::server(listener, config.tls, handle.clone())?;
