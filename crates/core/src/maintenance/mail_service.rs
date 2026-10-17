@@ -2,6 +2,13 @@ use crate::cleanup::{Cancellation, PortResult};
 use std::{error::Error, future::Future, time::Duration};
 const STOP_TIMEOUT: Duration = Duration::from_secs(60);
 const RESTORE_TIMEOUT: Duration = Duration::from_secs(60);
+pub const CLEANER_SERVICE_NAME: &str = "hMailCleaner";
+pub const AGENT_SERVICE_NAME: &str = "hMailCleanerAgent";
+pub fn is_reserved_service_name(name: &str) -> bool {
+    [CLEANER_SERVICE_NAME, AGENT_SERVICE_NAME]
+        .iter()
+        .any(|reserved| name.eq_ignore_ascii_case(reserved))
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MailState {
     Running,

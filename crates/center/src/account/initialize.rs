@@ -69,6 +69,14 @@ pub async fn initialize(
         .await
         .map_err(|_| InitError)?;
     identity.persist(store.directory()).map_err(|_| InitError)?;
+    sqlx::query(
+        "INSERT INTO encrypted_records(id,kind,version,envelope) VALUES(?,'center_client_key',1,?)",
+    )
+    .bind(prepared.material.account_id().to_string())
+    .bind(identity.client.encode().map_err(|_| InitError)?)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|_| InitError)?;
     transaction.commit().await.map_err(|_| InitError)?;
     Ok(InitReceipt { vault_id })
 }

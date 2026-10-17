@@ -372,3 +372,39 @@ fn identities_are_bound_to_their_explicit_role() {
         "urn:hmail-cleaner:agent:20000000-0000-4000-8000-000000000002"
     );
 }
+#[tokio::test]
+async fn a_current_serial_pin_rejects_another_certificate_before_profile_bytes() {
+    let ca = authority();
+    let agent = PeerIdentity::Agent(Uuid::new_v4());
+    let center = PeerIdentity::Center(Uuid::new_v4());
+    let trust = TrustPolicy {
+        roots: vec![ca.der().clone()],
+    };
+    let server = leaf(&ca, agent, Some(ExtendedKeyUsagePurpose::ServerAuth), false);
+    let client = leaf(
+        &ca,
+        center,
+        Some(ExtendedKeyUsagePurpose::ClientAuth),
+        false,
+    );
+    let revoked = RevokedSerials::default();
+    let config = mtls::client_config_pinned(
+        &client,
+        &trust,
+        &mtls::PinnedPeer {
+            identity: agent,
+            serial: vec![43],
+        },
+        &revoked,
+    )
+    .unwrap();
+    assert_eq!(
+        roundtrip(
+            mtls::server_config(&server, &trust, center, &revoked).unwrap(),
+            config,
+            "agent.internal"
+        )
+        .await,
+        (false, 0)
+    );
+}

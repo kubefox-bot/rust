@@ -83,7 +83,7 @@ pub(crate) async fn session(State(state): State<AppState>, cookies: Cookies) -> 
     let current = lease(&state, &cookies).ok();
     Json(SessionView {
         authenticated: current.is_some(),
-        generation: current.map(|s| s.generation.into()),
+        generation: current.map(|s| s.generation().into()),
     })
 }
 pub(crate) async fn logout(
@@ -92,7 +92,7 @@ pub(crate) async fn logout(
     Json(_): Json<serde_json::Value>,
 ) -> Result<StatusCode, StatusCode> {
     let current = lease(&state, &cookies)?;
-    state.authority.revoke(current.generation);
+    state.authority.revoke(current.generation());
     // No Set-Cookie deletion: a late response must not erase a newer generation's browser cookie.
     Ok(StatusCode::NO_CONTENT)
 }
@@ -104,7 +104,7 @@ pub(crate) async fn activity(
     let current = lease(&state, &cookies)?;
     state
         .authority
-        .touch(current.generation)
+        .touch(current.generation())
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     Ok(StatusCode::NO_CONTENT)
 }

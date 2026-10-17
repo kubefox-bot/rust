@@ -33,6 +33,9 @@ impl<E> Clone for Worker<E> {
     }
 }
 impl<E: Executor> Worker<E> {
+    pub(crate) fn mark_unavailable(&self) {
+        self.0.healthy.store(false, Ordering::Release);
+    }
     pub fn new(agent_id: AgentId, repository: Arc<JobRepository>, executor: E) -> Self {
         Self::configured(
             agent_id,

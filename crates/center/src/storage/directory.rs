@@ -4,6 +4,10 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+#[cfg(unix)]
+const PRIVATE_MODE: u32 = 0o700;
+#[cfg(unix)]
+const NON_OWNER_BITS: u32 = 0o077;
 pub struct DataDirectory;
 pub struct DataDirectoryLease(pub(super) Arc<Lease>);
 pub(super) struct Lease {
@@ -13,18 +17,24 @@ pub(super) struct Lease {
 impl DataDirectory {
     pub fn acquire(path: &Path) -> Result<DataDirectoryLease, StorageError> {
         std::fs::create_dir_all(path).map_err(|_| StorageError::Directory)?;
-        if std::fs::symlink_metadata(path)
-            .map_err(|_| StorageError::Directory)?
-            .file_type()
-            .is_symlink()
-        {
+        let metadata = std::fs::symlink_metadata(path).map_err(|_| StorageError::Directory)?;
+        if metadata.file_type().is_symlink() {
             return Err(StorageError::Directory);
         }
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))
-                .map_err(|_| StorageError::Directory)?;
+            if metadata.permissions().mode() & NON_OWNER_BITS != 0 {
+                if std::fs::read_dir(path)
+                    .map_err(|_| StorageError::Directory)?
+                    .next()
+                    .is_some()
+                {
+                    return Err(StorageError::Directory);
+                }
+                std::fs::set_permissions(path, std::fs::Permissions::from_mode(PRIVATE_MODE))
+                    .map_err(|_| StorageError::Directory)?;
+            }
         }
         let lock_path = path.join("center.lock");
         if lock_path

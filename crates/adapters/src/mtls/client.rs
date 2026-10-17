@@ -18,6 +18,7 @@ struct Verifier {
     delegate: Arc<WebPkiServerVerifier>,
     expected: PeerIdentity,
     revoked: RevokedSerials,
+    pinned_serial: Option<Vec<u8>>,
 }
 impl ServerCertVerifier for Verifier {
     fn verify_server_cert(
@@ -32,6 +33,18 @@ impl ServerCertVerifier for Verifier {
             .delegate
             .verify_server_cert(leaf, chain, name, ocsp, now)?;
         identity::verify(leaf, self.expected, Usage::Server, &self.revoked)?;
+        if let Some(expected) = &self.pinned_serial {
+            if identity::certificate_serial(leaf).map_err(|_| {
+                rustls::Error::InvalidCertificate(
+                    rustls::CertificateError::ApplicationVerificationFailure,
+                )
+            })? != *expected
+            {
+                return Err(rustls::Error::InvalidCertificate(
+                    rustls::CertificateError::ApplicationVerificationFailure,
+                ));
+            }
+        }
         Ok(verified)
     }
     fn verify_tls12_signature(
@@ -63,6 +76,36 @@ pub fn client_config(
     expected: PeerIdentity,
     revoked: &RevokedSerials,
 ) -> Result<ClientConfig, TlsError> {
+    build(identity, trust, expected, revoked, None)
+}
+pub struct PinnedPeer {
+    pub identity: PeerIdentity,
+    pub serial: Vec<u8>,
+}
+pub fn client_config_pinned(
+    identity: &ClientIdentity,
+    trust: &TrustPolicy,
+    peer: &PinnedPeer,
+    revoked: &RevokedSerials,
+) -> Result<ClientConfig, TlsError> {
+    if peer.serial.is_empty() {
+        return Err(TlsError::InvalidTrust);
+    }
+    build(
+        identity,
+        trust,
+        peer.identity,
+        revoked,
+        Some(peer.serial.clone()),
+    )
+}
+fn build(
+    identity: &ClientIdentity,
+    trust: &TrustPolicy,
+    expected: PeerIdentity,
+    revoked: &RevokedSerials,
+    pinned_serial: Option<Vec<u8>>,
+) -> Result<ClientConfig, TlsError> {
     if trust.roots.is_empty() || expected.id().is_nil() {
         return Err(TlsError::InvalidTrust);
     }
@@ -78,6 +121,7 @@ pub fn client_config(
         delegate,
         expected,
         revoked: revoked.clone(),
+        pinned_serial,
     };
     let mut config = ClientConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()?

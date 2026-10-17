@@ -173,7 +173,7 @@ assert_eq!(protected_effects, 0);
 - Produces: GET /api/v1/servers; GET/PATCH /api/v1/servers/{id}/profile; POST /api/v1/servers/{id}/validate; POST /api/v1/servers/{id}/resolve.
 - Produces: GET /api/v1/agents; POST /api/v1/agents/{id}/renew и /revoke; health содержит observed_at и свежесть, а не только saved status.
 
-- [ ] **Step 1: Написать profile/identity tests.**
+- [x] **Step 1: Написать profile/identity tests.**
 
 ~~~rust
 // edit_creates_immutable_version
@@ -189,10 +189,10 @@ assert_eq!(received_profile_bytes, 0);
 ~~~
 
   Проверить отсутствие секретов в JSON/logs/ошибках, expected_version conflict, повреждение ciphertext, Loopback MySQL относится к агенту. Невалидные Data/INI/права — отдельная диагностика без полного scan/Stop.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test profiles; cargo test -p hmail-cleaner-center --test identity.
-- [ ] **Step 3: Реализовать profiles/trust.** Защищённый профиль включает MailProfile и AgentCredentials, но агент получает только MailProfile. Password patch — Keep или Replace(value); строка-маска не является паролем. Профильные версии immutable; старые сохраняются для job reconciliation. Проверка Windows-путей/INI принадлежит агенту. Центр выпускает CA/leaf по политике основного плана, проверяет CSR signature, pin identity в handshake. Выпуск, продление и отзыв требуют текущего допуска; после отзыва пересоздаются verifier/пулы.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test profiles --locked; cargo test -p hmail-cleaner-center --test identity --locked; cargo test -p hmail-cleaner-center --test health --locked. Ожидается PASS для двух независимых fixtures и truthful stale/offline state.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: manage encrypted server profiles and agent trust".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test profiles; cargo test -p hmail-cleaner-center --test identity.
+- [x] **Step 3: Реализовать profiles/trust.** Защищённый профиль включает MailProfile и AgentCredentials, но агент получает только MailProfile. Password patch — Keep или Replace(value); строка-маска не является паролем. Профильные версии immutable; старые сохраняются для job reconciliation. Проверка Windows-путей/INI принадлежит агенту. Центр выпускает CA/leaf по политике основного плана, проверяет CSR signature, pin identity в handshake. Выпуск, продление и отзыв требуют текущего допуска; после отзыва пересоздаются verifier/пулы.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test profiles --locked; cargo test -p hmail-cleaner-center --test identity --locked; cargo test -p hmail-cleaner-center --test health --locked. Ожидается PASS для двух независимых fixtures и truthful stale/offline state.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: manage encrypted server profiles and agent trust".
 
 ## B5. Команды, история, согласование и SSE
 

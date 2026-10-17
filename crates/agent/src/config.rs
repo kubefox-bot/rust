@@ -4,8 +4,6 @@ use hmail_cleaner_adapters::mtls::{
 use hmail_cleaner_protocol::AgentId;
 use serde::Deserialize;
 use std::{
-    fs::File,
-    io::Read,
     net::SocketAddr,
     path::{Path, PathBuf},
 };
@@ -22,6 +20,7 @@ pub struct AgentConfig {
     pub agent_id: AgentId,
     pub build_version: String,
     pub tls: ServerTls,
+    pub(crate) identity: std::sync::Arc<crate::identity::IdentityBootstrap>,
 }
 #[derive(Debug, thiserror::Error)]
 #[error("invalid or unavailable agent bootstrap configuration")]
@@ -63,20 +62,37 @@ impl AgentConfig {
             certificates: chain,
             private_key: key,
         };
+        let signing_key =
+            rcgen::KeyPair::from_pem(std::str::from_utf8(&private).map_err(|_| ConfigError)?)
+                .map_err(|_| ConfigError)?;
+        let fingerprint =
+            crate::identity::fingerprint(identity.certificates.first().ok_or(ConfigError)?);
         let revoked = RevokedSerials::default();
         let config = mtls::server_config(
             &identity,
-            &TrustPolicy { roots },
+            &TrustPolicy {
+                roots: roots.clone(),
+            },
             PeerIdentity::Center(bootstrap.center_id),
             &revoked,
         )
         .map_err(|_| ConfigError)?;
+        let bootstrap_identity = std::sync::Arc::new(crate::identity::IdentityBootstrap {
+            directory: data_directory.clone(),
+            agent_id: bootstrap.agent_id,
+            center_id: bootstrap.center_id,
+            roots,
+            key: std::sync::Arc::new(signing_key),
+            revoked: revoked.clone(),
+            fingerprint: std::sync::Mutex::new(fingerprint),
+        });
         Ok(Self {
             listen: bootstrap.listen,
             data_directory,
             agent_id: bootstrap.agent_id,
             build_version: build_version.into(),
             tls: ServerTls::new(config, revoked),
+            identity: bootstrap_identity,
         })
     }
 }
@@ -91,18 +107,5 @@ fn certificates(path: &Path) -> Result<Vec<CertificateDer<'static>>, ConfigError
     Ok(certificates)
 }
 fn read(path: &Path, maximum: u64) -> Result<Vec<u8>, ConfigError> {
-    let metadata = std::fs::symlink_metadata(path).map_err(|_| ConfigError)?;
-    if !metadata.is_file() || metadata.file_type().is_symlink() {
-        return Err(ConfigError);
-    }
-    let mut bytes = Vec::new();
-    File::open(path)
-        .map_err(|_| ConfigError)?
-        .take(maximum + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|_| ConfigError)?;
-    if bytes.len() as u64 > maximum {
-        return Err(ConfigError);
-    }
-    Ok(bytes)
+    crate::files::read(path, maximum).map_err(|_| ConfigError)
 }

@@ -1,3 +1,7 @@
+use super::{
+    material::{CaSecret, ClientSecret},
+    policy, IdentityError,
+};
 use crate::{
     config::BrowserOrigin,
     vault::{
@@ -16,13 +20,11 @@ const SERVER_DAYS: i64 = 365;
 const CLOCK_SKEW_MINUTES: i64 = 5;
 pub(crate) struct PreparedIdentity {
     pub ca: EncryptedRecord,
+    pub client: EncryptedRecord,
     cert: String,
     key: Zeroizing<String>,
     root: String,
 }
-#[derive(Debug, thiserror::Error)]
-#[error("TLS bootstrap failed; existing identity was not replaced")]
-pub(crate) struct IdentityError;
 pub(crate) fn prepare(
     material: &AccountMaterial,
     dek: &Dek,
@@ -38,9 +40,14 @@ pub(crate) fn prepare(
     params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
     params.not_before = now - Duration::minutes(CLOCK_SKEW_MINUTES);
     params.not_after = now + Duration::days(CA_DAYS);
+    params.serial_number = Some(policy::serial()?);
     let ca_key = KeyPair::generate().map_err(|_| IdentityError)?;
     let ca_cert = params.self_signed(&ca_key).map_err(|_| IdentityError)?;
-    let private = Zeroizing::new(ca_key.serialize_pem());
+    let secret = CaSecret {
+        certificate_pem: ca_cert.pem(),
+        private_key_pem: Zeroizing::new(ca_key.serialize_pem()),
+    };
+    let private = Zeroizing::new(serde_json::to_vec(&secret).map_err(|_| IdentityError)?);
     let header = EnvelopeHeader::record(RecordIdentity {
         vault_id: material.vault_id(),
         kind: RecordKind::CaKey,
@@ -50,7 +57,7 @@ pub(crate) fn prepare(
         key_generation: 1,
     })
     .map_err(|_| IdentityError)?;
-    let ca = vault::seal_record(dek, &header, private.as_bytes()).map_err(|_| IdentityError)?;
+    let ca = vault::seal_record(dek, &header, &private).map_err(|_| IdentityError)?;
     let issuer = Issuer::new(params, ca_key);
     let mut server =
         CertificateParams::new(vec![origin.host().into()]).map_err(|_| IdentityError)?;
@@ -58,12 +65,34 @@ pub(crate) fn prepare(
     server.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
     server.not_before = now - Duration::minutes(CLOCK_SKEW_MINUTES);
     server.not_after = now + Duration::days(SERVER_DAYS);
+    server.serial_number = Some(policy::serial()?);
     let server_key = KeyPair::generate().map_err(|_| IdentityError)?;
     let cert = server
         .signed_by(&server_key, &issuer)
         .map_err(|_| IdentityError)?;
+    let client_key = KeyPair::generate().map_err(|_| IdentityError)?;
+    let client_params = policy::client_params(material.vault_id())?;
+    let client_cert = client_params
+        .signed_by(&client_key, &issuer)
+        .map_err(|_| IdentityError)?;
+    let client_secret = ClientSecret {
+        certificate_pem: format!("{}{}", client_cert.pem(), ca_cert.pem()),
+        private_key_pem: Zeroizing::new(client_key.serialize_pem()),
+        ca_pem: ca_cert.pem(),
+    };
+    let client_plaintext =
+        Zeroizing::new(serde_json::to_vec(&client_secret).map_err(|_| IdentityError)?);
+    let client_header = policy::header(
+        material,
+        RecordKind::CenterClientKey,
+        material.account_id(),
+        1,
+    )?;
+    let client =
+        vault::seal_record(dek, &client_header, &client_plaintext).map_err(|_| IdentityError)?;
     Ok(PreparedIdentity {
         ca,
+        client,
         cert: format!("{}{}", cert.pem(), ca_cert.pem()),
         key: Zeroizing::new(server_key.serialize_pem()),
         root: ca_cert.pem(),

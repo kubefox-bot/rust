@@ -4,10 +4,7 @@ use hmail_cleaner_core::cleanup::Cancellation;
 use hmail_cleaner_protocol::{JobPhase, ObservedMailState, SummaryDto, ValidatedJob};
 use hmail_cleaner_runner::RunObserver;
 use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::{atomic::AtomicBool, Arc},
     time::Duration,
 };
 use tokio::sync::{mpsc, watch};
@@ -17,7 +14,7 @@ impl<E: Executor> Worker<E> {
     pub(super) async fn run(&self, job: ValidatedJob, cancel: Arc<Cancellation>) {
         let id = job.command().job_id;
         if self.run_inner(&job, cancel).await.is_err() {
-            self.0.healthy.store(false, Ordering::Release);
+            self.mark_unavailable();
         }
         let mut active = self.0.active.lock().await;
         if active.as_ref().is_some_and(|active| active.id == id) {

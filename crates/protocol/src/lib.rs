@@ -9,9 +9,10 @@ mod jobs;
 mod limits;
 mod profiles;
 
+pub use agent::{AgentCsr, AgentIdentityInstall, AgentIdentityRequest, IdentityReceipt};
 pub use agent::{
     AgentHealth, ProfileValidationRequest, ProfileValidationResponse, ResolveRequest,
-    RetentionRequest, ValidatedProfile,
+    RetentionRequest, ServiceStateRequest, ServiceStateResponse, ValidatedProfile,
 };
 pub use canonical::canonical_job;
 pub use errors::{ErrorCode, ProtocolError, PublicError};

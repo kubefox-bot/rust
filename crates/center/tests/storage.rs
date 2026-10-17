@@ -22,6 +22,7 @@ async fn unknown_schema_is_preserved_and_the_store_owns_the_lock() {
     drop(store);
     // Pool resources can finish closing asynchronously; use a separate directory for schema probe.
     let other = tempfile::tempdir().unwrap();
+    let lease = DataDirectory::acquire(other.path()).unwrap();
     let database = other.path().join("center.sqlite");
     use sqlx::{sqlite::SqliteConnectOptions, Connection, SqliteConnection};
     let mut connection = SqliteConnection::connect_with(
@@ -37,7 +38,25 @@ async fn unknown_schema_is_preserved_and_the_store_owns_the_lock() {
         .unwrap();
     connection.close().await.unwrap();
     let before = std::fs::read(&database).unwrap();
-    let lease = DataDirectory::acquire(other.path()).unwrap();
     assert!(CenterStore::open(&lease).await.is_err());
     assert_eq!(std::fs::read(database).unwrap(), before);
+}
+#[cfg(unix)]
+#[test]
+fn an_existing_shared_directory_is_not_silently_chmodded() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = tempfile::tempdir().unwrap();
+    let shared = root.path().join("shared");
+    std::fs::create_dir(&shared).unwrap();
+    std::fs::write(shared.join("unrelated.txt"), b"preserve").unwrap();
+    std::fs::set_permissions(&shared, std::fs::Permissions::from_mode(0o755)).unwrap();
+    assert!(DataDirectory::acquire(&shared).is_err());
+    assert_eq!(
+        std::fs::metadata(&shared).unwrap().permissions().mode() & 0o777,
+        0o755
+    );
+    assert_eq!(
+        std::fs::read(shared.join("unrelated.txt")).unwrap(),
+        b"preserve"
+    );
 }

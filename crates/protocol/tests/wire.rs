@@ -115,3 +115,11 @@ fn public_error_rejects_raw_provider_messages() {
     encoded["message"] = json!("fixture mysql://name:password@private-host/database");
     assert!(serde_json::from_value::<hmail_cleaner_protocol::PublicError>(encoded).is_err());
 }
+#[test]
+fn the_cleaner_and_agent_cannot_be_used_as_mail_services() {
+    for name in ["hMailCleaner", "HMAILCLEANERAGENT", "hmailcleaner"] {
+        let mut input = fixture();
+        input["mail_profile"]["service_name"] = json!(name);
+        assert!(validate_job(serde_json::from_value(input).unwrap()).is_err());
+    }
+}

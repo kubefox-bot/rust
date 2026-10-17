@@ -1,6 +1,5 @@
 use super::{mapping, observer::ProgressValue, AgentError, Executor, Worker};
 use crate::jobs::JobUpdate;
-use hmail_cleaner_core::maintenance::mail_service::MailState;
 use hmail_cleaner_protocol::{ErrorCode, JobId, JobPhase, ObservedMailState, PublicError};
 use hmail_cleaner_runner::{MailObservation, Report, Status};
 
@@ -19,11 +18,7 @@ impl<E: Executor> Worker<E> {
                 progress.map(|value| (value.stage, value.summary)),
                 service.map(|value| match value {
                     MailObservation::Restoring => ObservedMailState::Restoring,
-                    MailObservation::State(MailState::Running) => ObservedMailState::Running,
-                    MailObservation::State(MailState::Stopped) => ObservedMailState::Stopped,
-                    MailObservation::State(MailState::Transitioning | MailState::Unsupported) => {
-                        ObservedMailState::Unknown
-                    }
+                    MailObservation::State(state) => state.into(),
                 }),
             )
             .await?;

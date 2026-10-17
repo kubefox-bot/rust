@@ -10,6 +10,8 @@ pub struct CenterStore {
     pub(crate) pool: SqlitePool,
     pub(super) lease: Arc<Lease>,
     pub(crate) kdf: Arc<crate::vault::KdfGate>,
+    pub(crate) catalog_writer: Arc<tokio::sync::Mutex<()>>,
+    pub(crate) revoked: hmail_cleaner_adapters::mtls::RevokedSerials,
 }
 impl CenterStore {
     pub(crate) fn directory(&self) -> &std::path::Path {
@@ -76,6 +78,8 @@ impl CenterStore {
             pool,
             lease: directory.0.clone(),
             kdf: Arc::new(crate::vault::KdfGate::new()),
+            catalog_writer: Arc::new(tokio::sync::Mutex::new(())),
+            revoked: hmail_cleaner_adapters::mtls::RevokedSerials::default(),
         })
     }
 }

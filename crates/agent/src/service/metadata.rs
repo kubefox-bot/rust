@@ -1,7 +1,7 @@
 use super::{InstallError, InstallationReceipt};
 use std::{
     fs::{self, File},
-    io::{Read, Write},
+    io::Read,
     path::Path,
 };
 const RECEIPT_NAME: &str = "installation.json";
@@ -34,18 +34,7 @@ pub(super) fn read(
     Ok(Some(receipt))
 }
 pub(super) fn write(directory: &Path, receipt: &InstallationReceipt) -> Result<(), InstallError> {
-    let staged = directory.join("installation.json.new");
-    let mut options = File::options();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let mut output = options.open(&staged)?;
-    output.write_all(&serde_json::to_vec(receipt).map_err(|_| InstallError::Invalid)?)?;
-    output.sync_all()?;
-    drop(output);
-    fs::rename(staged, directory.join(RECEIPT_NAME))?;
+    let bytes = serde_json::to_vec(receipt).map_err(|_| InstallError::Invalid)?;
+    crate::files::replace(directory, RECEIPT_NAME, &bytes)?;
     Ok(())
 }

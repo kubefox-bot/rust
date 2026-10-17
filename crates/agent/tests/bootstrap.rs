@@ -5,7 +5,7 @@ use hmail_cleaner_agent::config::AgentConfig;
 #[test]
 fn bootstrap_loads_local_keys_and_reports_the_same_build_as_the_package() {
     let directory = tempfile::tempdir().unwrap();
-    let (path, agent) = fixture::prepare(directory.path());
+    let (path, agent, _) = fixture::signed(directory.path());
     let config = AgentConfig::load(&path, "0.1.0+fixture").unwrap();
     assert_eq!(config.agent_id, agent);
     assert_eq!(config.build_version, "0.1.0+fixture");
@@ -15,7 +15,7 @@ fn bootstrap_loads_local_keys_and_reports_the_same_build_as_the_package() {
 #[test]
 fn mismatched_id_missing_certificate_and_wrong_private_key_fail_closed() {
     let directory = tempfile::tempdir().unwrap();
-    let (path, _) = fixture::prepare(directory.path());
+    let (path, _, _) = fixture::signed(directory.path());
     let data = path.parent().unwrap();
     let original = std::fs::read(&path).unwrap();
     let mut config: serde_json::Value = serde_json::from_slice(&original).unwrap();

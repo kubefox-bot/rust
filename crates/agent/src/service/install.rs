@@ -3,9 +3,8 @@ use super::{
     ServiceRegistration, ServiceRegistry, ServiceState,
 };
 use crate::jobs::JobRepository;
-use std::fs::File;
-pub const SERVICE_NAME: &str = "hMailCleanerAgent";
-const LEGACY_SERVICE_NAME: &str = "hMailCleaner";
+pub use hmail_cleaner_core::maintenance::mail_service::AGENT_SERVICE_NAME as SERVICE_NAME;
+use hmail_cleaner_core::maintenance::mail_service::CLEANER_SERVICE_NAME as LEGACY_SERVICE_NAME;
 
 pub async fn install_with(
     input: InstallServiceInput,
@@ -66,16 +65,7 @@ pub async fn install_with(
         return Err(InstallError::Collision);
     }
     security::directory(&input.data_directory)?;
-    let lock = File::options()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .open(input.data_directory.join("installation.lock"))?;
-    lock.try_lock().map_err(|error| match error {
-        std::fs::TryLockError::WouldBlock => InstallError::Busy,
-        std::fs::TryLockError::Error(error) => InstallError::Io(error),
-    })?;
+    let lock = super::acquire_update_lock(&input.data_directory)?;
     let repository = JobRepository::open(&input.data_directory.join("jobs.sqlite")).await?;
     if !repository.begin_maintenance().await? {
         repository.close().await;

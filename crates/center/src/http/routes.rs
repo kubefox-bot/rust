@@ -18,6 +18,8 @@ pub fn router(state: AppState) -> Router {
             "/settings/session",
             get(super::settings::read).patch(super::settings::update),
         )
+        .merge(crate::profiles::http::routes())
+        .merge(crate::agents::http::routes())
         .layer(DefaultBodyLimit::max(LOGIN_BODY_BYTES))
         .layer(CookieManagerLayer::new())
         .layer(CsrfLayer::new())

@@ -7,6 +7,8 @@ CREATE TABLE servers (id TEXT PRIMARY KEY, name TEXT NOT NULL, agent_id TEXT NOT
 CREATE TABLE profile_versions (id TEXT NOT NULL, version INTEGER NOT NULL CHECK(version>0), server_id TEXT NOT NULL REFERENCES servers(id), record_id TEXT NOT NULL REFERENCES encrypted_records(id), PRIMARY KEY(id,version));
 CREATE TRIGGER profile_immutable_update BEFORE UPDATE ON profile_versions BEGIN SELECT RAISE(ABORT,'immutable profile'); END;
 CREATE TABLE jobs (id TEXT PRIMARY KEY, server_id TEXT NOT NULL REFERENCES servers(id), profile_id TEXT NOT NULL, profile_version INTEGER NOT NULL, phase TEXT NOT NULL, snapshot BLOB, FOREIGN KEY(profile_id,profile_version) REFERENCES profile_versions(id,version));
-CREATE TABLE trust (agent_id TEXT PRIMARY KEY, serial TEXT NOT NULL UNIQUE, revoked INTEGER NOT NULL CHECK(revoked IN (0,1)));
+CREATE TABLE trust (agent_id TEXT PRIMARY KEY, serial TEXT NOT NULL UNIQUE, revoked INTEGER NOT NULL CHECK(revoked IN (0,1)), certificate_pem TEXT NOT NULL, expires_at INTEGER NOT NULL);
 CREATE TABLE enrollment (id TEXT PRIMARY KEY, agent_id TEXT NOT NULL, phase TEXT NOT NULL, host_key TEXT NOT NULL);
 PRAGMA user_version=1;
+CREATE TABLE revoked_serials(serial TEXT PRIMARY KEY);
+CREATE TABLE identity_renewals(agent_id TEXT PRIMARY KEY REFERENCES trust(agent_id), expected_serial TEXT NOT NULL, candidate BLOB NOT NULL CHECK(length(candidate)<=131072));

@@ -47,11 +47,17 @@ impl Drop for KeyOwner {
 }
 #[derive(Clone)]
 pub struct SessionLease {
-    pub generation: u64,
-    pub account_revision: i64,
+    generation: u64,
+    account_revision: i64,
     owner: Arc<KeyOwner>,
 }
 impl SessionLease {
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+    pub fn account_revision(&self) -> i64 {
+        self.account_revision
+    }
     /// Only synchronous cryptographic operations may run here; no network waits or authority re-entry.
     pub fn with_dek<T>(&self, operation: impl FnOnce(&Dek) -> T) -> Result<T, AuthError> {
         let key = self.owner.key.lock().map_err(|_| AuthError)?;

@@ -8,6 +8,12 @@ rust-version.workspace = true
 cli = ["dep:clap", "dep:rpassword"]
 
 [dependencies]
+futures-util = "0.3"
+chrono.workspace = true
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json"] }
+hmail-cleaner-adapters = { path = "../adapters", default-features = false, features = ["mtls"] }
+x509-parser = { version = "0.18.1", features = ["verify"] }
+
 rustls-pemfile = "2"
 
 hmail-cleaner-core = { path = "../core" }
@@ -36,18 +42,18 @@ base64ct = { version = "1.8.3", features = ["alloc"] }
 serde.workspace = true
 serde_json = "1"
 thiserror.workspace = true
-uuid = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, features = ["serde", "v4"] }
 subtle = "2.6"
 sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
 
 tokio.workspace = true
 
 [dev-dependencies]
+hmail-cleaner-agent = { path = "../agent" }
+
 tokio = { workspace = true, features = ["test-util"] }
-futures-util = "0.3"
 
 tower = { version = "0.5", features = ["util"] }
-reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json"] }
 
 tempfile = "3"
 

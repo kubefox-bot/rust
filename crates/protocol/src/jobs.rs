@@ -36,6 +36,13 @@ pub struct ResolvedCutoff {
     pub resolved_at_utc: DateTime<Utc>,
 }
 impl ResolvedCutoff {
+    pub fn validate(self) -> Result<Self, ProtocolError> {
+        if self.is_valid() {
+            Ok(self)
+        } else {
+            Err(ProtocolError::InvalidJob)
+        }
+    }
     fn is_valid(self) -> bool {
         (1000..=9999).contains(&self.local.year())
             && self.utc_offset_seconds.unsigned_abs() < MAX_UTC_OFFSET_SECONDS as u32
@@ -235,4 +242,14 @@ pub struct JobSnapshot {
     pub mail_state: ObservedMailState,
     pub error: Option<PublicError>,
     pub observed_at: DateTime<Utc>,
+}
+impl From<hmail_cleaner_core::maintenance::mail_service::MailState> for ObservedMailState {
+    fn from(state: hmail_cleaner_core::maintenance::mail_service::MailState) -> Self {
+        use hmail_cleaner_core::maintenance::mail_service::MailState;
+        match state {
+            MailState::Running => Self::Running,
+            MailState::Stopped => Self::Stopped,
+            MailState::Transitioning | MailState::Unsupported => Self::Unknown,
+        }
+    }
 }

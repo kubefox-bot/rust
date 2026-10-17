@@ -6,12 +6,7 @@ pub struct AgentBootstrap {
     pub agent_id: AgentId,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct AgentCsr {
-    pub agent_id: AgentId,
-    pub csr_pem: String,
-}
+pub use hmail_cleaner_protocol::AgentCsr;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EnrollmentError {

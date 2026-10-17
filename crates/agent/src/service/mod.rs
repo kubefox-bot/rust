@@ -22,3 +22,5 @@ pub async fn install(input: InstallServiceInput) -> Result<InstallationReceipt, 
         Err(InstallError::Unsupported)
     }
 }
+mod lock;
+pub(crate) use lock::acquire as acquire_update_lock;

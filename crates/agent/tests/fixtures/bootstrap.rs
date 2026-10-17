@@ -8,7 +8,7 @@ use rcgen::{
 use std::path::{Path, PathBuf};
 use zeroize::Zeroizing;
 
-pub fn prepare(root: &Path) -> (PathBuf, AgentId) {
+pub fn signed(root: &Path) -> (PathBuf, AgentId, CertifiedIssuer<'static, KeyPair>) {
     let directory = root.join("hMailCleanerAgent");
     let agent_id = AgentId::new();
     enrollment::prepare(&AgentBootstrap {
@@ -36,5 +36,5 @@ pub fn prepare(root: &Path) -> (PathBuf, AgentId) {
     std::fs::write(directory.join("identity.pem"), identity.pem()).unwrap();
     let config = directory.join("agent.json");
     std::fs::write(&config, serde_json::to_vec(&serde_json::json!({ "listen": "127.0.0.1:9443", "agent_id": agent_id, "center_id": uuid::Uuid::new_v4() })).unwrap()).unwrap();
-    (config, agent_id)
+    (config, agent_id, ca)
 }

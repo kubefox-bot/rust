@@ -8,6 +8,8 @@ rust-version.workspace = true
 cli = ["dep:clap"]
 
 [dependencies]
+ring = "0.17.14"
+
 hmail-cleaner-protocol = { path = "../protocol" }
 clap = { version = "4", optional = true, features = ["derive"] }
 hmail-cleaner-adapters = { path = "../adapters", default-features = false, features = ["mail", "mtls"] }
@@ -42,5 +44,5 @@ url = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows-service = "0.8"
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_System_Services"] }
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_System_Services", "Win32_Storage_FileSystem"] }
 widestring = "1"

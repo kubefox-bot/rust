@@ -9,10 +9,8 @@ use hmail_cleaner_adapters::{
     mysql::{DatabaseConfig, MySqlRepository},
     offline::{verify_data_folder, WindowsMailControl},
 };
-use hmail_cleaner_core::maintenance::mail_service::{MailControl, MailState};
-use hmail_cleaner_protocol::{
-    ObservedMailState, ProfileValidationRequest, ProfileValidationResponse,
-};
+use hmail_cleaner_core::maintenance::mail_service::MailControl;
+use hmail_cleaner_protocol::{ProfileValidationRequest, ProfileValidationResponse};
 use std::path::Path;
 
 pub(super) async fn post<E: Executor>(
@@ -31,11 +29,11 @@ pub(super) async fn post<E: Executor>(
         LocalFiles::new(profile.data_dir.clone().into()).map_err(|_| ApiError::bad_request())?;
     let control =
         WindowsMailControl::new(&profile.service_name).map_err(|_| AgentError::Unavailable)?;
-    let mail_state = match control.state().await.map_err(|_| AgentError::Unavailable)? {
-        MailState::Running => ObservedMailState::Running,
-        MailState::Stopped => ObservedMailState::Stopped,
-        MailState::Transitioning | MailState::Unsupported => ObservedMailState::Unknown,
-    };
+    let mail_state = control
+        .state()
+        .await
+        .map_err(|_| AgentError::Unavailable)?
+        .into();
     let database =
         DatabaseConfig::from_parts(&profile.mysql).map_err(|_| ApiError::bad_request())?;
     // Schema and connection checks only; no scan, Stop, DELETE or DELETE privilege probe.

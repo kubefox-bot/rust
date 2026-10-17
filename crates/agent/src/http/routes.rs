@@ -10,6 +10,9 @@ const MAX_JSON_BYTES: usize = 128 * 1024;
 pub fn router<E: Executor>(worker: Worker<E>) -> Router {
     Router::new()
         .route("/agent/v1/health", get(health::get::<E>))
+        .route("/agent/v1/identity/csr", post(super::identity::csr))
+        .route("/agent/v1/identity", put(super::identity::install::<E>))
+        .route("/agent/v1/service/state", post(super::service::post::<E>))
         .route("/agent/v1/resolve", post(resolve::post::<E>))
         .route("/agent/v1/profile/validate", post(profile::post::<E>))
         .route(

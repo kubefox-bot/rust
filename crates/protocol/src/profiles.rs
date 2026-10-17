@@ -59,6 +59,9 @@ impl MailProfile {
                 && value.len() <= MAX_PROFILE_TEXT_BYTES
                 && !value.contains('\0')
         }) && self.mysql.port != 0
+            && !hmail_cleaner_core::maintenance::mail_service::is_reserved_service_name(
+                &self.service_name,
+            )
             && self.mysql.permits_transport()
             && self.mysql.password.len() <= MAX_PASSWORD_BYTES
             && !self.mysql.password.contains('\0')
