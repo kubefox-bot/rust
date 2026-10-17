@@ -1,0 +1,15 @@
+[package]
+name = "hmail-cleaner-protocol"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+hmail-cleaner-core = { path = "../core" }
+chrono.workspace = true
+serde.workspace = true
+serde_json = "1"
+thiserror.workspace = true
+uuid = { workspace = true, features = ["serde", "v4"] }
+zeroize = { version = "1.9.1", features = ["serde"] }
+schemars = { version = "1.2.3", features = ["uuid1", "chrono04"] }

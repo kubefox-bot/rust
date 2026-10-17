@@ -89,7 +89,7 @@ assert_eq!(runner_calls, 0);
 - Produces: accept(&self, &ValidatedJob, RequestFingerprint) -> Result<AcceptOutcome, JobStoreError>; AcceptOutcome::{New,Existing,Conflict,Busy,Cancelled}.
 - Produces: cancel(&self, JobId) -> Result<JobSnapshot, JobStoreError>; lookup(&self, JobId) -> Result<Option<JobSnapshot>, JobStoreError>; recover_interrupted(&self) -> Result<(), JobStoreError>.
 
-- [ ] **Step 1: Написать тесты протокола и SQLite/tempdir.**
+- [x] **Step 1: Написать тесты протокола и SQLite/tempdir.**
 
 ~~~rust
 // same_id_same_command_has_one_receipt; same_id_changed_profile_is_conflict
@@ -109,10 +109,10 @@ assert_eq!(json["summary"]["removed_bytes"], "9007199254740993");
 ~~~
 
   Дополнительно: concurrent distinct IDs → один New/один Busy; ошибка commit → runner_calls=0; corrupted DB → Err, а не None; Windows-путь остаётся исходной строкой на Linux. Неизвестная protocol_version отклоняется до преобразования MailProfile.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-protocol --test wire; cargo test -p hmail-cleaner-agent --test receipts. Ожидается отсутствие новых API/провал assertions.
-- [ ] **Step 3: Реализовать контракт и квитанции.** Секреты в ValidatedJob ограничены и не выводятся через Debug. Agent DB хранит только fingerprint, публичные параметры, фазы/итоги; ключ HMAC квитанций — отдельный файл с правами ОС. SQLite transaction + unique active constraint завершаются до New. Cancel неизвестного ID сохраняет tombstone. На boot отмечать старые active как Interrupted; не исполнять их. Различать DTO и прежние core-типы, не менять сериализацию CLI Summary.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-protocol --locked; cargo test -p hmail-cleaner-agent --test receipts --locked. Проверить fixture с лишними/неверными полями, изменением mail profile под прежним version, u64 overflow и несовместимым протоколом. Ожидается PASS.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: persist idempotent agent job receipts".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-protocol --test wire; cargo test -p hmail-cleaner-agent --test receipts. Ожидается отсутствие новых API/провал assertions.
+- [x] **Step 3: Реализовать контракт и квитанции.** Секреты в ValidatedJob ограничены и не выводятся через Debug. Agent DB хранит только fingerprint, публичные параметры, фазы/итоги; ключ HMAC квитанций — отдельный файл с правами ОС. SQLite transaction + unique active constraint завершаются до New. Cancel неизвестного ID сохраняет tombstone. На boot отмечать старые active как Interrupted; не исполнять их. Различать DTO и прежние core-типы, не менять сериализацию CLI Summary.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-protocol --locked; cargo test -p hmail-cleaner-agent --test receipts --locked. Проверить fixture с лишними/неверными полями, изменением mail profile под прежним version, u64 overflow и несовместимым протоколом. Ожидается PASS.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: persist idempotent agent job receipts".
 
 ## A3. mTLS и проверка идентичности до передачи профиля
 
