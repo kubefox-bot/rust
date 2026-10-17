@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BrowserContracts } from "../../api";
+  import type { BrowserContracts } from "../api";
   let {
     servers,
     selected,

@@ -1,11 +1,11 @@
 import type { BrowserContracts } from "../../api";
+import { DEFAULT_PARAMETERS, JOURNAL_LIMIT } from "./conts";
 import {
-  DEFAULT_PARAMETERS,
-  JOURNAL_LIMIT,
   PHASE_LABELS,
   STAGE_LABELS,
   PUBLIC_ERROR_LABELS,
-} from "./conts";
+} from "../../jobs/display";
+export { screenStatus } from "../../jobs/display";
 import type {
   CleanupState,
   CleanupEvent,
@@ -45,11 +45,6 @@ export const initialState = (context: Context): CleanupState => {
     journal: [],
     expanded: false,
   };
-};
-export const screenStatus = (job: Job | null): string => {
-  if (!job) return "Ожидание запуска";
-  if (!job.snapshot) return "Проверка доставки задания";
-  return PHASE_LABELS[job.snapshot.phase];
 };
 export const progressPercent = (
   summary: BrowserContracts["summary"],

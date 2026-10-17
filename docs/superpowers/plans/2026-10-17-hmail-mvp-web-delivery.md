@@ -155,7 +155,7 @@ expect(activeSseConnections).toBe(1);
 - Produces: HistoryIsland({serverId}); SettingsIsland с выбранным AgentId/ProfileId; публичные entrypoints index.ts только с необходимыми экспортами.
 - Produces: реальные загрузки history/settings только при переходе на их страницы; данные выбранного сервера сохраняются в URL как несекретный UUID.
 
-- [ ] **Step 1: Написать browser assertions.**
+- [x] **Step 1: Написать browser assertions.**
 
 ~~~ts
 // history_is_scoped_and_paginated
@@ -172,10 +172,10 @@ expect(persistedBrowserValues).not.toContain(recoveryKey);
 ~~~
 
   Проверить loss of install response → attention/reconcile; error ≠ empty history; session timeout options 15/30/60/1440; credential commit → обычный login; одна вкладка выходит после нового входа из другой browser context.
-- [ ] **Step 2: Проверить RED.** bun run --cwd apps/web test:browser history settings enrollment account. Ожидается FAIL до реализации соответствующих страниц.
-- [ ] **Step 3: Реализовать разделы.** В sidebar один модуль, history в серверной шапке, settings рядом с SA. Настройки включают agents/add/update, технический профиль с явной целью и account/password/recovery. Сохранённые passwords/private keys не запрашивать на чтение; форму изменений не писать в localStorage. Recovery candidate показывается один раз и подтверждается до commit. В футере различать online/stale/offline, показывать observed_at и версии без фонового Data scan. Не добавлять роли, scheduler, кнопку lock или будущие пустые модули.
-- [ ] **Step 4: Проверить GREEN.** mise run web:check; bun run --cwd apps/web test:browser history settings enrollment account. Проверить начальную lazy загрузку и повторные открытия без накопления listeners/SSE; backend и browser validation обязательны, snapshots сами по себе не достаточны.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: manage server history agents and account settings".
+- [x] **Step 2: Проверить RED.** bun run --cwd apps/web test:browser history settings enrollment account. Ожидается FAIL до реализации соответствующих страниц.
+- [x] **Step 3: Реализовать разделы.** В sidebar один модуль, history в серверной шапке, settings рядом с SA. Настройки включают agents/add/update, технический профиль с явной целью и account/password/recovery. Сохранённые passwords/private keys не запрашивать на чтение; форму изменений не писать в localStorage. Recovery candidate показывается один раз и подтверждается до commit. В футере различать online/stale/offline, показывать observed_at и версии без фонового Data scan. Не добавлять роли, scheduler, кнопку lock или будущие пустые модули.
+- [x] **Step 4: Проверить GREEN.** mise run web:check; bun run --cwd apps/web test:browser history settings enrollment account. Проверить начальную lazy загрузку и повторные открытия без накопления listeners/SSE; backend и browser validation обязательны, snapshots сами по себе не достаточны.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: manage server history agents and account settings".
 
 ## C4. Podman + Quadlet, persistent data, обновление и воспроизводимая поставка
 

@@ -9,7 +9,7 @@
   import { initialState, transition } from "./model";
   import { REFRESH_INTERVAL_MS } from "./conts";
   import type { CleanupState, ConfirmedRun } from "./types";
-  import ServerHeader from "./ServerHeader.svelte";
+  import ServerHeader from "../../shell/ServerHeader.svelte";
   import RunForm from "./RunForm.svelte";
   import ProgressPanel from "./ProgressPanel.svelte";
   import Journal from "./Journal.svelte";
@@ -238,8 +238,13 @@
           agents = values;
         });
         const selectedId = selectedServer();
-        const target =
-          list.find((server) => server.id === selectedId) ?? list[0];
+        const target = selectedId
+          ? list.find((server) => server.id === selectedId)
+          : list[0];
+        if (selectedId && !target)
+          throw new Error(
+            "Выбранный сервер не найден. Откройте страницу очистки заново.",
+          );
         if (target) await choose(target.id);
       },
       onAnonymous: clear,

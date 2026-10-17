@@ -47,6 +47,7 @@ const build = publicBuild();
           <div class="nav-label">РАБОЧАЯ ОБЛАСТЬ</div>
           <a
             href="/"
+            data-cleanup-link
             class="nav-item active"
             aria-current={section === "cleanup" ? "page" : undefined}
           >
@@ -113,9 +114,16 @@ const build = publicBuild();
           <span>
             Mail Control <span class="build">· {build.version}</span>
           </span>
-          <span data-agents-footer>
-            Агенты · состояние доступно после входа
-          </span>
+          <details class="agents-summary" data-agents-details>
+            <summary data-agents-footer>
+              Агенты · состояние доступно после входа
+            </summary>
+            <ul
+              class="agents-list"
+              data-agents-list
+              aria-label="Состояние агентов по серверам"
+            ></ul>
+          </details>
         </footer>
       </div>
     </div>

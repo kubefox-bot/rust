@@ -1,15 +1,8 @@
 ---
 import Shell from "../layouts/Shell.astro";
+import { SettingsIsland } from "../features/settings";
 ---
 
 <Shell title="Настройки" section="settings">
-  <div class="page-heading">
-    <div>
-      <h1>Настройки</h1>
-      <p class="subtitle">Центр управления hMailServer</p>
-    </div>
-  </div>
-  <section class="card">
-    <div class="empty">Подключение интерфейса к API…</div>
-  </section>
+  <SettingsIsland client:load />
 </Shell>

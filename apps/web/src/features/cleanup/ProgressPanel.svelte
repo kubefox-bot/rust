@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { Dispatch, Job } from "./types";
   import { screenStatus, progressPercent } from "./model";
-  import { formatBytes, formatCount } from "./format";
-  import { MAIL_LABELS, STAGE_LABELS } from "./conts";
+  import {
+    formatBytes,
+    formatCount,
+    MAIL_LABELS,
+    STAGE_LABELS,
+  } from "../../jobs/display";
   let {
     job,
     dispatch,

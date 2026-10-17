@@ -2,6 +2,8 @@
 mod control;
 #[path = "../tests/fixtures/mod.rs"]
 pub mod fixtures;
+#[path = "browser_fixture/setup.rs"]
+mod setup;
 use base64ct::{Base64, Encoding};
 use hmail_cleaner_center::{
     app::AppState,
@@ -30,13 +32,18 @@ async fn main() {
         "Mail One",
     )
     .await;
-    let second_server = fixtures::jobs::configured_named(
+    let second_server = setup::unconfigured(
         &f,
         second.credentials.agent_id,
         second.credentials.endpoint.as_str(),
-        "Mail Two",
     )
     .await;
+    let history_count = std::env::args()
+        .nth(2)
+        .map(|value| value.parse::<usize>().expect("fixture history row count"))
+        .unwrap_or(0);
+    setup::history(&f, &first_server, history_count).await;
+    let packages = fixtures::enrollment::packages();
     one.restore_on_cancel();
     two.restore_on_cancel();
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -47,11 +54,16 @@ async fn main() {
         data_dir: f.root.path().to_path_buf(),
     })
     .unwrap();
-    let state = AppState::new(f.store.clone(), config.origin.clone())
+    let mut state = AppState::new(f.store.clone(), config.origin.clone())
         .await
         .unwrap()
         .with_authority(f.authority.clone())
         .with_static_dir(StaticDir::open(&static_dir).unwrap());
+    state.enrollment = hmail_cleaner_center::enrollment::EnrollmentService::new(
+        f.store.clone(),
+        packages.catalog.clone(),
+        hmail_cleaner_center::enrollment::NativeSsh,
+    );
     let cancel = Arc::new(hmail_cleaner_core::cleanup::Cancellation::default());
     f.authority.revoke(f.lease.generation());
     let server_cancel = cancel.clone();
@@ -91,4 +103,5 @@ async fn main() {
     let _ = server.await;
     let _ = reader.join();
     drop((first, second));
+    drop(packages);
 }

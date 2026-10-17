@@ -27,13 +27,18 @@ const deadline = async <Value>(
     clearTimeout(timer);
   }
 };
-export const startFixture = async () => {
-  const child = Bun.spawn([FIXTURE_BINARY, STATIC_DIRECTORY], {
-    cwd: ROOT,
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "inherit",
-  });
+export const startFixture = async (
+  options: Readonly<{ historyRows?: number }> = {},
+) => {
+  const child = Bun.spawn(
+    [FIXTURE_BINARY, STATIC_DIRECTORY, String(options.historyRows ?? 0)],
+    {
+      cwd: ROOT,
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "inherit",
+    },
+  );
   const output = lineReader(child.stdout);
   const stop = async () => {
     await child.stdin.end();

@@ -1,15 +1,14 @@
 ---
 import Shell from "../layouts/Shell.astro";
+import { HistoryIsland } from "../features/history";
 ---
 
 <Shell title="История" section="history">
   <div class="page-heading">
     <div>
-      <h1>История</h1>
-      <p class="subtitle">Центр управления hMailServer</p>
+      <h1>История очистки</h1>
+      <p class="subtitle">Сохранённые запуски выбранного почтового сервера</p>
     </div>
   </div>
-  <section class="card">
-    <div class="empty">Подключение интерфейса к API…</div>
-  </section>
+  <HistoryIsland client:load />
 </Shell>

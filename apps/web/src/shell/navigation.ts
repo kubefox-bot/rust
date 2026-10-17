@@ -5,7 +5,7 @@ export const selectedServer = (): string | null => {
   try {
     return decode("server_id", value);
   } catch {
-    return null;
+    throw new Error("Некорректный идентификатор сервера в адресе страницы.");
   }
 };
 export const selectServer = (id: string): void => {
@@ -16,6 +16,7 @@ export const selectServer = (id: string): void => {
   for (const [selector, path] of [
     ["[data-history-link]", "/history/"],
     ["[data-settings-link]", "/settings/"],
+    ["[data-cleanup-link]", "/"],
   ] as const) {
     const link = document.querySelector<HTMLAnchorElement>(selector);
     if (link) link.href = `${path}?server=${encodeURIComponent(id)}`;
