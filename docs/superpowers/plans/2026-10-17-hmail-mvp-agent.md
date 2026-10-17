@@ -133,7 +133,7 @@ assert_eq!(json["summary"]["removed_bytes"], "9007199254740993");
 - Produces: agent::enrollment::prepare(&AgentBootstrap) -> Result<AgentCsr, EnrollmentError>; локальный ключ/CSR, без старта очистки.
 - Adapters features: mail (сохраняет прежний default), mtls (новый optional); center подключает adapters только с mtls, agent — mail + mtls. Компиляция mail-модулей, MySQL и Windows/SCM dependencies gated, а не просто неиспользуемая. Sqlite agent ledger подключается самим agent crate.
 
-- [ ] **Step 1: Написать TLS fixtures и отрицательные тесты.**
+- [x] **Step 1: Написать TLS fixtures и отрицательные тесты.**
 
 ~~~rust
 // trusted_ca_wrong_node_rejected_before_request_body
@@ -147,10 +147,10 @@ assert_eq!(authenticated_peer, PeerIdentity::Agent(agent_id));
 assert!(!csr_output.contains("PRIVATE KEY"));
 ~~~
 
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-adapters --test mtls; cargo test -p hmail-cleaner-agent --test enrollment. До добавления реализаций ожидается FAIL.
-- [ ] **Step 3: Реализовать shared adapter.** Использовать выбранные версии §8.4 и ring без default crypto-provider. Обёртки verifier делегируют проверку цепочки/подписей WebPKI и дополнительно проверяют SAN, EKU, UUID, serial denylist. Идентичность проверяется в handshake, а не после POST. CSR подпись проверяется rcgen; выдаваемые extensions задаёт центр. Agent private key создаётся в защищённом каталоге. Реализовать атомарную замену TLS config и разрыв старых соединений при отзыве.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-adapters --features mtls --test mtls --locked; cargo test -p hmail-cleaner-agent --test enrollment --locked. Проверить ca/hostname/identity по отдельности, истечение срока и refresh verifier. Ожидается PASS; native Server 2016 пока NOT RUN.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: authenticate center and agent identities with mtls".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-adapters --test mtls; cargo test -p hmail-cleaner-agent --test enrollment. До добавления реализаций ожидается FAIL.
+- [x] **Step 3: Реализовать shared adapter.** Использовать выбранные версии §8.4 и ring без default crypto-provider. Обёртки verifier делегируют проверку цепочки/подписей WebPKI и дополнительно проверяют SAN, EKU, UUID, serial denylist. Идентичность проверяется в handshake, а не после POST. CSR подпись проверяется rcgen; выдаваемые extensions задаёт центр. Agent private key создаётся в защищённом каталоге. Реализовать атомарную замену TLS config и разрыв старых соединений при отзыве.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-adapters --features mtls --test mtls --locked; cargo test -p hmail-cleaner-agent --test enrollment --locked. Проверить ca/hostname/identity по отдельности, истечение срока и refresh verifier. Ожидается PASS; native Server 2016 пока NOT RUN.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: authenticate center and agent identities with mtls".
 
 ## A4. Выполнение задания, прогресс и корректная отмена
 
