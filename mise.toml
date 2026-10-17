@@ -72,3 +72,7 @@ description = "Проверить публикацию EXE и передачу �
 dir = "{{ config_root }}"
 run = "sh tools/build-exe.sh --test"
 run_windows = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build-exe.ps1 -Test"
+
+[tasks."build:center"]
+description = "Build the standalone center without mail/Windows cleanup dependencies"
+run = "cargo build --release -p hmail-cleaner --no-default-features --features center --locked"

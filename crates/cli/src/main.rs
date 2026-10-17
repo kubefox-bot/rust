@@ -16,6 +16,20 @@ use std::process::ExitCode;
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    #[cfg(feature = "center")]
+    {
+        let arguments = std::env::args_os().skip(1).collect::<Vec<_>>();
+        let is_center = arguments
+            .first()
+            .is_some_and(|argument| argument == "center");
+        if is_center || !cfg!(any(feature = "local-cli", feature = "agent")) {
+            return hmail_cleaner_center::cli::run(
+                arguments.into_iter().skip(usize::from(is_center)),
+                env!("HMAIL_BUILD_VERSION"),
+            )
+            .await;
+        }
+    }
     #[cfg(feature = "agent")]
     {
         let arguments = std::env::args_os().skip(1).collect::<Vec<_>>();

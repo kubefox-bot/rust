@@ -8,8 +8,12 @@ rust-version.workspace = true
 default = ["local-cli"]
 local-cli = ["dep:hmail-cleaner-runner", "dep:hmail-cleaner-core", "dep:hmail-cleaner-adapters", "dep:chrono", "dep:serde", "dep:thiserror", "dep:serde_json", "dep:clap", "dep:dotenvy", "dep:crossterm", "dep:windows-sys"]
 agent = ["dep:hmail-cleaner-agent"]
+center = ["dep:hmail-cleaner-center"]
+
 
 [dependencies]
+hmail-cleaner-center = { path = "../center", optional = true, features = ["cli"] }
+
 hmail-cleaner-runner = { path = "../runner", optional = true }
 hmail-cleaner-core = { path = "../core", optional = true }
 hmail-cleaner-adapters = { path = "../adapters", optional = true }

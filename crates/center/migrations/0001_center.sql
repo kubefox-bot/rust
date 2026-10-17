@@ -1,0 +1,12 @@
+CREATE TABLE account (singleton INTEGER PRIMARY KEY CHECK(singleton=1), login TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>0), material BLOB NOT NULL CHECK(length(material)<=8192));
+CREATE TABLE settings (singleton INTEGER PRIMARY KEY CHECK(singleton=1), idle_minutes INTEGER NOT NULL CHECK(idle_minutes IN (15,30,60,1440)));
+INSERT INTO settings VALUES(1,15);
+CREATE TABLE identity (singleton INTEGER PRIMARY KEY CHECK(singleton=1), vault_id TEXT NOT NULL UNIQUE);
+CREATE TABLE encrypted_records (id TEXT PRIMARY KEY, kind TEXT NOT NULL, version INTEGER NOT NULL CHECK(version>0), envelope BLOB NOT NULL CHECK(length(envelope)<=131072));
+CREATE TABLE servers (id TEXT PRIMARY KEY, name TEXT NOT NULL, agent_id TEXT NOT NULL UNIQUE, active_profile_id TEXT);
+CREATE TABLE profile_versions (id TEXT NOT NULL, version INTEGER NOT NULL CHECK(version>0), server_id TEXT NOT NULL REFERENCES servers(id), record_id TEXT NOT NULL REFERENCES encrypted_records(id), PRIMARY KEY(id,version));
+CREATE TRIGGER profile_immutable_update BEFORE UPDATE ON profile_versions BEGIN SELECT RAISE(ABORT,'immutable profile'); END;
+CREATE TABLE jobs (id TEXT PRIMARY KEY, server_id TEXT NOT NULL REFERENCES servers(id), profile_id TEXT NOT NULL, profile_version INTEGER NOT NULL, phase TEXT NOT NULL, snapshot BLOB, FOREIGN KEY(profile_id,profile_version) REFERENCES profile_versions(id,version));
+CREATE TABLE trust (agent_id TEXT PRIMARY KEY, serial TEXT NOT NULL UNIQUE, revoked INTEGER NOT NULL CHECK(revoked IN (0,1)));
+CREATE TABLE enrollment (id TEXT PRIMARY KEY, agent_id TEXT NOT NULL, phase TEXT NOT NULL, host_key TEXT NOT NULL);
+PRAGMA user_version=1;

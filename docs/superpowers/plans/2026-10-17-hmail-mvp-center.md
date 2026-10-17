@@ -89,7 +89,7 @@ assert_eq!(max_simultaneous_kdfs, 1);
 - Produces: initialize(&CenterStore, &InitInput, &mut impl SecretPrompt) -> Result<InitReceipt, InitError>.
 - Produces: команды hmail-cleaner center init/run с --data-dir; run пока поднимает только проверяемое приложение без UI.
 
-- [ ] **Step 1: Написать init/storage/backup tests.**
+- [x] **Step 1: Написать init/storage/backup tests.**
 
 ~~~rust
 // concurrent_init_has_one_account_and_no_partial_wraps
@@ -106,10 +106,10 @@ assert!(!all_persisted_bytes.windows(sentinel.len()).any(|w| w == sentinel));
 ~~~
 
   Sentinels задаются для всех MySQL полей, Data/INI, службы и agent private key. Backup восстанавливается в другом tempdir с тем же vault identity и обоими способами unlock. Повторный init не меняет версии/ключи.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test initialization; cargo test -p hmail-cleaner-center --test backup. Ожидается FAIL до storage/init.
-- [ ] **Step 3: Реализовать SQLite/init.** Схема: singleton account/settings/identity, encrypted_records, servers, immutable profile_versions, jobs, trust/enrollment metadata. WAL/FULL/FK/busy_timeout/пулы — из общего плана. Все команды одного каталога используют один OS lock. Не копировать живой .db без WAL: backup через согласованный SQLite snapshot (VACUUM INTO на отдельном соединении), включает версию/identity/bootstrap manifest. До миграции существующей схемы создаётся backup; неизвестная новая версия блокирует запуск. Скрытый ввод rpassword, recovery confirmation до короткой транзакции. После init нет RAM-сессии/DEK рабочего центра.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test initialization --locked; cargo test -p hmail-cleaner-center --test storage --locked; cargo test -p hmail-cleaner-center --test backup --locked. cargo build -p hmail-cleaner --no-default-features --features center --locked. Проверить отсутствие mail/mysql/crossterm в feature-графе center-поставки; CLI secret-параметры не существуют.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: initialize a portable encrypted center database".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test initialization; cargo test -p hmail-cleaner-center --test backup. Ожидается FAIL до storage/init.
+- [x] **Step 3: Реализовать SQLite/init.** Схема: singleton account/settings/identity, encrypted_records, servers, immutable profile_versions, jobs, trust/enrollment metadata. WAL/FULL/FK/busy_timeout/пулы — из общего плана. Все команды одного каталога используют один OS lock. Не копировать живой .db без WAL: backup через согласованный SQLite snapshot (VACUUM INTO на отдельном соединении), включает версию/identity/bootstrap manifest. До миграции существующей схемы создаётся backup; неизвестная новая версия блокирует запуск. Скрытый ввод rpassword, recovery confirmation до короткой транзакции. После init нет RAM-сессии/DEK рабочего центра.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test initialization --locked; cargo test -p hmail-cleaner-center --test storage --locked; cargo test -p hmail-cleaner-center --test backup --locked. cargo build -p hmail-cleaner --no-default-features --features center --locked. Проверить отсутствие mail/mysql/crossterm в feature-графе center-поставки; CLI secret-параметры не существуют.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: initialize a portable encrypted center database".
 
 ## B3. HTTPS-вход, одна сессия, CSRF и бездействие
 

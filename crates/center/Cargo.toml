@@ -4,7 +4,14 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+cli = ["dep:clap", "dep:rpassword", "dep:axum"]
+
 [dependencies]
+clap = { version = "4", optional = true, features = ["derive"] }
+rpassword = { version = "7", optional = true }
+axum = { version = "0.8", optional = true }
+
 argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "password-hash", "zeroize"] }
 chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc", "zeroize"] }
 ring = "0.17.14"
@@ -15,7 +22,11 @@ serde_json = "1"
 thiserror.workspace = true
 uuid = { workspace = true, features = ["serde"] }
 subtle = "2.6"
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
+
 tokio.workspace = true
 
 [dev-dependencies]
+tempfile = "3"
+
 uuid = { workspace = true, features = ["v4"] }
