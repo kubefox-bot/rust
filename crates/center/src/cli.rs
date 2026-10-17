@@ -21,6 +21,10 @@ enum Command {
     Init {
         #[arg(long)]
         data_dir: PathBuf,
+        #[arg(long)]
+        origin: Option<String>,
+        #[arg(long)]
+        listen: Option<std::net::SocketAddr>,
     },
     Run {
         #[arg(long)]
@@ -88,29 +92,39 @@ pub async fn run(
 }
 async fn execute(command: Command) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let data_dir = match &command {
-        Command::Init { data_dir } | Command::Run { data_dir } => data_dir.clone(),
+        Command::Init { data_dir, .. } | Command::Run { data_dir } => data_dir.clone(),
     };
     let config = CenterConfig::load(&CenterArgs { data_dir })?;
-    let lease = DataDirectory::acquire(&config.data_dir)?;
-    let store = CenterStore::open(&lease).await?;
     match command {
-        Command::Init { .. } => {
+        Command::Init { origin, listen, .. } => {
+            let lease = DataDirectory::acquire(&config.data_dir)?;
+            let store = CenterStore::open(&lease).await?;
+            if store.account().await?.is_some() {
+                return Err("Center is already initialized".into());
+            }
+            if origin.is_some() || listen.is_some() {
+                CenterConfig::create(
+                    &config.data_dir,
+                    origin.as_deref().unwrap_or(config.origin.as_str()),
+                    listen.unwrap_or(config.listen),
+                )?;
+            }
             let login = line("Логин суперадмина: ")?;
             account::initialize(&store, &InitInput { login }, &mut TerminalPrompt).await?;
             println!("Суперадмин создан. Ключ данных не оставлен в сессии.");
         }
         Command::Run { .. } => {
-            if store.account().await?.is_none() {
-                return Err("Run center init first".into());
-            }
-            let listener = tokio::net::TcpListener::bind(config.listen).await?;
-            let router =
-                axum::Router::new().route("/healthz", axum::routing::get(|| async { "ok" }));
-            axum::serve(listener, router)
-                .with_graceful_shutdown(async {
-                    let _ = tokio::signal::ctrl_c().await;
-                })
-                .await?;
+            let cancel = std::sync::Arc::new(hmail_cleaner_core::cleanup::Cancellation::default());
+            let signal_cancel = cancel.clone();
+            let signal = tokio::spawn(async move {
+                if tokio::signal::ctrl_c().await.is_ok() {
+                    signal_cancel.request();
+                }
+            });
+            let result = crate::run(config, cancel).await;
+            signal.abort();
+            let _ = signal.await;
+            result?;
         }
     }
     Ok(())

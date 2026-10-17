@@ -12,6 +12,9 @@ pub struct CenterStore {
     pub(crate) kdf: Arc<crate::vault::KdfGate>,
 }
 impl CenterStore {
+    pub(crate) fn directory(&self) -> &std::path::Path {
+        &self.lease.path
+    }
     pub async fn open(directory: &DataDirectoryLease) -> Result<Self, StorageError> {
         let database = directory.path().join("center.sqlite");
         if database.exists() {

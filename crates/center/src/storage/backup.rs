@@ -44,7 +44,12 @@ impl CenterStore {
                 .await
                 .map_err(|_| StorageError::Backup)?;
         snapshot.close().await.map_err(|_| StorageError::Backup)?;
-        for filename in ["https-cert.pem", "https-key.pem"] {
+        for filename in [
+            "https-cert.pem",
+            "https-key.pem",
+            "ca-cert.pem",
+            "center.json",
+        ] {
             let source = self.lease.path.join(filename);
             match source.symlink_metadata() {
                 Ok(meta) if meta.is_file() && meta.len() <= 65536 => {

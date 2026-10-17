@@ -5,12 +5,28 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-cli = ["dep:clap", "dep:rpassword", "dep:axum"]
+cli = ["dep:clap", "dep:rpassword"]
 
 [dependencies]
+rustls-pemfile = "2"
+
+hmail-cleaner-core = { path = "../core" }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+
+url = "2"
+time = "0.3"
+
+tower-cookies = "0.11.0"
+tower-http = { version = "0.7.1", features = ["csrf", "limit", "timeout", "set-header"] }
+axum-server = { version = "0.8", default-features = false, features = ["tls-rustls-no-provider"] }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+rcgen = { version = "0.14.10", default-features = false, features = ["ring", "pem", "x509-parser", "zeroize"] }
+hmail-cleaner-protocol = { path = "../protocol" }
+
 clap = { version = "4", optional = true, features = ["derive"] }
 rpassword = { version = "7", optional = true }
-axum = { version = "0.8", optional = true }
+axum = "0.8"
 
 argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "password-hash", "zeroize"] }
 chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc", "zeroize"] }
@@ -27,6 +43,12 @@ sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
 tokio.workspace = true
 
 [dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+futures-util = "0.3"
+
+tower = { version = "0.5", features = ["util"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json"] }
+
 tempfile = "3"
 
 uuid = { workspace = true, features = ["v4"] }

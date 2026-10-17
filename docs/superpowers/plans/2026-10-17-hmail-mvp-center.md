@@ -132,7 +132,7 @@ assert!(!all_persisted_bytes.windows(sentinel.len()).any(|w| w == sentinel));
 - Produces: center::run(CenterConfig, Arc<Cancellation>) -> Result<(), CenterError>.
 - Produces: GET /healthz без секрета/пути БД; ожидание login не делает исправный центр unhealthy.
 
-- [ ] **Step 1: Написать auth/CSRF tests.**
+- [x] **Step 1: Написать auth/CSRF tests.**
 
 ~~~rust
 // successful_login_replaces_old_session; failed_login_preserves_it
@@ -148,10 +148,10 @@ assert_eq!(protected_effects, 0);
 ~~~
 
   Проверить 15/30/60/1440, изменение timeout от последней активности, idle без HTTP, рестарт без сессии, отозванный SSE. Cookie tokens malformed/oversized отклоняются до allocation. Без Fetch Metadata сохраняется X-HMail-Request:1 + JSON + origin/Host policy. GET/HEAD/OPTIONS ничего не меняют; account lockout навсегда не возникает.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test sessions; cargo test -p hmail-cleaner-center --test csrf; cargo test -p hmail-cleaner-center --test login_limits.
-- [ ] **Step 3: Реализовать допуск.** Tower-cookies/CsrfLayer и атрибуты cookie строго из §5.7. DEK имеет владельца поколения отдельно от сессии. Общий credential barrier сериализует финальный admission и commit B7; KDF/сеть идут вне него. Token bucket ограничен одним состоянием, KDF — try acquire без очереди. На revoke закрыть browser SSE и generation-bound agent clients/streams; принятый agent job не отменять. TLS bootstrap работает до входа. Защищённые API-ответы используют Cache-Control:no-store. Открытая регистрация и состояние UI lock не создаются.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test sessions --locked; cargo test -p hmail-cleaner-center --test csrf --locked; cargo test -p hmail-cleaner-center --test login_limits --locked. HTTPS fixture проверяет атрибуты cookie и Host/origin. Не заменять эти проверки HTTP dev-mode.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: authenticate one center session with csrf and idle expiry".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test sessions; cargo test -p hmail-cleaner-center --test csrf; cargo test -p hmail-cleaner-center --test login_limits.
+- [x] **Step 3: Реализовать допуск.** Tower-cookies/CsrfLayer и атрибуты cookie строго из §5.7. DEK имеет владельца поколения отдельно от сессии. Общий credential barrier сериализует финальный admission и commit B7; KDF/сеть идут вне него. Token bucket ограничен одним состоянием, KDF — try acquire без очереди. На revoke закрыть browser SSE и generation-bound agent clients/streams; принятый agent job не отменять. TLS bootstrap работает до входа. Защищённые API-ответы используют Cache-Control:no-store. Открытая регистрация и состояние UI lock не создаются.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test sessions --locked; cargo test -p hmail-cleaner-center --test csrf --locked; cargo test -p hmail-cleaner-center --test login_limits --locked. HTTPS fixture проверяет атрибуты cookie и Host/origin. Не заменять эти проверки HTTP dev-mode.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: authenticate one center session with csrf and idle expiry".
 
 ## B4. Версии профилей и доверие конкретным агентам
 

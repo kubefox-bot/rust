@@ -44,6 +44,12 @@ pub async fn initialize(
     }
     let encoded = prepared.material.encode().map_err(|_| InitError)?;
     let vault_id = prepared.material.vault_id();
+    let config = crate::config::CenterConfig::load(&crate::config::CenterArgs {
+        data_dir: store.directory().to_path_buf(),
+    })
+    .map_err(|_| InitError)?;
+    let identity = crate::identity::prepare(&prepared.material, &prepared.dek, &config.origin)
+        .map_err(|_| InitError)?;
     let mut transaction = store.pool.begin().await.map_err(|_| InitError)?;
     sqlx::query("INSERT INTO account(singleton,login,revision,material) VALUES(1,?,1,?)")
         .bind(&input.login)
@@ -56,6 +62,13 @@ pub async fn initialize(
         .execute(&mut *transaction)
         .await
         .map_err(|_| InitError)?;
+    sqlx::query("INSERT INTO encrypted_records(id,kind,version,envelope) VALUES(?,'ca_key',1,?)")
+        .bind(vault_id.to_string())
+        .bind(identity.ca.encode().map_err(|_| InitError)?)
+        .execute(&mut *transaction)
+        .await
+        .map_err(|_| InitError)?;
+    identity.persist(store.directory()).map_err(|_| InitError)?;
     transaction.commit().await.map_err(|_| InitError)?;
     Ok(InitReceipt { vault_id })
 }
