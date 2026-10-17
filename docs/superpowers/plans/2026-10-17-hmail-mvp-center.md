@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Построить Rust-центр с одной учётной записью, зашифрованной SQLite, управлением заданиями и установкой агентов.
+**Goal:** Построить Rust-центр с одной учётной записью, SQLite с зашифрованными техническими профилями, управлением заданиями и установкой агентов.
 
 **Architecture:** center собирает auth, vault, profiles, jobs и enrollment через явные зависимости; доменные операции отделены от Axum/SQLx/SSH. Browser API и agent transport имеют разные границы доверия. Фоновая работа не имеет постоянного доступа к DEK после выхода.
 
@@ -45,11 +45,11 @@
 - Produces: SecretText = Zeroizing<String>, Dek = Zeroizing<[u8; 32]>; EnvelopeHeader, EncryptedRecord, PreparedVault, VaultError.
 - Produces: initialize(&SecretText, &dyn Entropy) -> Result<PreparedVault, VaultError>.
 - Produces: open_password(&AccountMaterial, &SecretText) -> Result<Dek, VaultError>; open_recovery(&AccountMaterial, &RecoveryKey) -> Result<Dek, VaultError>.
-- Produces: seal_record(&Dek, &EnvelopeHeader, &[u8]) -> Result<EncryptedRecord, VaultError>; open_record(&Dek, &EncryptedRecord) -> Result<Zeroizing<Vec<u8>>, VaultError>.
+- Produces: seal_record(&Dek, &EnvelopeHeader, &[u8]) -> Result<EncryptedRecord, VaultError>; open_record(&Dek, expected: &EnvelopeHeader, &EncryptedRecord) -> Result<Zeroizing<Vec<u8>>, VaultError>. Expected context задаёт владелец записи, чтобы целиком переставленный envelope не принимался за другой профиль.
 - Produces: encode_aad(&EnvelopeHeader) -> Result<Vec<u8>, VaultError>.
 - Produces: async KdfGate::try_run<T>(&self, job: impl FnOnce() -> Result<T, VaultError> + Send + 'static) -> Result<T, KdfError>, T: Send + 'static; один spawn_blocking без очереди.
 
-- [ ] **Step 1: Написать vault/kdf tests и фиксированный тестовый вектор формата.**
+- [x] **Step 1: Написать vault/kdf tests и фиксированный тестовый вектор формата.**
 
 ~~~rust
 // password_and_recovery_open_same_dek
@@ -65,10 +65,10 @@ assert_eq!(max_simultaneous_kdfs, 1);
 ~~~
 
   Тесты неверного пароля/recovery/tag, перепутанного назначения ключей, oversized envelope, сбоя CSPRNG, новых nonce при повторном seal. Контрольная KDF-арена очищается на success/error; не обещать очистку чужих копий.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test vault; cargo test -p hmail-cleaner-center --test kdf_limits. Ожидается FAIL до реализации.
-- [ ] **Step 3: Реализовать формат v1.** Выбранные библиотеки §5.8, одна 32 MiB арена, две разные соли/последовательные KDF. В docs/crypto-format-v1.md зафиксировать порядок/длины big-endian полей из общего плана и тестовый hex-вектор. HKDF назначения разделены; все метаданные обёртки аутентифицированы. Не использовать JSON как AAD. У каждой обёртки собственное поколение; версия учётной записи для CAS не заставляет менять профильные ciphertext. KDF permit принадлежит closure до её фактического завершения.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test vault --locked; cargo test -p hmail-cleaner-center --test kdf_limits --locked. Ожидается PASS; cargo tree -p hmail-cleaner-center -e features не включает Rayon/AWS-LC случайно.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: encrypt center records with password and recovery wraps".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test vault; cargo test -p hmail-cleaner-center --test kdf_limits. Ожидается FAIL до реализации.
+- [x] **Step 3: Реализовать формат v1.** Выбранные библиотеки §5.8, одна 32 MiB арена, две разные соли/последовательные KDF. В docs/crypto-format-v1.md зафиксировать порядок/длины big-endian полей из общего плана и тестовый hex-вектор. HKDF назначения разделены; все метаданные обёртки аутентифицированы. Не использовать JSON как AAD. У каждой обёртки собственное поколение; версия учётной записи для CAS не заставляет менять профильные ciphertext. KDF permit принадлежит closure до её фактического завершения.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test vault --locked; cargo test -p hmail-cleaner-center --test kdf_limits --locked. Ожидается PASS; cargo tree -p hmail-cleaner-center -e features не включает Rayon/AWS-LC случайно.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: encrypt center records with password and recovery wraps".
 
 ## B2. SQLite, каталог данных и локальный init
 
