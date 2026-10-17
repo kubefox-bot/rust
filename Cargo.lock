@@ -626,6 +626,7 @@ dependencies = [
  "dotenvy",
  "hmail-cleaner-adapters",
  "hmail-cleaner-core",
+ "hmail-cleaner-runner",
  "serde",
  "serde_json",
  "tempfile",
@@ -658,6 +659,18 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "hmail-cleaner-runner"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hmail-cleaner-adapters",
+ "hmail-cleaner-core",
+ "serde",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

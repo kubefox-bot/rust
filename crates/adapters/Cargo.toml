@@ -9,7 +9,7 @@ hmail-cleaner-core = { path = "../core" }
 chrono.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-sqlx.workspace = true
+sqlx = { workspace = true, features = ["runtime-tokio-rustls", "mysql", "chrono"] }
 
 [dev-dependencies]
 url = "2"

@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+hmail-cleaner-runner = { path = "../runner" }
 hmail-cleaner-core = { path = "../core" }
 hmail-cleaner-adapters = { path = "../adapters" }
 chrono.workspace = true

@@ -1,6 +1,6 @@
 use std::{env, io, path::PathBuf};
 pub(super) const TARGET: &str = "x86_64-pc-windows-msvc";
-pub(super) const RUST: &str = "1.98.1";
+pub(super) const RUST: &str = "1.99.1";
 pub(super) const BUILDER: &str = "messense/cargo-xwin:0.23.1";
 #[derive(Clone)]
 pub(super) struct Settings {

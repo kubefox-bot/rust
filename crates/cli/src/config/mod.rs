@@ -12,7 +12,7 @@ use hmail_cleaner_core::{
 };
 pub(crate) use retention::{before as parse_before, parse as parse_age};
 use std::{num::NonZeroU32, path::PathBuf};
-pub(crate) use types::{Config, ConfigError, RunIntent, ServicePolicy, ServiceSettings, Settings};
+pub(crate) use types::{Config, ConfigError, RunIntent, ServicePolicy, Settings};
 const DEFAULT_SERVICE_NAME: &str = "hMailServer";
 pub(crate) struct LaunchSettings {
     pub log_file: Option<PathBuf>,
@@ -49,60 +49,6 @@ fn input(args: &Args) -> Result<(sources::Values, sources::Values, Option<PathBu
         .map_err(|_| ConfigError::Setting("Не удалось определить путь EXE"))?;
     let (file, path) = sources::selected_file(args.options().env_file.as_deref(), &executable)?;
     Ok((system, file, path))
-}
-pub(crate) fn load_service_settings(args: &Args) -> Result<ServiceSettings, ConfigError> {
-    if args.options().json {
-        return Err(ConfigError::Setting("служба не поддерживает --json"));
-    }
-    if args
-        .options()
-        .env_file
-        .as_ref()
-        .is_some_and(|path| !path.is_absolute())
-    {
-        return Err(ConfigError::Setting(
-            "для службы --env-file должен быть абсолютным",
-        ));
-    }
-    let (system, file, env_file) = input(args)?;
-    let mut settings = service_with_sources(args, &system, &file)?;
-    settings.cleanup.env_file = env_file;
-    Ok(settings)
-}
-
-fn service_with_sources(
-    args: &Args,
-    system: &sources::Values,
-    file: &sources::Values,
-) -> Result<ServiceSettings, ConfigError> {
-    let cleanup = load_with_sources(args, system, file)?;
-    if cleanup.scan != ScanMode::Fast {
-        return Err(ConfigError::Setting("Для службы требуется HMAIL_SCAN=fast"));
-    }
-    if cleanup.log_file.is_none() {
-        return Err(ConfigError::Setting("HMAIL_LOG_FILE"));
-    }
-    if cleanup.service_name.eq_ignore_ascii_case("hMailCleaner") {
-        return Err(ConfigError::Setting(
-            "Почтовая служба должна отличаться от hMailCleaner",
-        ));
-    }
-    let raw =
-        sources::value("HMAIL_RUN_AT", system, file).ok_or(ConfigError::Setting("HMAIL_RUN_AT"))?;
-    if raw.len() != 5
-        || raw.as_bytes()[2] != b':'
-        || !raw
-            .bytes()
-            .enumerate()
-            .all(|(index, byte)| index == 2 || byte.is_ascii_digit())
-    {
-        return Err(ConfigError::Setting(
-            "HMAIL_RUN_AT должен иметь формат HH:MM",
-        ));
-    }
-    let run_at = chrono::NaiveTime::parse_from_str(raw, "%H:%M")
-        .map_err(|_| ConfigError::Setting("HMAIL_RUN_AT должен иметь формат HH:MM"))?;
-    Ok(ServiceSettings { cleanup, run_at })
 }
 pub(crate) fn load_with_sources(
     args: &Args,
@@ -169,7 +115,6 @@ pub(crate) fn load_with_sources(
             _ => return Err(ConfigError::Setting("HMAIL_SCAN")),
         },
     };
-    let log_file = log_file(options, system, file)?;
     Ok(Settings {
         env_file: None,
         database,
@@ -180,7 +125,6 @@ pub(crate) fn load_with_sources(
         scan,
         batch_size: NonZeroU32::new(batch).expect("validated positive batch"),
         workers,
-        log_file,
     })
 }
 impl Settings {

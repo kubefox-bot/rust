@@ -22,13 +22,8 @@ async fn main() -> ExitCode {
         }
     };
     if args.is_service() {
-        return match service::start(&args) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(error) => {
-                eprintln!("Ошибка службы: {error}");
-                ExitCode::from(1)
-            }
-        };
+        eprintln!("Очистка по расписанию удалена. Используйте preview/clean или агент центра.");
+        return ExitCode::from(2);
     }
     if args.is_menu()
         && (!std::io::stdin().is_terminal() || args.options().silence || args.options().json)
@@ -166,5 +161,3 @@ async fn run_menu(mut settings: config::Settings, output: &Output, cancel: &Canc
         }
     }
 }
-
-mod service;

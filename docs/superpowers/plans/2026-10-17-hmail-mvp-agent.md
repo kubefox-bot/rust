@@ -50,7 +50,7 @@
 - Produces: runner::run_once(&RunRequest, &impl RunObserver, &Cancellation) -> RunResult.
 - Produces: прежние Report/status/summary/exit_code и RunResult::{Finished,Fatal}; ServicePolicy::{RequireStopped,Manage}.
 
-- [ ] **Step 1: Закрепить регрессии.** Перенести meaningful lifecycle-тест из CLI в runner/tests/lifecycle.rs; расширить restore failure и close failure. В CLI tests/launch.rs проверить удалённый режим:
+- [x] **Step 1: Закрепить регрессии.** Перенести meaningful lifecycle-тест из CLI в runner/tests/lifecycle.rs; расширить restore failure и close failure. В CLI tests/launch.rs проверить удалённый режим:
 
 ~~~rust
 // database_lock_is_held_until_restore_finishes
@@ -64,10 +64,10 @@ assert_eq!(exit_code, 2);
 assert_eq!(runner_calls, 0);
 ~~~
 
-- [ ] **Step 2: Проверить RED.** Сначала сохранить baseline: mise run check; затем новые тесты: cargo test -p hmail-cleaner --test launch --locked. Ожидается FAIL для legacy service, а отсутствие runner package — диагностируемый RED при первом запуске cargo test -p hmail-cleaner-runner --test lifecycle.
-- [ ] **Step 3: Выделить сценарий.** Перенести текущую композицию и Report без смены порядка/exit codes; CLI Output реализует RunObserver. CLI config преобразует свой Config в RunRequest и остаётся единственным владельцем env загрузки. Agent не импортирует cli/config. Сохранить no-args menu, preview/clean, NDJSON и существующие проверки. Удалить расписание, ServiceSettings и чтение HMAIL_RUN_AT; прежний service run возвращает явную ошибку. Не менять ядро для удобства HTTP.
-- [ ] **Step 4: Проверить GREEN и сборочную границу.** Запустить cargo test -p hmail-cleaner-runner --locked, mise run check, mise run test:db. Закрепить 1.99.1 во всех трёх текущих владельцах версии; features SQLx mysql/runtime-tokio-rustls/chrono перенести в adapters. Ожидается PASS без изменения CLI результатов; MySQL fixture запускается только отдельной командой.
-- [ ] **Step 5: Локальный коммит.** git commit -m "refactor: share manual cleanup execution and remove scheduling" после добавления только файлов A1.
+- [x] **Step 2: Проверить RED.** Сначала сохранить baseline: mise run check; затем новые тесты: cargo test -p hmail-cleaner --test launch --locked. Ожидается FAIL для legacy service, а отсутствие runner package — диагностируемый RED при первом запуске cargo test -p hmail-cleaner-runner --test lifecycle.
+- [x] **Step 3: Выделить сценарий.** Перенести текущую композицию и Report без смены порядка/exit codes; CLI Output реализует RunObserver. CLI config преобразует свой Config в RunRequest и остаётся единственным владельцем env загрузки. Agent не импортирует cli/config. Сохранить no-args menu, preview/clean, NDJSON и существующие проверки. Удалить расписание, ServiceSettings и чтение HMAIL_RUN_AT; прежний service run возвращает явную ошибку. Не менять ядро для удобства HTTP.
+- [x] **Step 4: Проверить GREEN и сборочную границу.** Запустить cargo test -p hmail-cleaner-runner --locked, mise run check, mise run test:db. Закрепить 1.99.1 во всех трёх текущих владельцах версии; features SQLx mysql/runtime-tokio-rustls/chrono перенести в adapters. Ожидается PASS без изменения CLI результатов; MySQL fixture запускается только отдельной командой.
+- [x] **Step 5: Локальный коммит.** git commit -m "refactor: share manual cleanup execution and remove scheduling" после добавления только файлов A1.
 
 ## A2. Протокол и долговечные квитанции
 
