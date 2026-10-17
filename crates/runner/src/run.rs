@@ -71,7 +71,10 @@ pub async fn run_once(
         Ok(prepared) => prepared,
         Err(report) => return RunResult::Finished(*report),
     };
-    lifecycle::run(prepared, control.as_ref(), cancel).await
+    let observed = control
+        .as_ref()
+        .map(|control| crate::service_observer::ObservedControl { control, observer });
+    lifecycle::run(prepared, observed.as_ref(), cancel).await
 }
 
 async fn prepare<'a, O: RunObserver>(
@@ -110,6 +113,9 @@ async fn prepare<'a, O: RunObserver>(
                 "Для работы почтовая служба должна быть остановлена: {error}"
             ))
         })?;
+        observer.service_state(crate::MailObservation::State(
+            hmail_cleaner_core::maintenance::mail_service::MailState::Stopped,
+        ));
     }
     let mut repository = MySqlRepository::connect(&request.database)
         .await

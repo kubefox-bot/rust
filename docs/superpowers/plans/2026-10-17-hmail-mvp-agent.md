@@ -173,7 +173,7 @@ assert!(!csr_output.contains("PRIVATE KEY"));
 - Produces: POST /agent/v1/profile/validate без Stop/scan/delete; DatabaseConfig::from_parts(&DatabaseParts) -> Result<DatabaseConfig, DatabaseConfigError>, переиспользующий проверку существующего parse.
 - Produces: execute(&ValidatedJob, &impl RunObserver, &Cancellation) -> RunResult; DTO → native RunRequest преобразует агент.
 
-- [ ] **Step 1: Написать execution/reconnect/cutoff tests с fake runner и clock.**
+- [x] **Step 1: Написать execution/reconnect/cutoff tests с fake runner и clock.**
 
 ~~~rust
 // accepted_before_execution
@@ -192,10 +192,10 @@ assert_eq!(completed_events_after_disk_error, 0);
 ~~~
 
   Cutoff tests: календарный 1mo на конце месяца; DST nonexistent/ambiguous → ошибка; local cutoff для MySQL и UTC file_cutoff согласованы. Full preview при Running не вызывает Stop; managed clean восстанавливает исходное состояние; неправильный agent_id не открывает MySQL. ENOSPC terminal commit → нет события Completed.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-agent --test execution; cargo test -p hmail-cleaner-agent --test cutoff. Ожидается FAIL до API/worker.
-- [ ] **Step 3: Реализовать worker и transport.** Work начинается только после durable receipt; worker принадлежит агенту, не request task. Не держать DB/session mutex во время runner/сети. Важные итоги сохранять до публикации, counters coalesce; bounded observer не тормозит cleanup из-за медленного SSE. При ошибке собственного обязательного журнала запросить безопасную отмену и сохранить failure. PublicEvent строить по allowlist, не сериализовать сырой Failure/path/error. Потеря диска не даёт фиктивного terminal success. DatabaseConfig::from_parts создаёт MySqlConnectOptions без ручной интерполяции URI и использует ту же валидацию, что parse; старый API/SSL-политика сохраняются.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-agent --locked; mise run test:db; mise run test:agent-db. Последнюю команду добавить здесь для ignored MySQL-кейсов tests/execution.rs, с существующим disposable MySQL и HMAIL_TEST_DATABASE_URL из test fixture owner. Повторно использовать canonical schema.sql из adapters/tests/fixtures как явно общий тестовый ресурс, не импортировать внутренний Rust fixture-код. Проверить реальные MySQL/файлы: preview ничего не удаляет, повтор ID вызывает runner один раз, cancel завершает безопасный пакет/restore, null remaining_old_files сохраняется. Ожидается PASS на изолированных данных.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: execute manual agent jobs with bounded progress".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-agent --test execution; cargo test -p hmail-cleaner-agent --test cutoff. Ожидается FAIL до API/worker.
+- [x] **Step 3: Реализовать worker и transport.** Work начинается только после durable receipt; worker принадлежит агенту, не request task. Не держать DB/session mutex во время runner/сети. Важные итоги сохранять до публикации, counters coalesce; bounded observer не тормозит cleanup из-за медленного SSE. При ошибке собственного обязательного журнала запросить безопасную отмену и сохранить failure. PublicEvent строить по allowlist, не сериализовать сырой Failure/path/error. Потеря диска не даёт фиктивного terminal success. DatabaseConfig::from_parts создаёт MySqlConnectOptions без ручной интерполяции URI и использует ту же валидацию, что parse; старый API/SSL-политика сохраняются.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-agent --locked; mise run test:db; mise run test:agent-db. Последнюю команду добавить здесь для ignored MySQL-кейсов tests/execution.rs, с существующим disposable MySQL и HMAIL_TEST_DATABASE_URL из test fixture owner. Повторно использовать canonical schema.sql из adapters/tests/fixtures как явно общий тестовый ресурс, не импортировать внутренний Rust fixture-код. Проверить реальные MySQL/файлы: preview ничего не удаляет, повтор ID вызывает runner один раз, cancel завершает безопасный пакет/restore, null remaining_old_files сохраняется. Ожидается PASS на изолированных данных.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: execute manual agent jobs with bounded progress".
 
 ## A5. Windows-служба и пакет агента
 

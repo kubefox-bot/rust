@@ -14,6 +14,9 @@ pub struct JobRepository {
     pub(super) key: Zeroizing<[u8; 32]>,
 }
 impl JobRepository {
+    pub fn epoch(&self) -> Uuid {
+        self.epoch
+    }
     pub async fn open(path: &Path) -> Result<Self, JobStoreError> {
         let key = keys::load_or_create(path)?;
         let options = SqliteConnectOptions::new()

@@ -1,4 +1,5 @@
 //! Versioned, bounded wire contracts. Mail credentials have no Debug implementation.
+mod agent;
 pub mod browser;
 mod canonical;
 mod errors;
@@ -8,6 +9,10 @@ mod jobs;
 mod limits;
 mod profiles;
 
+pub use agent::{
+    AgentHealth, ProfileValidationRequest, ProfileValidationResponse, ResolveRequest,
+    RetentionRequest, ValidatedProfile,
+};
 pub use canonical::canonical_job;
 pub use errors::{ErrorCode, ProtocolError, PublicError};
 pub use events::{Counter, EventEnvelope, SummaryDto};
@@ -17,4 +22,4 @@ pub use jobs::{
     PublicJob, ResolvedCutoff, Scan, ServicePolicy, ValidatedJob,
 };
 pub use limits::{RunLimits, PROTOCOL_VERSION};
-pub use profiles::{DatabaseParts, MailProfile};
+pub use profiles::{DatabaseParts, DatabaseTls, MailProfile};

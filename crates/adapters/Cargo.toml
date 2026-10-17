@@ -6,11 +6,12 @@ rust-version.workspace = true
 
 [features]
 default = ["mail"]
-mail = ["dep:sqlx", "dep:windows-service", "dep:windows-sys"]
+mail = ["dep:sqlx", "dep:windows-service", "dep:windows-sys", "dep:hmail-cleaner-protocol"]
 mtls = ["dep:rustls", "dep:x509-parser", "dep:uuid", "dep:tokio-util"]
 
 [dependencies]
 hmail-cleaner-core = { path = "../core" }
+hmail-cleaner-protocol = { path = "../protocol", optional = true }
 chrono.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

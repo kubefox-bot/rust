@@ -51,6 +51,11 @@ pub fn canonical_job(job: &ValidatedJob) -> Vec<u8> {
         text(&mut bytes, value);
     }
     bytes.extend_from_slice(&profile.mysql.port.to_be_bytes());
+    bytes.push(match profile.mysql.tls {
+        crate::DatabaseTls::Preferred => 1,
+        crate::DatabaseTls::Required => 2,
+        crate::DatabaseTls::DisabledLocal => 3,
+    });
     bytes
 }
 fn text(bytes: &mut Vec<u8>, value: &str) {
