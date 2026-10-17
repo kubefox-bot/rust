@@ -100,6 +100,36 @@ async fn wrong_identity_and_active_receipt_preserve_existing_certificate() {
     assert!(std::fs::read(config.data_directory.join("identity.pem")).unwrap() == certificate);
 }
 #[tokio::test]
+async fn tls_renewal_preserves_maintenance_owned_by_ssh_recovery() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let root = tempfile::tempdir().unwrap();
+    let (path, agent, ca) = fixture::signed(root.path());
+    let config = AgentConfig::load(&path, "fixture").unwrap();
+    let repository = Arc::new(
+        JobRepository::open(&config.data_directory.join("jobs.sqlite"))
+            .await
+            .unwrap(),
+    );
+    let manager = IdentityManager::new(&config, repository.clone());
+    let certificate = std::fs::read(config.data_directory.join("identity.pem")).unwrap();
+    assert!(repository.begin_maintenance().await.unwrap());
+    let unavailable = Arc::new(AtomicBool::new(false));
+    let signal = unavailable.clone();
+    assert!(matches!(
+        manager
+            .install(candidate(&manager, &ca, agent), move || signal
+                .store(true, Ordering::SeqCst))
+            .await,
+        Err(crate::execution::AgentError::Unavailable)
+    ));
+    assert!(repository.in_maintenance().await.unwrap());
+    assert!(unavailable.load(Ordering::SeqCst));
+    assert_eq!(
+        std::fs::read(config.data_directory.join("identity.pem")).unwrap(),
+        certificate
+    );
+}
+#[tokio::test]
 async fn incomplete_certificate_write_freezes_admission_and_signals_unhealthy() {
     use std::sync::atomic::{AtomicBool, Ordering};
     let root = tempfile::tempdir().unwrap();

@@ -89,6 +89,24 @@ impl IdentityService {
         )
         .await
     }
+    pub(crate) async fn recover_agent(
+        &self,
+        agent: AgentId,
+        host: &str,
+        csr: &str,
+        lease: &SessionLease,
+    ) -> Result<IssuedAgent, IdentityError> {
+        let expected_serial = super::pending::current(&self.store, agent).await?;
+        let issued = self.sign_agent(agent, host, csr, lease).await?;
+        super::repository::activate(
+            self.store.clone(),
+            lease.clone(),
+            agent,
+            issued,
+            super::repository::Activation::Renewal { expected_serial },
+        )
+        .await
+    }
     pub async fn revoke_agent(
         &self,
         agent: AgentId,

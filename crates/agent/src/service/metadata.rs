@@ -10,6 +10,16 @@ pub(super) fn read(
     directory: &Path,
     executable: &Path,
 ) -> Result<Option<InstallationReceipt>, InstallError> {
+    let receipt = read_receipt(directory)?;
+    if receipt
+        .as_ref()
+        .is_some_and(|receipt| receipt.executable != executable)
+    {
+        return Err(InstallError::Collision);
+    }
+    Ok(receipt)
+}
+fn read_receipt(directory: &Path) -> Result<Option<InstallationReceipt>, InstallError> {
     let path = directory.join(RECEIPT_NAME);
     let info = match fs::symlink_metadata(&path) {
         Ok(info) => info,
@@ -28,10 +38,36 @@ pub(super) fn read(
     }
     let receipt: InstallationReceipt =
         serde_json::from_slice(&bytes).map_err(|_| InstallError::Invalid)?;
-    if receipt.executable != executable {
+    Ok(Some(receipt))
+}
+pub(crate) fn status(
+    directory: &Path,
+    executable: &Path,
+) -> Result<Option<hmail_cleaner_protocol::InstallationStatus>, InstallError> {
+    let Some(receipt) = read_receipt(directory)? else {
+        return Ok(None);
+    };
+    if std::fs::canonicalize(&receipt.executable)? != std::fs::canonicalize(executable)? {
         return Err(InstallError::Collision);
     }
-    Ok(Some(receipt))
+    if !receipt.started {
+        return Ok(None);
+    }
+    let Some(id) = receipt.operation_id.filter(|id| !id.is_nil()) else {
+        return Ok(None);
+    };
+    if receipt.sha256.len() != 64
+        || !receipt
+            .sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err(InstallError::Invalid);
+    }
+    Ok(Some(hmail_cleaner_protocol::InstallationStatus {
+        operation_id: id,
+        sha256: receipt.sha256,
+    }))
 }
 pub(super) fn write(directory: &Path, receipt: &InstallationReceipt) -> Result<(), InstallError> {
     let bytes = serde_json::to_vec(receipt).map_err(|_| InstallError::Invalid)?;

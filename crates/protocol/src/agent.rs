@@ -67,6 +67,14 @@ pub struct AgentHealth {
     pub stream_epoch: uuid::Uuid,
     pub revision: Counter,
     pub healthy: bool,
+    #[serde(default)]
+    pub idle: bool,
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstallationStatus {
+    pub operation_id: uuid::Uuid,
+    pub sha256: String,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

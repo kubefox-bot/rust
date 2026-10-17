@@ -13,6 +13,7 @@ pub struct AppState {
     pub(crate) limiter: Arc<LoginLimiter>,
     pub(crate) monitor: crate::agents::HealthMonitor,
     pub jobs: crate::jobs::JobService,
+    pub enrollment: crate::enrollment::EnrollmentService,
 }
 impl AppState {
     pub async fn new(store: CenterStore, origin: BrowserOrigin) -> Result<Self, StatusCode> {
@@ -37,6 +38,11 @@ impl AppState {
         );
         let monitor = crate::agents::HealthMonitor::new(store.clone());
         let jobs = crate::jobs::JobService::new(store.clone());
+        let enrollment = crate::enrollment::EnrollmentService::new(
+            store.clone(),
+            crate::enrollment::PackageCatalog::new(crate::config::AGENT_PACKAGES_DIRECTORY.into()),
+            crate::enrollment::NativeSsh,
+        );
         Ok(Self {
             store,
             authority,
@@ -44,6 +50,7 @@ impl AppState {
             limiter: Arc::new(LoginLimiter::new(clock)),
             monitor,
             jobs,
+            enrollment,
         })
     }
 }

@@ -1,6 +1,8 @@
 mod install;
 mod metadata;
 mod package;
+mod recovery;
+pub use recovery::prepare_recovery;
 pub mod security;
 mod types;
 #[cfg(windows)]
@@ -24,3 +26,4 @@ pub async fn install(input: InstallServiceInput) -> Result<InstallationReceipt, 
 }
 mod lock;
 pub(crate) use lock::acquire as acquire_update_lock;
+pub(crate) use metadata::status as installation_status;

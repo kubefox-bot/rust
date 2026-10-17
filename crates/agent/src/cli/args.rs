@@ -23,7 +23,13 @@ pub(super) enum Command {
         #[arg(long)]
         config: PathBuf,
     },
+    PrepareRecovery {
+        #[arg(long)]
+        config: PathBuf,
+    },
     InstallService {
+        #[arg(long)]
+        operation_id: Option<uuid::Uuid>,
         #[arg(long)]
         package: PathBuf,
         #[arg(long)]

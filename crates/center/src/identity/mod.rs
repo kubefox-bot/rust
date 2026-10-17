@@ -32,3 +32,4 @@ pub(crate) use client::pending_configuration;
 pub use renew::RenewError;
 mod client_material;
 mod client_renew;
+pub(crate) use client_renew::ensure as refresh_client_if_expiring;

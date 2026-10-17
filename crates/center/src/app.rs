@@ -27,6 +27,11 @@ pub async fn run(config: CenterConfig, cancel: Arc<Cancellation>) -> Result<(), 
     let state = AppState::new(store, config.origin.clone())
         .await
         .map_err(|_| CenterError)?;
+    state
+        .enrollment
+        .recover_interrupted()
+        .await
+        .map_err(|_| CenterError)?;
     let listener = std::net::TcpListener::bind(config.listen).map_err(|_| CenterError)?;
     serve(listener, &config, state, cancel).await
 }

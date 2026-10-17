@@ -39,10 +39,15 @@ pub async fn run_bound(
         config.build_version,
     );
     let handle = axum_server::Handle::new();
+    let installation = crate::http::installation::InstallationReader {
+        directory: config.data_directory.clone(),
+        executable: config.executable,
+    };
     let server = http::transport::server(listener, config.tls, handle.clone())?;
     let serving = server.serve(
         http::router(worker.clone())
             .layer(axum::Extension(identity))
+            .layer(axum::Extension(installation))
             .into_make_service(),
     );
     tokio::pin!(serving);

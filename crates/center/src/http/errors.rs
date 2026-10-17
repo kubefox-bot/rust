@@ -62,6 +62,25 @@ impl IntoResponse for ApiError {
         (self.0, Json(PublicError::new(self.1))).into_response()
     }
 }
+impl From<crate::enrollment::EnrollmentError> for ApiError {
+    fn from(error: crate::enrollment::EnrollmentError) -> Self {
+        use crate::enrollment::EnrollmentError;
+        match error {
+            EnrollmentError::NotFound => StatusCode::NOT_FOUND.into(),
+            EnrollmentError::Unauthorized => StatusCode::UNAUTHORIZED.into(),
+            EnrollmentError::Busy => Self::busy(),
+            EnrollmentError::Conflict => Self::conflict(),
+            EnrollmentError::Invalid
+            | EnrollmentError::HostKey
+            | EnrollmentError::Authentication
+            | EnrollmentError::Package
+            | EnrollmentError::Platform => Self::bad_request(),
+            EnrollmentError::Remote | EnrollmentError::Transport | EnrollmentError::Storage => {
+                Self::unavailable()
+            }
+        }
+    }
+}
 
 impl From<SubmitError> for ApiError {
     fn from(error: SubmitError) -> Self {

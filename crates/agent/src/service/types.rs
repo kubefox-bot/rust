@@ -18,6 +18,7 @@ pub enum Presence {
     Collision,
 }
 pub struct InstallServiceInput {
+    pub operation_id: Option<uuid::Uuid>,
     pub package: PathBuf,
     pub executable: PathBuf,
     pub config: PathBuf,
@@ -29,6 +30,8 @@ pub struct InstallServiceInput {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct InstallationReceipt {
+    #[serde(default)]
+    pub operation_id: Option<uuid::Uuid>,
     pub executable: PathBuf,
     pub sha256: String,
     #[serde(default)]

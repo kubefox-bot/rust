@@ -10,6 +10,9 @@ pub async fn install_with(
     input: InstallServiceInput,
     registry: &impl ServiceRegistry,
 ) -> Result<InstallationReceipt, InstallError> {
+    if input.operation_id.is_some_and(|id| id.is_nil()) {
+        return Err(InstallError::Invalid);
+    }
     if [
         &input.package,
         &input.executable,
@@ -95,6 +98,7 @@ pub async fn install_with(
         prior.as_ref(),
     )?;
     let receipt = InstallationReceipt {
+        operation_id: input.operation_id,
         executable: input.executable,
         sha256: package::hex(&input.expected_sha256),
         previous_sha256,

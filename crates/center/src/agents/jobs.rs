@@ -2,6 +2,12 @@ use super::{AgentClient, AgentError};
 use hmail_cleaner_protocol::{JobCommand, JobId, JobSnapshot};
 use reqwest::Method;
 impl AgentClient {
+    pub async fn installation(
+        &self,
+    ) -> Result<hmail_cleaner_protocol::InstallationStatus, AgentError> {
+        self.control(self.request(Method::GET, "/agent/v1/installation"))
+            .await
+    }
     pub async fn submit_job(&self, command: &JobCommand) -> Result<JobSnapshot, AgentError> {
         if command.agent_id != self.credentials.agent_id {
             return Err(AgentError::Protocol);

@@ -90,6 +90,12 @@ impl<E: Executor> Worker<E> {
             }
             .into(),
             healthy,
+            idle: healthy
+                && self
+                    .0
+                    .active
+                    .try_lock()
+                    .is_ok_and(|active| active.is_none()),
         }
     }
     pub async fn lookup(&self, id: JobId) -> Result<Option<JobSnapshot>, AgentError> {

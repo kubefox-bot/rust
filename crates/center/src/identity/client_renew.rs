@@ -6,7 +6,7 @@ use crate::{
 };
 use rustls::pki_types::{pem::PemObject, CertificateDer};
 use zeroize::Zeroizing;
-pub(super) async fn ensure(
+pub(crate) async fn ensure(
     store: &CenterStore,
     lease: &SessionLease,
 ) -> Result<bool, IdentityError> {

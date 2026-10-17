@@ -133,11 +133,6 @@ async fn revocation_cannot_be_undone_by_a_pending_renewal() {
         .unwrap();
     assert!(revoked);
 }
-#[derive(serde::Deserialize)]
-struct CaPayload {
-    certificate_pem: String,
-    private_key_pem: zeroize::Zeroizing<String>,
-}
 #[derive(serde::Serialize, serde::Deserialize)]
 struct ClientPayload {
     certificate_pem: String,
@@ -161,19 +156,7 @@ async fn authenticated_renewal_refreshes_an_expired_center_client_before_agent_c
         })
         .unwrap()
     };
-    let ca_header = header(RecordKind::CaKey, account.material.vault_id(), 1);
-    let ca = fixture
-        .store
-        .encrypted(account.material.vault_id(), &ca_header)
-        .await
-        .unwrap()
-        .unwrap();
-    let plain = fixture
-        .lease
-        .with_dek(|dek| vault::open_record(dek, &ca_header, &ca))
-        .unwrap()
-        .unwrap();
-    let ca: CaPayload = serde_json::from_slice(&plain).unwrap();
+    let ca = fixtures::identity::ca(&fixture).await;
     let issuer = rcgen::Issuer::from_ca_cert_pem(
         &ca.certificate_pem,
         rcgen::KeyPair::from_pem(&ca.private_key_pem).unwrap(),

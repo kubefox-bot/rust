@@ -13,13 +13,14 @@ use hmail_cleaner_center::{
 use hmail_cleaner_protocol::{AgentHealth, AgentId, ObservedMailState, ProfileValidationResponse};
 use rustls::pki_types::{pem::PemObject, CertificateDer, PrivatePkcs8KeyDer};
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
 };
 pub struct TlsAgent {
     pub credentials: AgentCredentials,
     pub received: Arc<AtomicUsize>,
     pub health_calls: Arc<AtomicUsize>,
+    pub idle: Arc<AtomicBool>,
     handle: axum_server::Handle<std::net::SocketAddr>,
     task: tokio::task::JoinHandle<()>,
 }
@@ -75,11 +76,14 @@ pub(crate) async fn start_router(
     let counter = received.clone();
     let health_calls = Arc::new(AtomicUsize::new(0));
     let health_counter = health_calls.clone();
+    let idle = Arc::new(AtomicBool::new(true));
+    let is_idle = idle.clone();
     let app = Router::new()
         .route(
             "/agent/v1/health",
             get(move || {
                 let counter = health_counter.clone();
+                let idle = is_idle.clone();
                 async move {
                     counter.fetch_add(1, Ordering::SeqCst);
                     Json(AgentHealth {
@@ -90,6 +94,7 @@ pub(crate) async fn start_router(
                         stream_epoch: epoch,
                         revision: 1.into(),
                         healthy: true,
+                        idle: idle.load(Ordering::SeqCst),
                     })
                 }
             }),
@@ -128,6 +133,7 @@ pub(crate) async fn start_router(
         },
         received,
         health_calls,
+        idle,
         handle,
         task,
     }

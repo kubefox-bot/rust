@@ -9,7 +9,9 @@ mod jobs;
 mod limits;
 mod profiles;
 
-pub use agent::{AgentCsr, AgentIdentityInstall, AgentIdentityRequest, IdentityReceipt};
+pub use agent::{
+    AgentCsr, AgentIdentityInstall, AgentIdentityRequest, IdentityReceipt, InstallationStatus,
+};
 pub use agent::{
     AgentHealth, ProfileValidationRequest, ProfileValidationResponse, ResolveRequest,
     RetentionRequest, ServiceStateRequest, ServiceStateResponse, ValidatedProfile,

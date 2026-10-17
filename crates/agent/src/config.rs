@@ -17,6 +17,7 @@ const PRIVATE_KEY_LIMIT: u64 = 16 * 1024;
 pub struct AgentConfig {
     pub listen: SocketAddr,
     pub data_directory: PathBuf,
+    pub(crate) executable: PathBuf,
     pub agent_id: AgentId,
     pub build_version: String,
     pub tls: ServerTls,
@@ -87,6 +88,7 @@ impl AgentConfig {
             fingerprint: std::sync::Mutex::new(fingerprint),
         });
         Ok(Self {
+            executable: std::env::current_exe().map_err(|_| ConfigError)?,
             listen: bootstrap.listen,
             data_directory,
             agent_id: bootstrap.agent_id,

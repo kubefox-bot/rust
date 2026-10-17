@@ -257,7 +257,7 @@ assert_eq!(new_snapshot.phase, JobPhase::Interrupted);
 - Produces: update(&SessionLease, AgentId, PackageVersion) -> Result<EnrollmentView, EnrollmentError>.
 - Produces: POST /api/v1/enrollment/probe, /install; GET /api/v1/enrollment/{id}; POST /api/v1/agents/{id}/update.
 
-- [ ] **Step 1: Написать SSH/install tests с изолированным SSH fixture.**
+- [x] **Step 1: Написать SSH/install tests с изолированным SSH fixture.**
 
 ~~~rust
 // host_key_changed_blocks_auth_and_transfer
@@ -273,10 +273,10 @@ assert_eq!(replaced_executables, 0);
 ~~~
 
   Проверить quoting для пробелов/кириллицы и входа с shell metacharacters; revoked session; partial upload, disconnect после создания SCM и потерянный финальный ответ. Никакой secret не появляется в persisted checkpoints/logs.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test ssh_install; cargo test -p hmail-cleaner-center --test agent_update.
-- [ ] **Step 3: Реализовать bounded SSH workflow.** Russh + SFTP, потоковый пакет, один install, проверка manifest и SHA-256 на ВМ. Удалённая команда использует фиксированный bootstrap и валидированные аргументы/входной JSON, без подстановки MySQL/путей почты в shell. Agent создаёт key/CSR, центр выпускает leaf, агент запускается idle, затем проверяется mTLS и отдельно профиль. Password/key ОС не сохранять по умолчанию; на logout прекращать новые привилегированные шаги и очищать секреты. Сохранять безопасный checkpoint; частичный исход показывать как unknown/requires-attention, не выполнять слепую повторную регистрацию. Обновление только явное, idle, с сохранением identity/data и предыдущего EXE; unattended updates не добавлять.
-- [ ] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test ssh_install --locked; cargo test -p hmail-cleaner-center --test ssh_failures --locked; cargo test -p hmail-cleaner-center --test agent_update --locked. Затем native Server 2016 fixture по инструкции, с явным NOT RUN если среды нет.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: install and update idle agents over verified ssh".
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test ssh_install; cargo test -p hmail-cleaner-center --test agent_update.
+- [x] **Step 3: Реализовать bounded SSH workflow.** Russh + SFTP, потоковый пакет, один install, проверка manifest и SHA-256 на ВМ. Удалённая команда использует фиксированный bootstrap и валидированные аргументы/входной JSON, без подстановки MySQL/путей почты в shell. Agent создаёт key/CSR, центр выпускает leaf, агент запускается idle, затем проверяется mTLS и отдельно профиль. Password/key ОС не сохранять по умолчанию; на logout прекращать новые привилегированные шаги и очищать секреты. Сохранять безопасный checkpoint; частичный исход показывать как unknown/requires-attention, не выполнять слепую повторную регистрацию. Обновление только явное, idle, с сохранением identity/data и предыдущего EXE; unattended updates не добавлять.
+- [x] **Step 4: Проверить GREEN.** cargo test -p hmail-cleaner-center --test ssh_install --locked; cargo test -p hmail-cleaner-center --test ssh_failures --locked; cargo test -p hmail-cleaner-center --test agent_update --locked. Затем native Server 2016 fixture по инструкции, с явным NOT RUN если среды нет.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: install and update idle agents over verified ssh".
 
 ## B7. Смена пароля, recovery key и локальное восстановление
 

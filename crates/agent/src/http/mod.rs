@@ -12,3 +12,4 @@ pub(crate) mod transport;
 
 pub use routes::router;
 mod identity;
+pub(crate) mod installation;

@@ -62,6 +62,7 @@ fn input(root: &std::path::Path) -> InstallServiceInput {
     std::fs::write(&config, b"fixture config").unwrap();
     use sha2::Digest;
     InstallServiceInput {
+        operation_id: Some(uuid::Uuid::new_v4()),
         package: source,
         executable: root.join("program/hMailCleanerAgent/hmail-cleaner-agent.exe"),
         config,
@@ -78,6 +79,37 @@ fn input(root: &std::path::Path) -> InstallServiceInput {
             ],
         }),
     }
+}
+#[tokio::test]
+async fn trust_recovery_refuses_an_active_receipt_and_never_creates_a_missing_ledger() {
+    let root = tempfile::tempdir().unwrap();
+    let request = input(root.path());
+    assert!(
+        hmail_cleaner_agent::service::prepare_recovery(&request.data_directory)
+            .await
+            .is_err()
+    );
+    assert!(!request.data_directory.join("jobs.sqlite").exists());
+    let repo =
+        hmail_cleaner_agent::jobs::JobRepository::open(&request.data_directory.join("jobs.sqlite"))
+            .await
+            .unwrap();
+    let job = hmail_cleaner_protocol::validate_job(
+        serde_json::from_str(include_str!("../../protocol/tests/fixtures/job-v1.json")).unwrap(),
+    )
+    .unwrap();
+    repo.accept(&job, repo.fingerprint(&job)).await.unwrap();
+    assert!(matches!(
+        hmail_cleaner_agent::service::prepare_recovery(&request.data_directory).await,
+        Err(hmail_cleaner_agent::service::InstallError::Busy)
+    ));
+    assert!(!repo.in_maintenance().await.unwrap());
+    repo.cancel(job.command().job_id).await.unwrap();
+    hmail_cleaner_agent::service::prepare_recovery(&request.data_directory)
+        .await
+        .unwrap();
+    assert!(repo.in_maintenance().await.unwrap());
+    repo.close().await;
 }
 #[tokio::test]
 async fn unrelated_service_collision_has_no_modifications() {

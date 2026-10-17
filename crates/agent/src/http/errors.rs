@@ -8,6 +8,9 @@ use hmail_cleaner_protocol::{ErrorCode, PublicError};
 
 pub(super) struct ApiError(pub StatusCode, pub ErrorCode);
 impl ApiError {
+    pub fn unavailable() -> Self {
+        Self(StatusCode::SERVICE_UNAVAILABLE, ErrorCode::Unavailable)
+    }
     pub fn bad_request() -> Self {
         Self(StatusCode::BAD_REQUEST, ErrorCode::BadRequest)
     }
@@ -22,7 +25,7 @@ impl From<AgentError> for ApiError {
             AgentError::Busy => Self(StatusCode::CONFLICT, ErrorCode::Busy),
             AgentError::Conflict => Self(StatusCode::CONFLICT, ErrorCode::Conflict),
             AgentError::Unavailable | AgentError::Storage(_) | AgentError::Transport(_) => {
-                Self(StatusCode::SERVICE_UNAVAILABLE, ErrorCode::Unavailable)
+                Self::unavailable()
             }
         }
     }

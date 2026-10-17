@@ -64,5 +64,8 @@ pub fn csr() -> (rcgen::KeyPair, String) {
     (key, request)
 }
 pub mod agents;
+pub mod enrollment;
+pub mod identity;
 pub mod job_agent;
 pub mod jobs;
+pub mod ssh;

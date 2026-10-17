@@ -91,6 +91,14 @@ impl JobService {
         if occupied {
             return Err(SubmitError::Busy);
         }
+        let provisioning: bool = sqlx::query_scalar(
+            "SELECT enrollment_id IS NOT NULL FROM provisioning_slot WHERE singleton=1",
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        if provisioning {
+            return Err(SubmitError::Busy);
+        }
         let latest: i64 = sqlx::query_scalar(
             "SELECT max(version) FROM profile_versions WHERE id=? AND server_id=?",
         )

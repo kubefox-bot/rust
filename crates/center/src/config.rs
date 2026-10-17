@@ -5,6 +5,7 @@ use std::{
 };
 const DEFAULT_ORIGIN: &str = "https://localhost:8443";
 const DEFAULT_LISTEN: &str = "0.0.0.0:8443";
+pub(crate) const AGENT_PACKAGES_DIRECTORY: &str = "/opt/hmail/agent-packages";
 const CONFIG_FILE: &str = "center.json";
 const MAX_CONFIG_BYTES: u64 = 8192;
 pub struct CenterArgs {

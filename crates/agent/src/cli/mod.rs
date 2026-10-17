@@ -64,7 +64,14 @@ async fn execute(
             result.map_err(Into::into)
         }
         Command::Service { config } => host(config, build_version),
+        Command::PrepareRecovery { config } => {
+            let validated = AgentConfig::load(&config, build_version)?;
+            service::prepare_recovery(&validated.data_directory).await?;
+            serde_json::to_writer(std::io::stdout().lock(), &serde_json::json!({"ok":true}))?;
+            Ok(())
+        }
         Command::InstallService {
+            operation_id,
             package,
             executable,
             config,
@@ -90,6 +97,7 @@ async fn execute(
                 _ => return Err(service::InstallError::Invalid.into()),
             };
             let receipt = service::install(InstallServiceInput {
+                operation_id,
                 package,
                 executable,
                 config,

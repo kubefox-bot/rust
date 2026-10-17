@@ -16,6 +16,7 @@ fn failed_or_stale_observations_never_claim_fresh_health() {
                 stream_epoch: uuid::Uuid::new_v4(),
                 revision: 1.into(),
                 healthy: true,
+                idle: true,
             },
             chrono::Utc::now(),
             Duration::ZERO,
