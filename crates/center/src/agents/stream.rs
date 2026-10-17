@@ -23,7 +23,7 @@ impl AgentClient {
         if !self.lease.is_live() {
             return Err(AgentError::Revoked);
         }
-        let response = tokio::select! {biased;_=revoked.changed()=>return Err(AgentError::Revoked),_=self.trust.cancelled()=>return Err(AgentError::Revoked),result=tokio::time::timeout(OPEN_TIMEOUT,self.request(reqwest::Method::GET,&format!("/agent/v1/jobs/{id}/events")).send())=>result.map_err(|_|AgentError::Unavailable)?.map_err(|_|AgentError::Unavailable)?};
+        let response = tokio::select! {biased;_=revoked.changed()=>return Err(AgentError::Revoked),_=self.trust.cancelled()=>return Err(AgentError::Unavailable),result=tokio::time::timeout(OPEN_TIMEOUT,self.request(reqwest::Method::GET,&format!("/agent/v1/jobs/{id}/events")).send())=>result.map_err(|_|AgentError::Unavailable)?.map_err(|_|AgentError::Unavailable)?};
         if !response.status().is_success()
             || response
                 .headers()
@@ -56,7 +56,7 @@ impl AgentStream<'_> {
                     });
                 }
             }
-            self.chunk = tokio::select! {biased;_=revoked.changed()=>return Err(AgentError::Revoked),_=self.client.trust.cancelled()=>return Err(AgentError::Revoked),result=tokio::time::timeout(HEARTBEAT_DEADLINE,self.response.chunk())=>result.map_err(|_|AgentError::Unavailable)?.map_err(|_|AgentError::Unavailable)?.ok_or(AgentError::Unavailable)?};
+            self.chunk = tokio::select! {biased;_=revoked.changed()=>return Err(AgentError::Revoked),_=self.client.trust.cancelled()=>return Err(AgentError::Unavailable),result=tokio::time::timeout(HEARTBEAT_DEADLINE,self.response.chunk())=>result.map_err(|_|AgentError::Unavailable)?.map_err(|_|AgentError::Unavailable)?.ok_or(AgentError::Unavailable)?};
         }
     }
 }

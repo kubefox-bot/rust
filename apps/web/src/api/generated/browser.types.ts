@@ -2,10 +2,11 @@
 
 export type AgentId = string;
 export type ServerId = string;
+export type DispatchState = 'unknown' | 'acknowledged';
+export type JobId = string;
+export type Operation = 'preview' | 'clean';
 export type Counter = string;
-export type EnrollmentPhase =
-  'preparing' | 'transferring' | 'identity_issued' | 'installing' | 'verifying' | 'ready' | 'failed' | 'unknown';
-export type ProfileId = string;
+export type Scan = 'fast' | 'full';
 export type ErrorCode =
   | 'bad_request'
   | 'unauthorized'
@@ -17,11 +18,8 @@ export type ErrorCode =
   | 'cleanup_failed'
   | 'restore_failed'
   | 'internal';
-export type DispatchState = 'unknown' | 'acknowledged';
-export type JobId = string;
-export type Operation = 'preview' | 'clean';
-export type Scan = 'fast' | 'full';
 export type ObservedMailState = 'unknown' | 'running' | 'stopped' | 'restoring';
+export type ProfileId = string;
 export type ServicePolicy = 'require_stopped' | 'manage';
 export type JobPhase =
   | 'accepted'
@@ -46,6 +44,8 @@ export type JobStage =
   | 'scan'
   | 'complete'
   | 'cancelled';
+export type EnrollmentPhase =
+  'preparing' | 'transferring' | 'identity_issued' | 'installing' | 'verifying' | 'ready' | 'failed' | 'unknown';
 export type SshCredentials =
   | {
       method: 'password';
@@ -91,6 +91,7 @@ export type PasswordPatch =
 export interface BrowserContracts {
   agents: AgentView[];
   change_password: ChangePasswordInput;
+  cleanup_context: CleanupContext;
   confirm_recovery: ConfirmRecoveryInput;
   counter: Counter;
   cutoff: ResolvedCutoff;
@@ -145,35 +146,12 @@ export interface ChangePasswordInput {
   current_password: string;
   new_password: string;
 }
-export interface ConfirmRecoveryInput {
-  candidate_id: string;
-  recovery_key: string;
-}
-export interface ResolvedCutoff {
-  file_cutoff_utc: string;
-  local: string;
-  resolved_at_utc: string;
-  utc_offset_seconds: number;
-}
-export interface EnrollmentView {
-  agent_id: AgentId;
-  expected_sha256: string;
-  fingerprint: string;
-  id: string;
-  package_version: string;
-  phase: EnrollmentPhase;
-  profile_id: ProfileId;
-  server_id: ServerId;
-  slot_held: boolean;
-}
-export interface PublicError {
-  code: ErrorCode;
-  correlation_id: string;
-  message: string;
-}
-export interface HistoryPage {
-  jobs: JobView[];
-  next_cursor?: Counter | null;
+export interface CleanupContext {
+  busy: boolean;
+  configured: boolean;
+  latest?: JobView | null;
+  profile_version: Counter;
+  server: ServerView;
 }
 export interface JobView {
   dispatch: DispatchState;
@@ -203,6 +181,12 @@ export interface RunLimits {
   batch_size: number;
   workers: number;
 }
+export interface ResolvedCutoff {
+  file_cutoff_utc: string;
+  local: string;
+  resolved_at_utc: string;
+  utc_offset_seconds: number;
+}
 export interface JobSnapshot {
   error?: PublicError | null;
   initial_mail_state?: ObservedMailState | null;
@@ -215,6 +199,11 @@ export interface JobSnapshot {
   stage?: JobStage | null;
   stream_epoch: string;
   summary: SummaryDto;
+}
+export interface PublicError {
+  code: ErrorCode;
+  correlation_id: string;
+  message: string;
 }
 export interface PublicJob {
   agent_id: AgentId;
@@ -249,6 +238,31 @@ export interface SummaryDto {
   selected_orphan_recipients: Counter;
   total_scan_files?: Counter | null;
   verified_files: Counter;
+}
+export interface ServerView {
+  agent_id: AgentId;
+  id: ServerId;
+  name: string;
+  profile_id: ProfileId;
+}
+export interface ConfirmRecoveryInput {
+  candidate_id: string;
+  recovery_key: string;
+}
+export interface EnrollmentView {
+  agent_id: AgentId;
+  expected_sha256: string;
+  fingerprint: string;
+  id: string;
+  package_version: string;
+  phase: EnrollmentPhase;
+  profile_id: ProfileId;
+  server_id: ServerId;
+  slot_held: boolean;
+}
+export interface HistoryPage {
+  jobs: JobView[];
+  next_cursor?: Counter | null;
 }
 export interface HostKeyChallenge {
   fingerprint: string;
@@ -336,12 +350,6 @@ export interface ProfilePatch {
   mysql_username: string;
   password: PasswordPatch;
   service_name: string;
-}
-export interface ServerView {
-  agent_id: AgentId;
-  id: ServerId;
-  name: string;
-  profile_id: ProfileId;
 }
 export interface SessionView {
   authenticated: boolean;

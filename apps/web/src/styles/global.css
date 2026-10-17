@@ -446,3 +446,7 @@ button.link {
     display: none;
   }
 }
+
+.session-hidden .private-content {
+  visibility: hidden;
+}

@@ -13,7 +13,7 @@ use hmail_cleaner_center::{
 use hmail_cleaner_protocol::{AgentHealth, AgentId, ObservedMailState, ProfileValidationResponse};
 use rustls::pki_types::{pem::PemObject, CertificateDer, PrivatePkcs8KeyDer};
 use std::sync::{
-    atomic::{AtomicBool, AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicU16, AtomicUsize, Ordering},
     Arc,
 };
 pub struct TlsAgent {
@@ -21,6 +21,7 @@ pub struct TlsAgent {
     pub received: Arc<AtomicUsize>,
     pub health_calls: Arc<AtomicUsize>,
     pub idle: Arc<AtomicBool>,
+    pub protocol: Arc<AtomicU16>,
     handle: axum_server::Handle<std::net::SocketAddr>,
     task: tokio::task::JoinHandle<()>,
 }
@@ -78,19 +79,22 @@ pub(crate) async fn start_router(
     let health_counter = health_calls.clone();
     let idle = Arc::new(AtomicBool::new(true));
     let is_idle = idle.clone();
+    let protocol = Arc::new(AtomicU16::new(1));
+    let reported_protocol = protocol.clone();
     let app = Router::new()
         .route(
             "/agent/v1/health",
             get(move || {
                 let counter = health_counter.clone();
                 let idle = is_idle.clone();
+                let protocol = reported_protocol.clone();
                 async move {
                     counter.fetch_add(1, Ordering::SeqCst);
                     Json(AgentHealth {
                         agent_id: id,
                         version: "tls-fixture".into(),
-                        protocol_min: 1,
-                        protocol_max: 1,
+                        protocol_min: protocol.load(Ordering::SeqCst),
+                        protocol_max: protocol.load(Ordering::SeqCst),
                         stream_epoch: epoch,
                         revision: 1.into(),
                         healthy: true,
@@ -134,6 +138,7 @@ pub(crate) async fn start_router(
         received,
         health_calls,
         idle,
+        protocol,
         handle,
         task,
     }

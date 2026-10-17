@@ -50,3 +50,12 @@ pub struct JobEvent {
     pub revision: Counter,
     pub job: JobView,
 }
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CleanupContext {
+    pub server: super::profiles::ServerView,
+    pub profile_version: Counter,
+    pub configured: bool,
+    pub latest: Option<JobView>,
+    pub busy: bool,
+}

@@ -15,10 +15,23 @@ use tower_cookies::Cookies;
 pub(crate) fn routes() -> Router<AppState> {
     Router::new()
         .route("/servers/{id}/jobs", post(submit))
+        .route("/servers/{id}/cleanup-context", get(context))
         .route("/jobs/{id}", get(read))
         .route("/jobs/{id}/cancel", post(cancel))
         .route("/jobs/{id}/reconcile", post(reconcile))
         .route("/events", get(super::event_http::events))
+}
+async fn context(
+    State(state): State<AppState>,
+    cookies: Cookies,
+    Path(server): Path<ServerId>,
+) -> Result<Json<hmail_cleaner_protocol::browser::jobs::CleanupContext>, ApiError> {
+    Ok(Json(
+        state
+            .jobs
+            .cleanup_context(server, &lease(&state, &cookies)?)
+            .await?,
+    ))
 }
 async fn submit(
     State(state): State<AppState>,

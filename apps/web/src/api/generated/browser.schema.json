@@ -13,6 +13,9 @@
     "change_password": {
       "$ref": "#/$defs/ChangePasswordInput"
     },
+    "cleanup_context": {
+      "$ref": "#/$defs/CleanupContext"
+    },
     "confirm_recovery": {
       "$ref": "#/$defs/ConfirmRecoveryInput"
     },
@@ -114,6 +117,7 @@
     }
   },
   "required": [
+    "cleanup_context",
     "counter",
     "server_id",
     "phase",
@@ -229,6 +233,40 @@
         "current_password",
         "new_password",
         "confirm_password"
+      ]
+    },
+    "CleanupContext": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean"
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "latest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_version": {
+          "$ref": "#/$defs/Counter"
+        },
+        "server": {
+          "$ref": "#/$defs/ServerView"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "server",
+        "profile_version",
+        "configured",
+        "busy"
       ]
     },
     "ConfirmRecoveryInput": {

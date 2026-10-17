@@ -105,7 +105,7 @@ expect(resyncRequestsAfterEpochChange).toBe(1);
 - Produces: login/logout UI; footer health reader и единственный event transport; test:browser script на Bun + Playwright API.
 - Produces: browser_fixture использует public center initialize/run и test-only fixtures B5, реальные production assets и ephemeral данные; в рабочем бинарнике такого режима нет.
 
-- [ ] **Step 1: Написать state/browser tests.**
+- [x] **Step 1: Написать state/browser tests.**
 
 ~~~ts
 // changing_parameters_invalidates_preview
@@ -127,8 +127,8 @@ expect(activeSseConnections).toBe(1);
   проверяет сессию до открытия данных. HTTPS browser fixture использует
   собственное явно настроенное доверие; общий ignoreHTTPSErrors не подменяет
   проверку TLS. Ручной импорт CA в обычный браузер проверяется отдельно в C5.
-- [ ] **Step 2: Проверить RED.** bun test --cwd apps/web tests/cleanup.test.ts; bun run --cwd apps/web test:browser cleanup. До компонентов/fixture ожидается FAIL.
-- [ ] **Step 3: Реализовать компоненты.** Главный остров владеет выбором сервера, формой, подтверждением и прогрессом; отдельные маленькие компоненты получают typed props. Server truth не дублируется глобальным UI store. Форма показывает server-local cutoff из ответа агента; до preview server/profile/параметры валидируются backend.
+- [x] **Step 2: Проверить RED.** bun test --cwd apps/web tests/cleanup.test.ts; bun run --cwd apps/web test:browser cleanup. До компонентов/fixture ожидается FAIL.
+- [x] **Step 3: Реализовать компоненты.** Главный остров владеет выбором сервера, формой, подтверждением и прогрессом; отдельные маленькие компоненты получают typed props. Server truth не дублируется глобальным UI store. Форма показывает server-local cutoff из ответа агента; до preview server/profile/параметры валидируются backend.
 
   Раскрытие журнала — локальный layout-state: скрыть sidebar/header/form,
   оставить server context/progress/footer, не размонтировать job owner.
@@ -136,8 +136,8 @@ expect(activeSseConnections).toBe(1);
   Результаты selected/removed/free disk не смешивать; null verification
   показывать как незавершённую сверку. Ошибки API не заменять пустыми данными.
   При смене страницы подписка освобождается; новая получает снимок.
-- [ ] **Step 4: Проверить GREEN.** mise run web:check; bun run --cwd apps/web test:browser cleanup. Проверить ширины 1440/1024/736/375/320, keyboard/focus/Escape, reconnect и два tabs. Тесты должны пройти с production assets, отдаваемыми Rust fixture, без Astro dev-server.
-- [ ] **Step 5: Локальный коммит.** git commit -m "feat: control cleanup with confirmed targets and live progress".
+- [x] **Step 4: Проверить GREEN.** mise run web:check; bun run --cwd apps/web test:browser cleanup. Проверить ширины 1440/1024/736/375/320, keyboard/focus/Escape, reconnect и два tabs. Тесты должны пройти с production assets, отдаваемыми Rust fixture, без Astro dev-server.
+- [x] **Step 5: Локальный коммит.** git commit -m "feat: control cleanup with confirmed targets and live progress".
 
 ## C3. История, настройки, агенты и учётная запись
 

@@ -25,6 +25,8 @@ struct Inner {
     epoch: uuid::Uuid,
     receipts: Mutex<HashMap<JobId, JobSnapshot>>,
     pub puts: AtomicUsize,
+    cancels: AtomicUsize,
+    restore_on_cancel: AtomicBool,
     pub lose_response: AtomicBool,
     pub hide_lookup: AtomicBool,
     pub cancel_first: AtomicBool,
@@ -35,6 +37,47 @@ struct Inner {
     subscriptions: AtomicUsize,
 }
 impl Control {
+    pub fn cancels(&self) -> usize {
+        self.0.cancels.load(Ordering::SeqCst)
+    }
+    pub fn restore_on_cancel(&self) {
+        self.0.restore_on_cancel.store(true, Ordering::SeqCst);
+    }
+    pub fn latest(&self) -> Option<JobSnapshot> {
+        self.0
+            .receipts
+            .lock()
+            .unwrap()
+            .values()
+            .max_by_key(|value| value.observed_at)
+            .cloned()
+    }
+    pub fn progress(&self, id: JobId, phase: JobPhase) {
+        let mut values = self.0.receipts.lock().unwrap();
+        let receipt = values.get_mut(&id).unwrap();
+        receipt.phase = phase;
+        receipt.revision = receipt.revision.next().unwrap();
+        receipt.initial_mail_state = Some(ObservedMailState::Running);
+        receipt.mail_state = if phase == JobPhase::Restoring {
+            ObservedMailState::Restoring
+        } else {
+            ObservedMailState::Running
+        };
+        receipt.summary.selected_files = 12.into();
+        receipt.summary.selected_bytes = 50_331_648.into();
+        if phase == JobPhase::Completed
+            && receipt
+                .job
+                .as_ref()
+                .is_some_and(|job| job.operation == hmail_cleaner_protocol::Operation::Clean)
+        {
+            receipt.summary.removed_files = 10.into();
+            receipt.summary.absent_files = 2.into();
+            receipt.summary.removed_bytes = 41_943_040.into();
+        }
+        receipt.observed_at = chrono::Utc::now();
+        let _ = self.0.events.send(receipt.clone());
+    }
     pub fn puts(&self) -> usize {
         self.0.puts.load(Ordering::SeqCst)
     }
@@ -78,6 +121,8 @@ pub async fn start(center: &CenterFixture) -> (TlsAgent, Control) {
         epoch: uuid::Uuid::new_v4(),
         receipts: Mutex::new(HashMap::new()),
         puts: AtomicUsize::new(0),
+        cancels: AtomicUsize::new(0),
+        restore_on_cancel: AtomicBool::new(false),
         lose_response: AtomicBool::new(false),
         hide_lookup: AtomicBool::new(false),
         cancel_first: AtomicBool::new(false),
@@ -87,19 +132,33 @@ pub async fn start(center: &CenterFixture) -> (TlsAgent, Control) {
         events: tokio::sync::broadcast::channel(16).0,
         subscriptions: AtomicUsize::new(0),
     }));
+    let agent_id = hmail_cleaner_protocol::AgentId::new();
     let app = Router::new()
+        .route(
+            "/agent/v1/resolve",
+            post(
+                move |Json(request): Json<hmail_cleaner_protocol::ResolveRequest>| async move {
+                    if request.agent_id != agent_id
+                        || request.protocol_version != hmail_cleaner_protocol::PROTOCOL_VERSION
+                    {
+                        return Err(StatusCode::BAD_REQUEST);
+                    }
+                    hmail_cleaner_agent::cutoff::resolve(
+                        &chrono::FixedOffset::east_opt(10800).unwrap(),
+                        chrono::Utc::now(),
+                        request.retention,
+                    )
+                    .map(Json)
+                    .map_err(|_| StatusCode::BAD_REQUEST)
+                },
+            ),
+        )
         .route("/agent/v1/jobs/{id}", get(read).put(submit))
         .route("/agent/v1/jobs/{id}/cancel", axum::routing::put(cancel))
         .route("/agent/v1/service/state", post(service))
         .route("/agent/v1/jobs/{id}/events", get(events))
         .with_state(control.clone());
-    let agent = start_router(
-        center,
-        hmail_cleaner_protocol::AgentId::new(),
-        app,
-        control.0.epoch,
-    )
-    .await;
+    let agent = start_router(center, agent_id, app, control.0.epoch).await;
     (agent, control)
 }
 async fn submit(
@@ -151,6 +210,7 @@ async fn read(
     control.receipt(id).map(Json).ok_or(StatusCode::NOT_FOUND)
 }
 async fn cancel(State(control): State<Control>, Path(id): Path<JobId>) -> Json<JobSnapshot> {
+    control.0.cancels.fetch_add(1, Ordering::SeqCst);
     let mut receipts = control.0.receipts.lock().unwrap();
     let snapshot = receipts.entry(id).or_insert_with(|| JobSnapshot {
         job_id: id,
@@ -166,7 +226,18 @@ async fn cancel(State(control): State<Control>, Path(id): Path<JobId>) -> Json<J
         observed_at: chrono::Utc::now(),
     });
     if snapshot.phase.is_active() {
-        snapshot.phase = JobPhase::Cancelled;
+        let restoring = control.0.restore_on_cancel.load(Ordering::SeqCst)
+            && snapshot.job.as_ref().is_some_and(|job| {
+                job.service_policy == hmail_cleaner_protocol::ServicePolicy::Manage
+            });
+        snapshot.phase = if restoring {
+            JobPhase::Restoring
+        } else {
+            JobPhase::Cancelled
+        };
+        if restoring {
+            snapshot.mail_state = ObservedMailState::Restoring;
+        }
         snapshot.revision = snapshot.revision.next().unwrap();
     }
     if control.0.cancel_first.load(Ordering::SeqCst) {

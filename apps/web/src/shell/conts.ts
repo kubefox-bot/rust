@@ -1,0 +1,3 @@
+export const SESSION_CHECK_MS = 30000;
+export const ACTIVITY_INTERVAL_MS = 30000;
+export const AGENT_REFRESH_MS = 15000;

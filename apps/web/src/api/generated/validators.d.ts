@@ -3,6 +3,7 @@ import type {ValidateFunction} from "ajv";
 import type {BrowserContracts} from "./browser.types";
 export const agents: ValidateFunction<BrowserContracts["agents"]>;
 export const change_password: ValidateFunction<BrowserContracts["change_password"]>;
+export const cleanup_context: ValidateFunction<BrowserContracts["cleanup_context"]>;
 export const confirm_recovery: ValidateFunction<BrowserContracts["confirm_recovery"]>;
 export const counter: ValidateFunction<BrowserContracts["counter"]>;
 export const cutoff: ValidateFunction<BrowserContracts["cutoff"]>;

@@ -12,6 +12,7 @@ impl AgentClient {
         if command.agent_id != self.credentials.agent_id {
             return Err(AgentError::Protocol);
         }
+        self.health().await?;
         self.control(
             self.request(Method::PUT, &format!("/agent/v1/jobs/{}", command.job_id))
                 .json(command),

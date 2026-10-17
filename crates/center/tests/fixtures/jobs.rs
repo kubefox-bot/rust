@@ -17,11 +17,19 @@ pub async fn register(center: &CenterFixture, endpoint: &str) -> ServerRegistrat
     configured(center, id, endpoint).await
 }
 pub async fn configured(center: &CenterFixture, id: AgentId, endpoint: &str) -> ServerRegistration {
+    configured_named(center, id, endpoint, "Mail fixture").await
+}
+pub async fn configured_named(
+    center: &CenterFixture,
+    id: AgentId,
+    endpoint: &str,
+    name: &str,
+) -> ServerRegistration {
     let target = ServerRegistration {
         server_id: ServerId::new(),
         profile_id: ProfileId::new(),
         agent_id: id,
-        name: "Mail fixture".into(),
+        name: name.into(),
         endpoint: endpoint.into(),
     };
     let profiles = ProfileService::new(center.store.clone());

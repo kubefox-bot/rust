@@ -23,7 +23,7 @@ pub enum AgentError {
     NotFound,
     #[error("agent resource conflict")]
     Conflict,
-    #[error("session or trust revoked")]
+    #[error("session revoked")]
     Revoked,
 }
 pub struct AgentClient {
@@ -41,7 +41,13 @@ impl AgentClient {
         let trust = store.revoked.capture();
         let tls = crate::identity::client_configuration(store, &credentials, lease)
             .await
-            .map_err(|_| AgentError::Revoked)?;
+            .map_err(|_| {
+                if lease.is_live() {
+                    AgentError::Unavailable
+                } else {
+                    AgentError::Revoked
+                }
+            })?;
         Self::configured(tls, credentials, lease, trust)
     }
     fn configured(
@@ -74,6 +80,9 @@ impl AgentClient {
             || health.protocol_min > PROTOCOL_VERSION
             || health.protocol_max < PROTOCOL_VERSION
             || health.version.len() > 128
+            || health.version.is_empty()
+            || health.stream_epoch.is_nil()
+            || health.revision.get() == 0
         {
             return Err(AgentError::Protocol);
         }
@@ -93,6 +102,7 @@ impl AgentClient {
         &self,
         mail: &MailProfile,
     ) -> Result<ProfileValidationResponse, AgentError> {
+        self.health().await?;
         let input = ProfileValidationRequest {
             protocol_version: PROTOCOL_VERSION,
             agent_id: self.credentials.agent_id,
@@ -167,7 +177,7 @@ impl AgentClient {
             }
             serde_json::from_slice(&body).map_err(|_| AgentError::Protocol)
         };
-        tokio::select! {biased;_ = revoked.changed()=>Err(AgentError::Revoked),_ = self.trust.cancelled()=>Err(AgentError::Revoked),result=operation=>result}
+        tokio::select! {biased;_ = revoked.changed()=>Err(AgentError::Revoked),_ = self.trust.cancelled()=>Err(AgentError::Unavailable),result=operation=>result}
     }
 }
 impl AgentClient {
@@ -179,7 +189,13 @@ impl AgentClient {
         let trust = store.revoked.capture();
         let tls = crate::identity::pending_configuration(store, &credentials, lease)
             .await
-            .map_err(|_| AgentError::Revoked)?;
+            .map_err(|_| {
+                if lease.is_live() {
+                    AgentError::Unavailable
+                } else {
+                    AgentError::Revoked
+                }
+            })?;
         Self::configured(tls, credentials, lease, trust)
     }
     pub(crate) async fn csr(&self) -> Result<hmail_cleaner_protocol::AgentCsr, AgentError> {

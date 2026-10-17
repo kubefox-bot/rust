@@ -6,6 +6,7 @@ use schemars::JsonSchema;
 /// Explicit browser allowlist. Never derive the internal application state or agent payloads here.
 #[derive(JsonSchema)]
 pub struct BrowserContracts {
+    pub cleanup_context: CleanupContext,
     pub counter: Counter,
     pub server_id: ServerId,
     pub phase: JobPhase,
