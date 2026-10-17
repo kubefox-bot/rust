@@ -41,6 +41,6 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(static_routes)
         .nest("/api/v1", api)
-        .route("/healthz", get(|| async { "ok" }))
+        .route("/healthz", get(super::health::read))
         .with_state(state)
 }

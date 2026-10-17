@@ -81,6 +81,7 @@ struct Session {
     lease: SessionLease,
 }
 struct State {
+    closed: bool,
     revision: i64,
     next_ticket: u64,
     admitted_ticket: u64,
@@ -123,7 +124,7 @@ fn expire(state: &mut State, now: Duration) {
 impl SessionAuthority {
     pub(crate) fn advance_revision(&self, expected: i64, next: i64) -> Result<(), AuthError> {
         let mut state = self.state.lock().map_err(|_| AuthError)?;
-        if state.revision != expected || expected.checked_add(1) != Some(next) {
+        if state.closed || state.revision != expected || expected.checked_add(1) != Some(next) {
             return Err(AuthError);
         }
         if let Some(session) = state.current.take() {
@@ -137,6 +138,7 @@ impl SessionAuthority {
             .state
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        state.closed = true;
         if let Some(session) = state.current.take() {
             session.lease.owner.revoke();
         }
@@ -147,6 +149,7 @@ impl SessionAuthority {
         }
         Ok(Self {
             state: Mutex::new(State {
+                closed: false,
                 revision,
                 next_ticket: 0,
                 admitted_ticket: 0,
@@ -160,6 +163,9 @@ impl SessionAuthority {
     }
     pub fn begin_login(&self) -> Result<u64, AuthError> {
         let mut state = self.state.lock().map_err(|_| AuthError)?;
+        if state.closed {
+            return Err(AuthError);
+        }
         state.next_ticket = state.next_ticket.checked_add(1).ok_or(AuthError)?;
         Ok(state.next_ticket)
     }
@@ -177,7 +183,8 @@ impl SessionAuthority {
         let token = SecretText::new(Base64UrlUnpadded::encode_string(&*bytes));
         let hash = fingerprint(&token)?;
         let mut state = self.state.lock().map_err(|_| AuthError)?;
-        if revision != state.revision
+        if state.closed
+            || revision != state.revision
             || ticket <= state.admitted_ticket
             || ticket > state.next_ticket
         {
@@ -273,5 +280,34 @@ impl SessionAuthority {
 impl Drop for SessionAuthority {
     fn drop(&mut self) {
         self.shutdown();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn shutdown_rejects_inflight_login_completion_and_never_reopens_admission() {
+        let authority =
+            Arc::new(SessionAuthority::new(1, 15, Arc::new(MonotonicClock::default())).unwrap());
+        let grant = authority.admit(1, Dek::new([1; 32])).unwrap();
+        let lease = authority.authenticate(&grant.token).unwrap();
+        let ticket = authority.begin_login().unwrap();
+        let (finish, pending) = tokio::sync::oneshot::channel::<Dek>();
+        let waiting = authority.clone();
+        let completion =
+            tokio::spawn(async move { waiting.admit_ticket(ticket, 1, pending.await.unwrap()) });
+        authority.shutdown();
+        finish.send(Dek::new([2; 32])).unwrap();
+        assert!(completion.await.unwrap().is_err());
+        assert!(!lease.is_live());
+        assert!(lease.with_dek(|_| ()).is_err());
+        assert!(authority.authenticate(&grant.token).is_err());
+        assert!(!authority.revoke(grant.generation));
+        assert!(authority.begin_login().is_err());
+        let _ = authority.advance_revision(1, 2);
+        assert!(authority.begin_login().is_err());
+        assert!(authority.admit(2, Dek::new([3; 32])).is_err());
     }
 }

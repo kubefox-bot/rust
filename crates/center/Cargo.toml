@@ -22,6 +22,7 @@ rustls-pemfile = "2"
 hmail-cleaner-core = { path = "../core" }
 tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
+hyper = { version = "1", features = ["client", "http1"] }
 
 url = "2"
 time = "0.3"

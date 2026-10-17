@@ -89,15 +89,7 @@ pub(super) fn build(settings: &Settings) -> io::Result<PathBuf> {
         fs::copy(root.join(name), staging.join(name))?;
     }
     copy_sources(&root.join("crates"), &staging.join("crates"))?;
-    let revision = Command::new("git")
-        .args(["rev-parse", "--short=12", "HEAD"])
-        .output()?;
-    let revision = String::from_utf8_lossy(&revision.stdout).trim().to_string();
-    let dirty = !Command::new("git")
-        .args(["diff", "--quiet", "HEAD"])
-        .status()?
-        .success();
-    let source_revision = format!("{revision}{}", if dirty { "-dirty" } else { "" });
+    let source_revision = super::source::revision(settings)?;
     let flags = settings.component.arguments().join(" ");
     let script = format!("rustup toolchain install {RUST} --profile minimal --no-self-update && rustup target add --toolchain {RUST} {TARGET} && cargo +{RUST} xwin build --release -p hmail-cleaner --target {TARGET} --locked {flags}");
     let build_environment = settings

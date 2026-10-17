@@ -11,6 +11,9 @@ use std::{
     path::PathBuf,
     process::ExitCode,
 };
+mod backup;
+mod health;
+mod shutdown;
 #[derive(Parser)]
 struct Args {
     #[command(subcommand)]
@@ -33,6 +36,18 @@ enum Command {
     Recover {
         #[arg(long)]
         data_dir: PathBuf,
+    },
+    Backup {
+        #[arg(long)]
+        data_dir: PathBuf,
+        #[arg(long)]
+        destination: PathBuf,
+    },
+    Health {
+        #[arg(long)]
+        data_dir: PathBuf,
+        #[arg(long)]
+        expect_build: Option<String>,
     },
 }
 struct TerminalPrompt;
@@ -86,7 +101,7 @@ pub async fn run(
         Ok(args) => args,
         Err(_) => return ExitCode::from(2),
     };
-    match execute(args.command).await {
+    match execute(args.command, build_version).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("Center operation failed: {error}");
@@ -94,14 +109,27 @@ pub async fn run(
         }
     }
 }
-async fn execute(command: Command) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn execute(
+    command: Command,
+    build_version: &'static str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let data_dir = match &command {
         Command::Init { data_dir, .. }
         | Command::Run { data_dir }
-        | Command::Recover { data_dir } => data_dir.clone(),
+        | Command::Recover { data_dir }
+        | Command::Backup { data_dir, .. }
+        | Command::Health { data_dir, .. } => data_dir.clone(),
     };
     let config = CenterConfig::load(&CenterArgs { data_dir })?;
     match command {
+        Command::Backup { destination, .. } => {
+            let manifest = backup::create(&config, &destination, build_version).await?;
+            println!("{}", serde_json::to_string(&manifest)?);
+        }
+        Command::Health { expect_build, .. } => {
+            let status = health::check(&config, expect_build.as_deref()).await?;
+            println!("{}", serde_json::to_string(&status)?);
+        }
         Command::Recover { .. } => {
             let lease = DataDirectory::acquire(&config.data_dir)?;
             let store = CenterStore::open(&lease).await?;
@@ -131,13 +159,17 @@ async fn execute(command: Command) -> Result<(), Box<dyn std::error::Error + Sen
             let cancel = std::sync::Arc::new(hmail_cleaner_core::cleanup::Cancellation::default());
             let signal_cancel = cancel.clone();
             let signal = tokio::spawn(async move {
-                if tokio::signal::ctrl_c().await.is_ok() {
-                    signal_cancel.request();
-                }
+                let result = shutdown::wait().await;
+                signal_cancel.request();
+                result
             });
-            let result = crate::run(config, cancel).await;
+            let result = crate::app::run_with_build(config, cancel, build_version).await;
             signal.abort();
-            let _ = signal.await;
+            match signal.await {
+                Ok(result) => result?,
+                Err(error) if error.is_cancelled() => (),
+                Err(error) => return Err(error.into()),
+            }
             result?;
         }
     }

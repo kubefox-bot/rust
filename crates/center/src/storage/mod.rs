@@ -5,6 +5,7 @@ mod records;
 
 pub use backup::BackupManifest;
 pub use connection::CenterStore;
+pub(crate) use connection::SCHEMA_VERSION;
 pub use directory::{DataDirectory, DataDirectoryLease};
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {

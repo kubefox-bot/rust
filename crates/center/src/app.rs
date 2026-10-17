@@ -22,10 +22,19 @@ impl Drop for SessionLifetime {
 #[error("center startup or transport failed")]
 pub struct CenterError;
 pub async fn run(config: CenterConfig, cancel: Arc<Cancellation>) -> Result<(), CenterError> {
+    run_with_build(config, cancel, env!("CARGO_PKG_VERSION")).await
+}
+pub(crate) async fn run_with_build(
+    config: CenterConfig,
+    cancel: Arc<Cancellation>,
+    build_version: &'static str,
+) -> Result<(), CenterError> {
     let lease = DataDirectory::acquire(&config.data_dir).map_err(|_| CenterError)?;
     let store = CenterStore::open(&lease).await.map_err(|_| CenterError)?;
     let state = AppState::new(store, config.origin.clone())
         .await
+        .map_err(|_| CenterError)?
+        .with_build_version(build_version)
         .map_err(|_| CenterError)?;
     let state = state.with_static_dir(
         http::static_files::StaticDir::open(&config.static_dir).map_err(|_| CenterError)?,
@@ -103,6 +112,7 @@ pub async fn serve(
             _=tick.tick()=>{
                 authority.expire();
                 if cancel.is_requested() {
+                    authority.shutdown();
                     handle.graceful_shutdown(Some(SHUTDOWN_GRACE));
                     return future.await.map_err(|_|CenterError);
                 }

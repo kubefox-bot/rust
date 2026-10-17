@@ -1462,6 +1462,7 @@ dependencies = [
  "hmail-cleaner-agent",
  "hmail-cleaner-core",
  "hmail-cleaner-protocol",
+ "hyper",
  "hyper-util",
  "rand 0.10.3",
  "rcgen",

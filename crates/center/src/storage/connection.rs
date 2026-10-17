@@ -4,7 +4,7 @@ use sqlx::{
     Connection, SqliteConnection, SqlitePool,
 };
 use std::{sync::Arc, time::Duration};
-pub(super) const SCHEMA_VERSION: i64 = 1;
+pub(crate) const SCHEMA_VERSION: i64 = 1;
 #[derive(Clone)]
 pub struct CenterStore {
     pub(crate) pool: SqlitePool,

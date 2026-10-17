@@ -1,0 +1,6 @@
+[Unit]
+Description=Persistent hMail Control Center data
+
+[Volume]
+VolumeName=hmail-center-data
+Label=app=hmail-center

@@ -93,3 +93,11 @@ run = "bun run web:check"
 [tasks."web:build"]
 description = "Build static Astro pages and Svelte islands"
 run = "bun run web:build"
+
+[tasks."release:local"]
+description = "Build a local immutable center image and matching Windows agent package without publishing"
+run = "bun tools/release/build.ts"
+
+[tasks."test:delivery"]
+description = "Verify local OCI release bytes and disposable center lifecycle"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/release/tsconfig.json", "bun test ./tools/release/tests tools/release/agent-manifest.test.ts", "bun tools/release/verify.ts"]

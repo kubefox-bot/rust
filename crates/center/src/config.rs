@@ -9,6 +9,18 @@ pub(crate) const AGENT_PACKAGES_DIRECTORY: &str = "/opt/hmail/agent-packages";
 const CONFIG_FILE: &str = "center.json";
 const MAX_CONFIG_BYTES: u64 = 8192;
 const DEFAULT_STATIC_DIR: &str = "/opt/hmail/web";
+const MAX_BUILD_VERSION_BYTES: usize = 128;
+pub(crate) fn validate_build_version(value: &str) -> Result<(), ConfigError> {
+    if value.is_empty()
+        || value.len() > MAX_BUILD_VERSION_BYTES
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b".+_-".contains(&byte))
+    {
+        return Err(ConfigError);
+    }
+    Ok(())
+}
 pub struct CenterArgs {
     pub data_dir: PathBuf,
 }

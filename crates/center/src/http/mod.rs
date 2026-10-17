@@ -3,6 +3,7 @@ mod routes;
 pub use crate::app::AppState;
 pub use routes::router;
 pub(crate) mod errors;
+pub(crate) mod health;
 pub(crate) mod server;
 mod settings;
 pub mod static_files;

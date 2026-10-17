@@ -28,6 +28,7 @@ pub(super) struct Settings {
     pub docker_context: Option<String>,
     pub component: Component,
     pub build_version: Option<String>,
+    pub source_revision: Option<String>,
 }
 impl Settings {
     pub fn read() -> io::Result<Self> {
@@ -40,6 +41,13 @@ impl Settings {
             Err(env::VarError::NotPresent) => None,
         };
         let root = env::current_dir()?;
+        let source_revision = match env::var("HMAIL_SOURCE_REVISION") {
+            Ok(value) if super::build_identity::valid_source_revision(&value) => Some(value),
+            Ok(_) | Err(env::VarError::NotUnicode(_)) => {
+                return Err(io::Error::other("Invalid HMAIL_SOURCE_REVISION"))
+            }
+            Err(env::VarError::NotPresent) => None,
+        };
         let build_version = match component {
             Component::Cli => None,
             Component::Agent => Some(super::manifest::version(&root)?),
@@ -49,6 +57,7 @@ impl Settings {
             docker_context,
             component,
             build_version,
+            source_revision,
         })
     }
 }
@@ -79,5 +88,25 @@ mod tests {
             ["--no-default-features", "--features", "agent"]
         );
         assert!(component(vec!["--component".into(), "unknown".into()]).is_err());
+    }
+    #[test]
+    fn shared_source_revision_accepts_fingerprinted_local_builds_and_rejects_injection() {
+        for value in [
+            "0123456789ab",
+            "0123456789ab-dirty",
+            "0123456789ab-dirty.abcdef012345",
+        ] {
+            assert!(super::super::build_identity::valid_source_revision(value));
+        }
+        for value in [
+            "source",
+            "0123",
+            "ABCDEF012345",
+            "0123456789ab\ncargo:rustc-env=PRIVATE=value",
+            "0123456789ab-dirty.bad",
+            "0123456789ab-dirty-dirty",
+        ] {
+            assert!(!super::super::build_identity::valid_source_revision(value));
+        }
     }
 }

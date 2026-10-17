@@ -12,6 +12,15 @@ pub struct BackupManifest {
 }
 impl CenterStore {
     pub async fn backup(&self, destination: &Path) -> Result<BackupManifest, StorageError> {
+        self.backup_with_build(destination, env!("CARGO_PKG_VERSION"))
+            .await
+    }
+    pub async fn backup_with_build(
+        &self,
+        destination: &Path,
+        build_version: &str,
+    ) -> Result<BackupManifest, StorageError> {
+        crate::config::validate_build_version(build_version).map_err(|_| StorageError::Backup)?;
         std::fs::create_dir(destination).map_err(|_| StorageError::Backup)?;
         #[cfg(unix)]
         {
@@ -68,7 +77,7 @@ impl CenterStore {
                 .map(|id| id.parse())
                 .transpose()
                 .map_err(|_| StorageError::Backup)?,
-            build_version: env!("CARGO_PKG_VERSION").into(),
+            build_version: build_version.into(),
         };
         let bytes = serde_json::to_vec_pretty(&manifest).map_err(|_| StorageError::Backup)?;
         std::fs::write(destination.join("manifest.json"), bytes)

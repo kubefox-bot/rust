@@ -1,0 +1,66 @@
+ARG BUN_IMAGE
+ARG RUST_IMAGE
+ARG RUNTIME_IMAGE
+
+FROM --platform=$BUILDPLATFORM ${BUN_IMAGE} AS web
+WORKDIR /work
+COPY package.json bun.lock ./
+COPY apps/web/package.json apps/web/package.json
+RUN bun install --frozen-lockfile
+COPY apps/web/astro.config.mjs apps/web/tsconfig.json apps/web/
+COPY apps/web/src apps/web/src
+ARG HMAIL_BUILD_VERSION
+RUN PUBLIC_BUILD_VERSION=${HMAIL_BUILD_VERSION} bun run web:build && \
+    find apps/web/dist -type d -exec chmod 0555 {} + && \
+    find apps/web/dist -type f -exec chmod 0444 {} +
+
+FROM --platform=$BUILDPLATFORM ${RUST_IMAGE} AS rust
+ARG HMAIL_RUST_TARGET
+ARG HMAIL_GNU_PREFIX
+ARG HMAIL_GNU_PACKAGES
+ARG HMAIL_ELF_MACHINE
+RUN rustc -Vv && \
+    if [ "$(rustc -Vv | sed -n 's/^host: //p')" != "${HMAIL_RUST_TARGET}" ]; then \
+      apt-get update && apt-get install --no-install-recommends -y ${HMAIL_GNU_PACKAGES} && \
+      rm -rf /var/lib/apt/lists/*; \
+    fi && \
+    dpkg-query -W '*gcc*' 'libc6*' 'binutils*' && \
+    cat /etc/apt/sources.list.d/debian.sources && \
+    ${HMAIL_GNU_PREFIX}-gcc --version && \
+    rustup target add ${HMAIL_RUST_TARGET}
+WORKDIR /work
+COPY Cargo.toml Cargo.lock ./
+COPY crates crates
+ARG HMAIL_BUILD_VERSION
+ARG HMAIL_SOURCE_REVISION
+RUN target_key=$(printf '%s' "${HMAIL_RUST_TARGET}" | tr '-' '_') && \
+    HMAIL_BUILD_VERSION=${HMAIL_BUILD_VERSION} HMAIL_SOURCE_REVISION=${HMAIL_SOURCE_REVISION} \
+    env "CC_${target_key}=${HMAIL_GNU_PREFIX}-gcc" "AR_${target_key}=${HMAIL_GNU_PREFIX}-ar" \
+    cargo build --release -p hmail-cleaner --no-default-features --features center --locked \
+      --target "${HMAIL_RUST_TARGET}" --config "target.${HMAIL_RUST_TARGET}.linker='${HMAIL_GNU_PREFIX}-gcc'" && \
+    test "$(od -An -tu2 -j18 -N2 target/${HMAIL_RUST_TARGET}/release/hmail-cleaner | tr -d ' ')" = "${HMAIL_ELF_MACHINE}" && \
+    readelf -h target/${HMAIL_RUST_TARGET}/release/hmail-cleaner && \
+    ${HMAIL_GNU_PREFIX}-strip target/${HMAIL_RUST_TARGET}/release/hmail-cleaner && \
+    mkdir -p /out && cp target/${HMAIL_RUST_TARGET}/release/hmail-cleaner /out/hmail-cleaner && \
+    mkdir -p /out/data && chmod 0700 /out/data
+COPY --from=agent-package / /out/agent/
+RUN find /out/agent -type d -exec chmod 0555 {} + && \
+    find /out/agent -type f -exec chmod 0444 {} +
+
+FROM ${RUNTIME_IMAGE}
+ARG HMAIL_BUILD_VERSION
+ARG HMAIL_SOURCE_REVISION
+LABEL org.opencontainers.image.title="hmail-control-center" \
+      org.opencontainers.image.version=${HMAIL_BUILD_VERSION} \
+      org.opencontainers.image.revision=${HMAIL_SOURCE_REVISION}
+COPY --from=rust --chmod=0555 /out/hmail-cleaner /usr/local/bin/hmail-cleaner
+COPY --from=rust --chown=10001:10001 /out/data /data
+COPY --from=web /work/apps/web/dist /opt/hmail/web
+COPY --from=rust /out/agent /opt/hmail/agent-packages/${HMAIL_BUILD_VERSION}/
+USER 10001:10001
+WORKDIR /data
+EXPOSE 8443
+STOPSIGNAL SIGTERM
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 CMD ["/usr/local/bin/hmail-cleaner", "center", "health", "--data-dir", "/data"]
+ENTRYPOINT ["/usr/local/bin/hmail-cleaner"]
+CMD ["center", "run", "--data-dir", "/data"]

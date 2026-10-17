@@ -1,8 +1,11 @@
 mod artifact;
+#[path = "../../crates/cli/build_support.rs"]
+mod build_identity;
 mod container;
 mod manifest;
 mod package;
 mod settings;
+mod source;
 use settings::{Settings, TARGET};
 use std::{
     io,

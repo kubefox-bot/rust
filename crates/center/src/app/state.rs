@@ -16,8 +16,17 @@ pub struct AppState {
     pub enrollment: crate::enrollment::EnrollmentService,
     pub(crate) account: crate::account::AccountService,
     pub(crate) static_dir: Option<crate::http::static_files::StaticDir>,
+    pub(crate) build_version: &'static str,
 }
 impl AppState {
+    pub fn with_build_version(
+        mut self,
+        build_version: &'static str,
+    ) -> Result<Self, crate::config::ConfigError> {
+        crate::config::validate_build_version(build_version)?;
+        self.build_version = build_version;
+        Ok(self)
+    }
     pub fn with_static_dir(mut self, directory: crate::http::static_files::StaticDir) -> Self {
         self.static_dir = Some(directory);
         self
@@ -58,6 +67,7 @@ impl AppState {
             crate::enrollment::NativeSsh,
         );
         Ok(Self {
+            build_version: env!("CARGO_PKG_VERSION"),
             static_dir: None,
             account: crate::account::AccountService::new(store.clone(), authority.clone()),
             store,
