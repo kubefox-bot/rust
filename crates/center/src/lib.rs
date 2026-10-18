@@ -15,3 +15,5 @@ pub mod enrollment;
 pub mod history;
 pub mod jobs;
 pub mod profiles;
+
+mod diagnostics;

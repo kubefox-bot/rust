@@ -1,3 +1,4 @@
+pub(crate) mod diagnostics;
 mod mapping;
 mod native;
 mod observer;

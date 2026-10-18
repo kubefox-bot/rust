@@ -24,9 +24,10 @@ impl From<AgentError> for ApiError {
             AgentError::Invalid => Self::bad_request(),
             AgentError::Busy => Self(StatusCode::CONFLICT, ErrorCode::Busy),
             AgentError::Conflict => Self(StatusCode::CONFLICT, ErrorCode::Conflict),
-            AgentError::Unavailable | AgentError::Storage(_) | AgentError::Transport(_) => {
-                Self::unavailable()
-            }
+            AgentError::Journal
+            | AgentError::Unavailable
+            | AgentError::Storage(_)
+            | AgentError::Transport(_) => Self::unavailable(),
         }
     }
 }

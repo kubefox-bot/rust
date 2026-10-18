@@ -20,6 +20,7 @@ pub(super) struct State<E> {
     pub version: String,
     pub repository: Arc<JobRepository>,
     pub executor: E,
+    pub journal: Option<hmail_cleaner_adapters::journal::RuntimeJournal>,
     pub active: Mutex<Option<Active>>,
     pub events: broadcast::Sender<JobSnapshot>,
     pub healthy: AtomicBool,
@@ -44,6 +45,13 @@ impl<E: Executor> Worker<E> {
             env!("CARGO_PKG_VERSION").into(),
         )
     }
+    pub fn with_journal(
+        mut self,
+        journal: hmail_cleaner_adapters::journal::RuntimeJournal,
+    ) -> Result<Self, AgentError> {
+        Arc::get_mut(&mut self.0).ok_or(AgentError::Busy)?.journal = Some(journal);
+        Ok(self)
+    }
     pub(crate) fn configured(
         agent_id: AgentId,
         repository: Arc<JobRepository>,
@@ -56,6 +64,7 @@ impl<E: Executor> Worker<E> {
             version,
             repository,
             executor,
+            journal: None,
             active: Mutex::new(None),
             events,
             healthy: AtomicBool::new(true),
@@ -64,7 +73,13 @@ impl<E: Executor> Worker<E> {
         }))
     }
     pub fn is_healthy(&self) -> bool {
-        self.0.healthy.load(Ordering::Acquire) && !self.0.stopping.load(Ordering::Acquire)
+        self.0.healthy.load(Ordering::Acquire)
+            && !self.0.stopping.load(Ordering::Acquire)
+            && self
+                .0
+                .journal
+                .as_ref()
+                .is_none_or(|journal| journal.is_healthy())
     }
     pub fn subscribe(&self) -> broadcast::Receiver<JobSnapshot> {
         self.0.events.subscribe()

@@ -13,3 +13,5 @@ pub mod service;
 
 #[cfg(feature = "mtls")]
 pub mod mtls;
+
+pub mod journal;

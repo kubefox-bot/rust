@@ -42,5 +42,9 @@ pub fn router(state: AppState) -> Router {
         .merge(static_routes)
         .nest("/api/v1", api)
         .route("/healthz", get(super::health::read))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::diagnostics::request,
+        ))
         .with_state(state)
 }

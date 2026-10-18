@@ -1,4 +1,9 @@
-use super::{mapping, observer::ProgressValue, AgentError, Executor, Worker};
+use super::{
+    diagnostics::{self, Event},
+    mapping,
+    observer::ProgressValue,
+    AgentError, Executor, Worker,
+};
 use crate::jobs::JobUpdate;
 use hmail_cleaner_protocol::{ErrorCode, JobId, JobPhase, ObservedMailState, PublicError};
 use hmail_cleaner_runner::{MailObservation, Report, Status};
@@ -31,6 +36,16 @@ impl<E: Executor> Worker<E> {
         report: Report,
         fatal: bool,
     ) -> Result<(), AgentError> {
+        diagnostics::record(
+            self.0.journal.as_ref(),
+            Event::ExecutionResult {
+                job_id: id,
+                status: report.status,
+                stage: report.stage,
+                summary: report.summary,
+                fatal,
+            },
+        );
         let prior = self.lookup(id).await?.ok_or(AgentError::Unavailable)?;
         let restoration_unconfirmed = prior.mail_state == ObservedMailState::Restoring;
         let phase = if fatal || restoration_unconfirmed {
@@ -72,6 +87,10 @@ impl<E: Executor> Worker<E> {
                 },
             )
             .await?;
+        diagnostics::record(
+            self.0.journal.as_ref(),
+            Event::ReceiptPersisted { job_id: id, phase },
+        );
         let _ = self.0.events.send(snapshot);
         Ok(())
     }

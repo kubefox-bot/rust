@@ -7,6 +7,7 @@ use axum::http::StatusCode;
 use std::sync::Arc;
 #[derive(Clone)]
 pub struct AppState {
+    pub(crate) journal: Option<hmail_cleaner_adapters::journal::RuntimeJournal>,
     pub store: CenterStore,
     pub(crate) authority: Arc<SessionAuthority>,
     pub origin: BrowserOrigin,
@@ -19,6 +20,13 @@ pub struct AppState {
     pub(crate) build_version: &'static str,
 }
 impl AppState {
+    pub fn with_journal(
+        mut self,
+        journal: hmail_cleaner_adapters::journal::RuntimeJournal,
+    ) -> Self {
+        self.journal = Some(journal);
+        self
+    }
     pub fn with_build_version(
         mut self,
         build_version: &'static str,
@@ -67,6 +75,7 @@ impl AppState {
             crate::enrollment::NativeSsh,
         );
         Ok(Self {
+            journal: None,
             build_version: env!("CARGO_PKG_VERSION"),
             static_dir: None,
             account: crate::account::AccountService::new(store.clone(), authority.clone()),

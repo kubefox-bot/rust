@@ -22,6 +22,32 @@ pub async fn run_bound(
         return Err(AgentError::Invalid);
     }
     let _process_owner = crate::runtime_lock::acquire(&config.data_directory)?;
+    let journal = hmail_cleaner_adapters::journal::RuntimeJournal::open(
+        &config
+            .data_directory
+            .join(crate::execution::diagnostics::JOURNAL_FILE),
+    )
+    .map_err(|_| AgentError::Journal)?;
+    journal
+        .record(&crate::execution::diagnostics::Event::ServiceStarting)
+        .map_err(|_| AgentError::Journal)?;
+    let result = run_owned(config, cancellation, listener, journal.clone()).await;
+    crate::execution::diagnostics::record(
+        Some(&journal),
+        if result.is_ok() {
+            crate::execution::diagnostics::Event::ServiceStopped
+        } else {
+            crate::execution::diagnostics::Event::ServiceFailed
+        },
+    );
+    result
+}
+async fn run_owned(
+    config: AgentConfig,
+    cancellation: Arc<Cancellation>,
+    listener: std::net::TcpListener,
+    journal: hmail_cleaner_adapters::journal::RuntimeJournal,
+) -> Result<(), AgentError> {
     let repository =
         Arc::new(JobRepository::open(&config.data_directory.join("jobs.sqlite")).await?);
     repository.recover_interrupted().await?;
@@ -37,7 +63,8 @@ pub async fn run_bound(
         repository,
         NativeExecutor,
         config.build_version,
-    );
+    )
+    .with_journal(journal)?;
     let handle = axum_server::Handle::new();
     let installation = crate::http::installation::InstallationReader {
         directory: config.data_directory.clone(),

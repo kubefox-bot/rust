@@ -14,6 +14,8 @@ pub trait Executor: Send + Sync + 'static {
 }
 #[derive(Debug, thiserror::Error)]
 pub enum AgentError {
+    #[error("agent disk journal unavailable at startup")]
+    Journal,
     #[error("job storage failed")]
     Storage(#[from] JobStoreError),
     #[error("invalid request")]

@@ -1,4 +1,8 @@
-use super::{observer::Observer, AgentError, Executor, Worker};
+use super::{
+    diagnostics::{self, Event},
+    observer::Observer,
+    AgentError, Executor, Worker,
+};
 use crate::jobs::JobUpdate;
 use hmail_cleaner_core::cleanup::Cancellation;
 use hmail_cleaner_protocol::{JobPhase, ObservedMailState, SummaryDto, ValidatedJob};
@@ -14,6 +18,7 @@ impl<E: Executor> Worker<E> {
     pub(super) async fn run(&self, job: ValidatedJob, cancel: Arc<Cancellation>) {
         let id = job.command().job_id;
         if self.run_inner(&job, cancel).await.is_err() {
+            diagnostics::record(self.0.journal.as_ref(), Event::ReceiptFailed { job_id: id });
             self.mark_unavailable();
         }
         let mut active = self.0.active.lock().await;
@@ -58,7 +63,11 @@ impl<E: Executor> Worker<E> {
         let _ = self.0.events.send(claimed);
         let (progress, mut latest) = watch::channel(None);
         let (service, mut service_events) = mpsc::channel(SERVICE_CAPACITY);
+        diagnostics::record(self.0.journal.as_ref(), Event::JobStarted { job_id: id });
         let observer = Observer {
+            job_id: id,
+            journal: self.0.journal.clone(),
+            last_stage: std::sync::Mutex::new(None),
             progress,
             service,
             failed: Arc::new(AtomicBool::new(false)),
