@@ -9,6 +9,7 @@ import {
 } from "./updater-package/conts";
 import { CI_RECEIPT_FILE } from "./publishing/conts";
 import { readReceiptConfig } from "./publishing/config";
+import { applianceReleaseArtifacts } from "../appliance";
 
 export const writeCiReceipt = async ({
   directory,
@@ -56,6 +57,7 @@ export const writeCiReceipt = async ({
         release_manifest_sha256: release.sha256,
         host_package_sha256: hostPackage.sha256,
         host_manifest_sha256: hostManifest.sha256,
+        appliance_artifacts: await applianceReleaseArtifacts({ directory, sourceSha }),
       },
       null,
       2,

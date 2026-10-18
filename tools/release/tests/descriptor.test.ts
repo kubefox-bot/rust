@@ -22,7 +22,7 @@ test("descriptor binds clean common build, immutable image and full source SHA",
     sequence: 7,
     updater_min: 1,
     updater_max: 1,
-    schema_version: 1,
+    schema_version: 2,
   });
   expect(parseDeliveryDescriptor(JSON.stringify(result))).toEqual(result);
 });

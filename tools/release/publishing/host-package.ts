@@ -1,4 +1,4 @@
-import { requireHostPackageIdentity } from "./host-package-identity";
+import { requireHostPackageIdentity } from "../updater-package/index";
 import { join } from "node:path";
 import { signArtifact, verifyDeliverySignature } from "./signing";
 import { listAssets } from "./assets";

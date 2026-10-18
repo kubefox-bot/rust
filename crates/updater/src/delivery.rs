@@ -48,7 +48,8 @@ impl Descriptor {
             || value.updater_min > 1
             || value.updater_max < 1
             || value.updater_min > value.updater_max
-            || value.schema_version != 1
+            || value.schema_version
+                != hmail_cleaner_protocol::delivery::CURRENT_STORAGE_SCHEMA as u64
             || value.protocol_min == 0
             || value.protocol_min > 1
             || value.protocol_max < 1

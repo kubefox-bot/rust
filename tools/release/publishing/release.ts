@@ -56,4 +56,7 @@ export const releaseAssets = ({
     name: "astra-updater-package-manifest.json",
     path: join(directory, "host-updater", HOST_PACKAGE_MANIFEST),
   },
+  { name: `astra-hyperv-${build}.zip`, path: join(directory, "appliance", `astra-hyperv-${build}.zip`) },
+  { name: "appliance-manifest.json", path: join(directory, "appliance/appliance-manifest.json") },
+  { name: "assembly-report.json", path: join(directory, "appliance/assembly-report.json") },
 ];

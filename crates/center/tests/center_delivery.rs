@@ -21,6 +21,37 @@ impl SecretPrompt for Prompt {
         Ok(true)
     }
 }
+#[cfg(feature = "cli")]
+#[tokio::test]
+async fn initialization_status_detects_completed_init_without_creating_a_new_database() {
+    let empty = tempfile::tempdir().unwrap();
+    let command = |path: &std::path::Path| {
+        vec![
+            "init-status".into(),
+            "--data-dir".into(),
+            path.as_os_str().to_os_string(),
+        ]
+    };
+    assert_eq!(
+        hmail_cleaner_center::cli::run(command(empty.path()).into_iter(), "fixture").await,
+        std::process::ExitCode::from(3)
+    );
+    assert!(!empty.path().join("center.sqlite").exists());
+    let root = tempfile::tempdir().unwrap();
+    let store = initialized(root.path()).await;
+    let key = std::fs::read(root.path().join("https-key.pem")).unwrap();
+    drop(store);
+    for _ in 0..2 {
+        assert_eq!(
+            hmail_cleaner_center::cli::run(command(root.path()).into_iter(), "fixture").await,
+            std::process::ExitCode::SUCCESS
+        );
+    }
+    assert_eq!(
+        std::fs::read(root.path().join("https-key.pem")).unwrap(),
+        key
+    );
+}
 async fn initialized(path: &Path) -> CenterStore {
     let directory = DataDirectory::acquire(path).unwrap();
     let store = CenterStore::open(&directory).await.unwrap();

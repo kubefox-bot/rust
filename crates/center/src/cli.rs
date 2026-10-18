@@ -14,6 +14,7 @@ use std::{
 mod backup;
 mod health;
 mod shutdown;
+const UNINITIALIZED_EXIT_CODE: u8 = 3;
 #[derive(Parser)]
 struct Args {
     #[command(subcommand)]
@@ -21,6 +22,10 @@ struct Args {
 }
 #[derive(Subcommand)]
 enum Command {
+    InitStatus {
+        #[arg(long)]
+        data_dir: PathBuf,
+    },
     Init {
         #[arg(long)]
         data_dir: PathBuf,
@@ -102,7 +107,7 @@ pub async fn run(
         Err(_) => return ExitCode::from(2),
     };
     match execute(args.command, build_version).await {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(status) => status,
         Err(error) => {
             eprintln!("Center operation failed: {error}");
             ExitCode::FAILURE
@@ -112,9 +117,10 @@ pub async fn run(
 async fn execute(
     command: Command,
     build_version: &'static str,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<ExitCode, Box<dyn std::error::Error + Send + Sync>> {
     let data_dir = match &command {
-        Command::Init { data_dir, .. }
+        Command::InitStatus { data_dir }
+        | Command::Init { data_dir, .. }
         | Command::Run { data_dir }
         | Command::Recover { data_dir }
         | Command::Backup { data_dir, .. }
@@ -122,6 +128,13 @@ async fn execute(
     };
     let config = CenterConfig::load(&CenterArgs { data_dir })?;
     match command {
+        Command::InitStatus { .. } => {
+            if !crate::storage::initialized(&config.data_dir).await? {
+                println!("Center initialization is not complete.");
+                return Ok(ExitCode::from(UNINITIALIZED_EXIT_CODE));
+            }
+            println!("Center initialization is complete.");
+        }
         Command::Backup { destination, .. } => {
             let manifest = backup::create(&config, &destination, build_version).await?;
             println!("{}", serde_json::to_string(&manifest)?);
@@ -173,5 +186,5 @@ async fn execute(
             result?;
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

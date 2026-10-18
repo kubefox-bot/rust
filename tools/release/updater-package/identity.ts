@@ -1,10 +1,8 @@
 import { join } from "node:path";
-import {
-  HOST_PACKAGE_ARCHIVE,
-  HOST_PACKAGE_MANIFEST,
-} from "../updater-package/conts";
+import { HOST_PACKAGE_ARCHIVE, HOST_PACKAGE_MANIFEST } from "./conts";
 import { requireElfTarget } from "../elf";
 import { ELF_HEADER_BYTES } from "../conts";
+import { verifyArchiveInventory } from "./archive";
 export const requireHostPackageIdentity = async ({
   directory,
   sourceSha,
@@ -42,5 +40,9 @@ export const requireHostPackageIdentity = async ({
   requireElfTarget({
     bytes: await binary.slice(0, ELF_HEADER_BYTES).bytes(),
     platform: "linux/amd64",
+  });
+  await verifyArchiveInventory({
+    archive,
+    files: "files" in identity ? identity.files : undefined,
   });
 };

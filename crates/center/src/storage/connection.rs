@@ -1,10 +1,10 @@
 use super::{directory::Lease, DataDirectoryLease, StorageError};
+pub(crate) use hmail_cleaner_protocol::delivery::CURRENT_STORAGE_SCHEMA as SCHEMA_VERSION;
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     Connection, SqliteConnection, SqlitePool,
 };
 use std::{sync::Arc, time::Duration};
-pub(crate) const SCHEMA_VERSION: i64 = 2;
 #[derive(Clone)]
 pub struct CenterStore {
     pub(crate) pool: SqlitePool,

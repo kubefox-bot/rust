@@ -43,6 +43,8 @@ jobs:
       - run: mise run web:check
       - run: mise run web:build
       - run: mise run release:test
+      - run: mise run release:contracts:check
+      - run: mise run appliance:test
       - run: mise run delivery:test
 
   mysql:
@@ -80,6 +82,9 @@ jobs:
       - run: mise exec -- bun install --frozen-lockfile
       - run: mise run check
       - run: mise run build:agent
+      - name: Verify installer with Windows PowerShell 5.1 fixtures (no Hyper-V VM)
+        shell: powershell
+        run: .\tools\appliance\tests\installer.ps1
       - run: mise exec -- cargo build -p hmail-cleaner-adapters --example scm_fixture --locked
       - name: Verify isolated SCM fixture (Server 2016 acceptance is separate)
         shell: pwsh
@@ -135,6 +140,22 @@ jobs:
         env:
           HMAIL_RELEASE_MANIFEST: ${{ env.HMAIL_DELIVERY_DIRECTORY }}/release-manifest.json
         run: mise run test:delivery
+      - name: Install isolated disk editing tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libguestfs-tools qemu-utils unzip zip xfsprogs linux-image-generic
+          kernel=$(find /lib/modules -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)
+          test -n "$kernel"
+          sudo install -m 0644 "/boot/vmlinuz-$kernel" "$GITHUB_WORKSPACE/target/appliance-kernel"
+          printf 'SUPERMIN_KERNEL=%s\nSUPERMIN_MODULES=%s\n' "$GITHUB_WORKSPACE/target/appliance-kernel" "/lib/modules/$kernel" >> "$GITHUB_ENV"
+      - name: Build and read back unbooted FCOS Hyper-V appliance
+        env:
+          HMAIL_APPLIANCE_OUTPUT: ${{ env.HMAIL_DELIVERY_DIRECTORY }}/appliance
+          LIBGUESTFS_BACKEND: direct
+          LIBGUESTFS_BACKEND_SETTINGS: force_tcg
+        run: mise run appliance:build
       - name: Bind green lifecycle receipt to source and release manifest
         run: mise exec -- bun tools/release/ci-receipt.ts
       - id: identity

@@ -7,6 +7,8 @@ import { promoteRelease } from "../publishing/promote";
 import { createDeliveryDescriptor } from "../delivery-descriptor";
 import { releaseFixture, sourceSha } from "./delivery-fixture";
 import type { PublicationPorts, PublishedRelease } from "../publishing/types";
+import { createBundleFixture } from "../../appliance/testing/bundle";
+import { applianceReleaseArtifacts } from "../../appliance";
 
 test("failed lifecycle gate never copies image or creates external release", async () => {
   const directory = await mkdtemp(join(tmpdir(), "astra-publish-"));
@@ -174,6 +176,7 @@ const verifiedFixture = async () => {
   };
   const raw = JSON.stringify(manifest);
   await Bun.write(join(directory, "release-manifest.json"), raw);
+  await createBundleFixture({ directory: join(directory, "appliance"), release: manifest, sourceSha });
   const names = [
     "prelogin_https_health",
     "direct_container_healthcheck",
@@ -194,6 +197,7 @@ const verifiedFixture = async () => {
       release_manifest_sha256: Bun.SHA256.hash(raw, "hex"),
       host_package_sha256: Bun.SHA256.hash("hostbytes", "hex"),
       host_manifest_sha256: Bun.SHA256.hash("hostmanifest", "hex"),
+      appliance_artifacts: await applianceReleaseArtifacts({ directory, sourceSha }),
       image_digest: manifest.image.digest,
       platform: "linux/amd64",
       checks: Object.fromEntries(names.map((name) => [name, "PASS"])),

@@ -7,6 +7,7 @@ use crate::{
 };
 use std::{ffi::OsString, path::Path, time::Duration};
 pub mod restore;
+mod schema;
 /// Snapshot is created by the OLD executable with no live center process.
 pub async fn create(tx: &Transaction) -> Result<(), Error> {
     let parent = tx.backup.parent().ok_or(Error::Invalid)?;
@@ -60,10 +61,15 @@ pub fn verify(path: &Path, build: &str) -> Result<(), Error> {
             .as_str()
             .and_then(|value| uuid::Uuid::parse_str(value).ok())
             .is_none()
-        || manifest["schema_version"] != 1
+        || !manifest["schema_version"].as_i64().is_some_and(|value| {
+            hmail_cleaner_protocol::delivery::SUPPORTED_BACKUP_SCHEMAS.contains(&value)
+        })
         || manifest["build_version"] != build
         || manifest["vault_id"].as_str().is_none()
     {
+        return Err(Error::Verification);
+    }
+    if manifest["schema_version"].as_i64() != Some(schema::read(&path.join("center.sqlite"))?) {
         return Err(Error::Verification);
     }
     for name in [

@@ -7,6 +7,7 @@ import {
 } from "../updater-package/conts";
 import { CI_RECEIPT_FILE, REQUIRED_CHECKS } from "./conts";
 import type { ReleaseManifest } from "../types";
+import { applianceReleaseArtifacts } from "../../appliance";
 
 export const requireLifecycleReport = (
   value: unknown,
@@ -71,6 +72,9 @@ export const readVerifiedRelease = async ({
     receipt.host_manifest_sha256 !== hostManifest.sha256
   )
     throw new Error("CI host bootstrap package bytes changed");
+  const appliance = await applianceReleaseArtifacts({ directory, sourceSha });
+  if (!("appliance_artifacts" in receipt) || JSON.stringify(receipt.appliance_artifacts) !== JSON.stringify(appliance))
+    throw new Error("CI appliance package bytes changed or are not bound by receipt");
   for (const expected of manifest.artifacts) {
     const segments = expected.name.split("/");
     if (

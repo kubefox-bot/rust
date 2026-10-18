@@ -44,7 +44,12 @@
     "image": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["reference", "digest", "config_digest", "platform"],
+      "required": [
+        "reference",
+        "digest",
+        "config_digest",
+        "platform"
+      ],
       "properties": {
         "reference": {
           "type": "string",
@@ -78,7 +83,7 @@
       "maximum": 9007199254740991
     },
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "protocol_min": {
       "type": "integer",

@@ -2,6 +2,7 @@
 mod agent;
 pub mod browser;
 mod canonical;
+pub mod delivery;
 mod errors;
 mod events;
 mod ids;

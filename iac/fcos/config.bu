@@ -19,25 +19,25 @@ passwd:
 storage:
   directories:
     - path: /var/home/hmail-center
-      mode: 0700
+      mode: 448 # 0700
       user:
         name: hmail-center
       group:
         name: hmail-center
     - path: /var/home/hmail-center/.config
-      mode: 0700
+      mode: 448 # 0700
       user:
         name: hmail-center
       group:
         name: hmail-center
     - path: /var/home/hmail-center/.config/containers
-      mode: 0700
+      mode: 448 # 0700
       user:
         name: hmail-center
       group:
         name: hmail-center
     - path: /var/home/hmail-center/.config/containers/systemd
-      mode: 0700
+      mode: 448 # 0700
       user:
         name: hmail-center
       group:
@@ -54,8 +54,8 @@ storage:
 
             hmail-center:200000:65536
     - path: /var/lib/systemd/linger/hmail-center
-      mode: 0644
+      mode: 420 # 0644
     - path: /etc/zincati/config.d/50-hmail-center.toml
-      mode: 0644
+      mode: 420 # 0644
       contents:
         local: zincati.toml

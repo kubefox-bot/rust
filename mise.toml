@@ -114,9 +114,21 @@ run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/acceptance/
 description = "Check release tooling and signed publication contracts"
 run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/release/tsconfig.json", "bun test ./tools/release/tests tools/release/agent-manifest.test.ts"]
 
+[tasks."release:contracts:check"]
+description = "Verify release compatibility metadata against the shared Rust contract"
+run = "bun tools/release/compatibility.ts check"
+
 [tasks."delivery:test"]
 description = "Verify updater and graceful replacement behavior"
 run = "cargo test -p astra-updater --locked"
+
+[tasks."appliance:test"]
+description = "Check offline appliance contracts, bootstrap and installer boundaries"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/appliance/tsconfig.json", "bun test tools/appliance/tests"]
+
+[tasks."appliance:build"]
+description = "Build an unbooted FCOS Hyper-V bundle from a clean same-SHA release on Linux"
+run = "bun tools/appliance/build.ts"
 
 [tasks."test:updates"]
 description = "Record local delivery verification; native target acceptance stays separate"

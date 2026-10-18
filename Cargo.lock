@@ -1474,6 +1474,7 @@ name = "hmail-cleaner-center"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "astra-updater",
  "axum",
  "axum-server",
  "base64ct",

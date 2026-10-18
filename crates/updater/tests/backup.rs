@@ -20,6 +20,10 @@ fn snapshot_receipt_must_cover_every_required_file() {
     ] {
         std::fs::write(snapshot.join(name), b"example").unwrap();
     }
+    let mut database_header = [0; 100];
+    database_header[..16].copy_from_slice(b"SQLite format 3\0");
+    database_header[60..64].copy_from_slice(&1u32.to_be_bytes());
+    std::fs::write(snapshot.join("center.sqlite"), database_header).unwrap();
     journal::save(&snapshot.join("manifest.json"),&serde_json::json!({"format_version":1,"schema_version":1,"vault_id":Uuid::new_v4(),"build_version":"old"})).unwrap();
     let tx = Transaction {
         version: 1,

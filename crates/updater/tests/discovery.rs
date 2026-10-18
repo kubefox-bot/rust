@@ -21,7 +21,7 @@ fn descriptor() -> Descriptor {
         release_manifest_sha256: "d".repeat(64),
         updater_min: 1,
         updater_max: 1,
-        schema_version: 1,
+        schema_version: 2,
         protocol_min: 1,
         protocol_max: 1,
     }

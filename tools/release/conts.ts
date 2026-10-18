@@ -85,6 +85,7 @@ export const SOURCE_INPUTS = [
   "crates",
   "tools",
   "deploy",
+  "iac/fcos",
   "apps/web/package.json",
   "apps/web/astro.config.mjs",
   "apps/web/tsconfig.json",

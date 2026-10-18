@@ -1,0 +1,13 @@
+{
+  "fcos": {
+    "release": "44.20260928.3.1",
+    "url": "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/44.20260928.3.1/x86_64/fedora-coreos-44.20260928.3.1-hyperv.x86_64.vhdx.zip",
+    "sha256": "f56c46364eb5666742ab7dc3c519ef6809f9913e779920109f2069a3a06238f4",
+    "uncompressed_sha256": "e24767ceb7988740bb43fde195d761008695c29377944e84df9b40312ed36cec"
+  },
+  "kvpctl": {
+    "version": "v0.11.0",
+    "url": "https://github.com/containers/libhvee/releases/download/v0.11.0/kvpctl-amd64.exe.zip",
+    "sha256": "6bab2103227ab5538d767769ef8c5a8ade212b0a2782bb2f8aeb93b9a8eab22a"
+  }
+}
