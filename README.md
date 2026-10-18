@@ -59,6 +59,7 @@ mise run measure:mvp
 
 Локальная поставка через Podman/Quadlet, первоначальный вход и ручное
 обновление описаны в [инструкции центра](docs/center-deployment.md).
+Подготовка Fedora CoreOS без привязки к гипервизору: [IaC](iac/README.md).
 Границы фактической проверки перечислены в [приёмке MVP](docs/mvp-acceptance.md).
 Методика и результаты замеров — в [ресурсном отчёте](docs/mvp-resource-report.md),
 принятые при реализации решения — в [журнале решений](docs/mvp-implementation-decisions.md).
