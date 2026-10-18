@@ -20,6 +20,12 @@ struct Prepared<'a, O> {
     files: LocalFiles,
     guard: WindowsOffline,
 }
+struct Selection<'a, O>(&'a O);
+impl<O: RunObserver> recursive::SelectionObserver for Selection<'_, O> {
+    async fn selected(&self, files: &[recursive::SelectedFile]) -> PortResult<()> {
+        self.0.selected_files(files).await
+    }
+}
 
 impl<O: RunObserver> PreparedRun for Prepared<'_, O> {
     async fn execute(&mut self) -> Report {
@@ -29,7 +35,7 @@ impl<O: RunObserver> PreparedRun for Prepared<'_, O> {
             } else {
                 "быстрый предпросмотр без управления службой"
             });
-        let result = recursive::run(
+        let result = recursive::run_with_details(
             Dependencies {
                 repository: &mut self.repository,
                 files: &self.files,
@@ -40,6 +46,7 @@ impl<O: RunObserver> PreparedRun for Prepared<'_, O> {
             self.cancel,
             |progress| self.observer.progress(progress),
             self.request.action,
+            &Selection(self.observer),
         )
         .await;
         report::from_result(Mode::from_action(self.request.action), result)

@@ -116,6 +116,14 @@ impl<E: Executor> Worker<E> {
     pub async fn lookup(&self, id: JobId) -> Result<Option<JobSnapshot>, AgentError> {
         Ok(self.0.repository.lookup(id).await?)
     }
+    pub async fn preview_files(
+        &self,
+        id: JobId,
+        query: &hmail_cleaner_protocol::PreviewFilesQuery,
+    ) -> Result<hmail_cleaner_protocol::PreviewFilesPage, AgentError> {
+        query.validate().map_err(|_| AgentError::Invalid)?;
+        Ok(self.0.repository.preview_files(id, query).await?)
+    }
     pub async fn submit(&self, job: ValidatedJob) -> Result<JobSnapshot, AgentError> {
         let worker = self.clone();
         // Dropping the HTTP future only drops its JoinHandle, not admission.

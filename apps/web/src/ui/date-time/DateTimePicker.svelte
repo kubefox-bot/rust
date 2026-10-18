@@ -10,12 +10,14 @@
     POPOVER_WIDTH_PX,
     VIEWPORT_MARGIN_PX,
     POPOVER_GAP_PX,
+    TIME_BASIS,
   } from "./conts";
   import type { DateTimePickerProps } from "./types";
   let {
     value,
     label,
     describedBy,
+    timeBasis = "server",
     required = false,
     disabled = false,
     onchange,
@@ -154,7 +156,9 @@
     ontoggle={toggle}
   >
     {#if open && day}
-      <div class="caption">Дата и время сервера</div>
+      <div class="caption">
+        {TIME_BASIS[timeBasis].caption}
+      </div>
       <Calendar
         selected={day}
         onselect={(selected) => {
@@ -186,7 +190,7 @@
       </label>
       <p class="time-hint" id={`${id}-time-hint`}>
         {candidate
-          ? "Время почтового сервера, без пересчёта часового пояса."
+          ? TIME_BASIS[timeBasis].hint
           : "Введите время: ЧЧ:ММ или ЧЧ:ММ:СС. Доли секунды — через точку."}
       </p>
       {#if missing}<p class="validation" role="alert">

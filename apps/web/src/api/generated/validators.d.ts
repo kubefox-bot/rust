@@ -20,6 +20,7 @@ export const login: ValidateFunction<BrowserContracts["login"]>;
 export const packages: ValidateFunction<BrowserContracts["packages"]>;
 export const phase: ValidateFunction<BrowserContracts["phase"]>;
 export const prepare_recovery: ValidateFunction<BrowserContracts["prepare_recovery"]>;
+export const preview_files_page: ValidateFunction<BrowserContracts["preview_files_page"]>;
 export const profile: ValidateFunction<BrowserContracts["profile"]>;
 export const profile_validation: ValidateFunction<BrowserContracts["profile_validation"]>;
 export const profile_version: ValidateFunction<BrowserContracts["profile_version"]>;

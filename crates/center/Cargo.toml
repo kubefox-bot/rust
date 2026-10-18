@@ -13,7 +13,7 @@ russh = { version = "=0.64.1", default-features = false, features = ["ring"] }
 russh-sftp = { version = "=3.0.1", default-features = false }
 futures-util = "0.3"
 chrono.workspace = true
-reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json", "query"] }
 hmail-cleaner-adapters = { path = "../adapters", default-features = false, features = ["mtls"] }
 x509-parser = { version = "0.18.1", features = ["verify"] }
 

@@ -7,14 +7,11 @@
   import Enrollment from "./Enrollment.svelte";
   import OperationStatus from "./agents/OperationStatus.svelte";
   import ActionConfirmation from "./agents/ActionConfirmation.svelte";
+  import { recent, renew, revoke, message } from "./agents/api";
   import {
-    packages as readPackages,
-    recent,
-    renew,
-    revoke,
-    message,
-  } from "./agents/api";
-  import { isNewerAgentBuild } from "./agents/updates";
+    isNewerAgentBuild,
+    availablePackages as readPackages,
+  } from "../../agents";
   import { ENROLLMENT_PHASES } from "./agents/conts";
   import type {
     AgentAction,
@@ -120,6 +117,23 @@
     error = "";
     notice = "";
   };
+  $effect(() => {
+    if (
+      resources.kind !== "ready" ||
+      !server ||
+      !agent ||
+      current.kind !== "wizard" ||
+      locked ||
+      actionPending
+    )
+      return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("action") !== "update-agent") return;
+    url.searchParams.delete("action");
+    window.history.replaceState(null, "", url);
+    if (!agent.revoked && !agent.certificate_expired && updatePackages.length)
+      chooseMode({ kind: "binary", server });
+  });
   const inspect = (view: EnrollmentView) => {
     if (locked || actionPending) return;
     const target = servers.find(

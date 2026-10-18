@@ -1,7 +1,8 @@
-import type { BrowserContracts } from "../../api";
-import { agentStatus, footerText } from "../agent-status";
-import { AGENT_STATUS_LABELS } from "../conts";
-import { formatDateTime } from "../../lib/time";
+import { mount, unmount } from "svelte";
+import { writable } from "svelte/store";
+import { footerText } from "../agent-status";
+import AgentList from "./AgentList.svelte";
+import type { AgentListView } from "./types";
 
 export const footerView = () => {
   const summary = document.querySelector("[data-agents-footer]");
@@ -10,51 +11,40 @@ export const footerView = () => {
   const details = document.querySelector<HTMLDetailsElement>(
     "[data-agents-details]",
   );
+  const entries = writable<AgentListView>({ agents: [], packages: null });
+  const rendered = list
+    ? mount(AgentList, { target: list, props: { entries } })
+    : null;
   const showMessage = (text: string) => {
     if (message) {
       message.textContent = text;
       message.hidden = false;
     }
-    list?.replaceChildren();
+    entries.set({ agents: [], packages: null });
     if (details) {
       details.open = false;
       details.hidden = true;
     }
   };
-  const showAgents = (agents: BrowserContracts["agents"]) => {
-    if (!agents.length) {
-      showMessage(footerText(agents));
+  const showAgents = (value: AgentListView) => {
+    if (!value.agents.length) {
+      showMessage(footerText(value.agents));
       return;
     }
     if (message) message.hidden = true;
     if (details) details.hidden = false;
-    if (summary) summary.textContent = footerText(agents);
-    if (!list) return;
-    const rows = document.createDocumentFragment();
-    for (const agent of agents) {
-      const row = document.createElement("li");
-      row.dataset.serverId = agent.server_id;
-      const name = document.createElement("strong");
-      name.textContent = agent.name;
-      const status = document.createElement("span");
-      const observedStatus = agentStatus(agent);
-      status.dataset.status = observedStatus;
-      status.textContent = AGENT_STATUS_LABELS[observedStatus];
-      const version = document.createElement("span");
-      version.textContent = agent.health.version
-        ? `Версия: ${agent.health.version}`
-        : "Версия неизвестна";
-      const contact = document.createElement("span");
-      if (agent.health.observed_at) {
-        const time = document.createElement("time");
-        time.dateTime = agent.health.observed_at;
-        time.textContent = formatDateTime(agent.health.observed_at);
-        contact.append("Последний контакт: ", time);
-      } else contact.textContent = "Контакт ещё не получен";
-      row.append(name, status, version, contact);
-      rows.append(row);
-    }
-    list.replaceChildren(rows);
+    if (summary) summary.textContent = footerText(value.agents);
+    entries.set(value);
   };
-  return { showMessage, showAgents };
+  const dispose = () => {
+    showMessage("Агенты · состояние доступно после входа");
+    if (rendered)
+      unmount(rendered).catch((failure: unknown) => {
+        console.error(
+          "Не удалось завершить отображение списка агентов.",
+          failure,
+        );
+      });
+  };
+  return { showMessage, showAgents, dispose };
 };

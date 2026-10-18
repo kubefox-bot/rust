@@ -3,6 +3,7 @@ mod events;
 mod health;
 mod jobs;
 mod policy;
+mod preview_files;
 mod profile;
 mod resolve;
 mod service;

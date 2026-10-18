@@ -8,12 +8,6 @@ import {
 } from "../../../api";
 import type { EnrollmentAttempt, Enrollment } from "./types";
 
-export const packages = (signal: AbortSignal) =>
-  requestJson({
-    path: "/enrollment/packages",
-    responseSchema: "packages",
-    signal,
-  });
 export const recent = (signal: AbortSignal) =>
   requestJson({ path: "/enrollment", responseSchema: "enrollments", signal });
 export const probe = (

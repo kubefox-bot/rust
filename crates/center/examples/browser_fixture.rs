@@ -50,6 +50,17 @@ async fn main() {
     let address = listener.local_addr().unwrap();
     let origin = format!("https://localhost:{}", address.port());
     CenterConfig::create(f.root.path(), &origin, address).unwrap();
+    // Optional local browser testing with an already trusted development certificate.
+    // The default automated fixture continues using its isolated generated CA.
+    if let Some(directory) = std::env::args().nth(3) {
+        for name in ["https-cert.pem", "https-key.pem"] {
+            std::fs::copy(
+                std::path::Path::new(&directory).join(name),
+                f.root.path().join(name),
+            )
+            .unwrap();
+        }
+    }
     let config = CenterConfig::load(&CenterArgs {
         data_dir: f.root.path().to_path_buf(),
     })

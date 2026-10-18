@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { isNewerAgentBuild } from "../src/features/settings/agents/updates";
+import { isNewerAgentBuild } from "../src/agents";
 
 test("agent update requires a provably newer release or build", () => {
   expect(isNewerAgentBuild({ current: "1.2.9", available: "1.2.10" })).toBe(

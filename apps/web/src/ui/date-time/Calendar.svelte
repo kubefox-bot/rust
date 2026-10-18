@@ -68,6 +68,12 @@
     <span class="month" aria-live="polite"
       >{monthFormat.format(new Date(`${displayed}T00:00:00Z`))}</span
     >
+    <Button
+      size="small"
+      variant="quiet"
+      aria-label="Следующий месяц"
+      onclick={() => changeMonth(1)}>›</Button
+    >
     <Input
       aria-label="Год календаря"
       type="number"
@@ -88,12 +94,6 @@
         focused = displayed;
       }}
     />
-    <Button
-      size="small"
-      variant="quiet"
-      aria-label="Следующий месяц"
-      onclick={() => changeMonth(1)}>›</Button
-    >
   </div>
   <table
     role="grid"

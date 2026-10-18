@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { agentStatus, footerText } from "../src/shell/agent-status";
+import { agentStatus, agentBadge, footerText } from "../src/shell/agent-status";
 import type { BrowserContracts } from "../src/api";
 const agent: BrowserContracts["agents"][number] = {
   agent_id: "11111111-1111-4111-8111-111111111111",
@@ -42,6 +42,19 @@ test("footer classifies actual observed stale health before the offline flag", (
   expect(agentStatus({ ...pending, certificate_expired: true })).toBe(
     "offline",
   );
+  expect(agentBadge(agent)).toEqual({
+    state: "online",
+    label: "Агент на связи",
+  });
+  expect(agentBadge(expired)).toEqual({
+    state: "offline",
+    label: "Сертификат истёк",
+  });
+  expect(agentBadge(revoked)).toEqual({
+    state: "offline",
+    label: "Доступ отозван",
+  });
+  expect(agentBadge(pending).state).toBe("pending");
   expect(
     agentStatus({ ...agent, health: { ...agent.health, observed_at: null } }),
   ).toBe("pending");

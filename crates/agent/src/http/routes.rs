@@ -22,6 +22,10 @@ pub fn router<E: Executor>(worker: Worker<E>) -> Router {
         )
         .route("/agent/v1/jobs/{job_id}/cancel", put(jobs::cancel::<E>))
         .route("/agent/v1/jobs/{job_id}/events", get(events::get::<E>))
+        .route(
+            "/agent/v1/jobs/{job_id}/files",
+            get(super::preview_files::get::<E>),
+        )
         .layer(DefaultBodyLimit::max(MAX_JSON_BYTES))
         .layer(axum::middleware::from_fn(super::policy::control))
         .with_state(worker)

@@ -5,6 +5,9 @@ type ServerReference = Readonly<{ id: string; slug?: string | null }>;
 export const serverUrlValue = (server: ServerReference): string =>
   server.slug || server.id;
 
+export const agentUpdateUrl = (server: ServerReference): string =>
+  `/settings/?server=${encodeURIComponent(serverUrlValue(server))}&action=update-agent#agents`;
+
 export const resolveServerReference = ({
   reference,
   servers,

@@ -2,6 +2,8 @@ use super::{
     agents::{start_router, TlsAgent},
     CenterFixture,
 };
+#[path = "job_agent/preview_files.rs"]
+mod preview_files;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -36,8 +38,12 @@ struct Inner {
     events: tokio::sync::broadcast::Sender<JobSnapshot>,
     subscriptions: AtomicUsize,
     lookups: AtomicUsize,
+    wrong_file_job: AtomicBool,
 }
 impl Control {
+    pub fn wrong_file_job(&self, enabled: bool) {
+        self.0.wrong_file_job.store(enabled, Ordering::SeqCst);
+    }
     pub fn cancels(&self) -> usize {
         self.0.cancels.load(Ordering::SeqCst)
     }
@@ -139,6 +145,7 @@ pub async fn start(center: &CenterFixture) -> (TlsAgent, Control) {
         events: tokio::sync::broadcast::channel(16).0,
         subscriptions: AtomicUsize::new(0),
         lookups: AtomicUsize::new(0),
+        wrong_file_job: AtomicBool::new(false),
     }));
     let agent_id = hmail_cleaner_protocol::AgentId::new();
     let app = Router::new()
@@ -165,6 +172,7 @@ pub async fn start(center: &CenterFixture) -> (TlsAgent, Control) {
         .route("/agent/v1/jobs/{id}/cancel", axum::routing::put(cancel))
         .route("/agent/v1/service/state", post(service))
         .route("/agent/v1/jobs/{id}/events", get(events))
+        .route("/agent/v1/jobs/{id}/files", get(preview_files::read))
         .with_state(control.clone());
     let agent = start_router(center, agent_id, app, control.0.epoch).await;
     (agent, control)

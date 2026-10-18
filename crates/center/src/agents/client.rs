@@ -21,6 +21,8 @@ pub enum AgentError {
     Rejected,
     #[error("agent resource not found")]
     NotFound,
+    #[error("agent resource was not captured")]
+    Gone,
     #[error("agent resource conflict")]
     Conflict,
     #[error("session revoked")]
@@ -141,6 +143,13 @@ impl AgentClient {
         &self,
         request: RequestBuilder,
     ) -> Result<T, AgentError> {
+        self.control_bounded(request, MAX_RESPONSE_BYTES).await
+    }
+    pub(super) async fn control_bounded<T: DeserializeOwned>(
+        &self,
+        request: RequestBuilder,
+        max_response_bytes: usize,
+    ) -> Result<T, AgentError> {
         let mut revoked = self.lease.revocation();
         if !self.lease.is_live() {
             return Err(AgentError::Revoked);
@@ -154,13 +163,14 @@ impl AgentClient {
             match response.status().as_u16() {
                 200..=299 => (),
                 404 => return Err(AgentError::NotFound),
+                410 => return Err(AgentError::Gone),
                 409 => return Err(AgentError::Conflict),
                 400..=499 => return Err(AgentError::Rejected),
                 _ => return Err(AgentError::Unavailable),
             }
             if response
                 .content_length()
-                .is_some_and(|size| size > MAX_RESPONSE_BYTES as u64)
+                .is_some_and(|size| size > max_response_bytes as u64)
             {
                 return Err(AgentError::Protocol);
             }
@@ -170,7 +180,7 @@ impl AgentClient {
                 .await
                 .map_err(|_| AgentError::Unavailable)?
             {
-                if chunk.len() > MAX_RESPONSE_BYTES.saturating_sub(body.len()) {
+                if chunk.len() > max_response_bytes.saturating_sub(body.len()) {
                     return Err(AgentError::Protocol);
                 }
                 body.extend_from_slice(&chunk);

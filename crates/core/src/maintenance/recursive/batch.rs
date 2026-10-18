@@ -1,6 +1,11 @@
 use super::*;
 use std::collections::HashMap;
 
+pub(super) struct Observers<'a, P, O> {
+    pub progress: &'a P,
+    pub selection: &'a O,
+}
+
 pub(super) async fn run<
     R: TreeRepository,
     F: FullFileStore,
@@ -10,12 +15,14 @@ pub(super) async fn run<
     deps: &mut Dependencies<'_, R, F, G>,
     options: &RunOptions,
     operation: Operation,
-    progress: &P,
+    observers: Observers<'_, P, impl SelectionObserver>,
     map: &mut HashMap<String, Vec<StoredMessage>>,
     scanned: ScanBatch,
     summary: &mut Summary,
 ) -> Result<(), CleanupError> {
+    let progress = observers.progress;
     let mut selected = Vec::new();
+    let mut details = Vec::new();
     let mut linked = HashMap::new();
     for file in scanned.files {
         let rows = map.remove(&path_key(&file.path)).unwrap_or_default();
@@ -38,10 +45,23 @@ pub(super) async fn run<
         if rows.is_empty() {
             summary.selected_orphan_files += 1;
         }
+        if operation == Operation::Preview {
+            details.push(SelectedFile {
+                file: file.clone(),
+                orphan: rows.is_empty(),
+            });
+        }
         linked.insert(path_key(&file.path), (file.clone(), rows));
         selected.push(file);
     }
     workflow::emit(Stage::Selection, *summary, progress);
+    if !details.is_empty() {
+        workflow::at(
+            observers.selection.selected(&details).await,
+            Stage::Selection,
+            *summary,
+        )?;
+    }
     if operation == Operation::Clean && !selected.is_empty() {
         workflow::at(
             deps.guard.ensure_stopped().await,

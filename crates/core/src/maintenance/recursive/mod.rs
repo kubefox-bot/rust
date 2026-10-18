@@ -12,6 +12,22 @@ use super::{
 use crate::cleanup::*;
 use std::{collections::HashMap, future::Future, path::Path};
 
+/// Awaited at the physical-file selection boundary; failures stop the preview.
+pub trait SelectionObserver: Send + Sync {
+    fn selected(&self, files: &[SelectedFile]) -> impl Future<Output = PortResult<()>> + Send;
+}
+#[derive(Debug, Clone)]
+pub struct SelectedFile {
+    pub file: super::FileObservation,
+    pub orphan: bool,
+}
+struct IgnoreSelection;
+impl SelectionObserver for IgnoreSelection {
+    async fn selected(&self, _: &[SelectedFile]) -> PortResult<()> {
+        Ok(())
+    }
+}
+
 pub trait TreeRepository: FullRepository {
     fn stored_messages(
         &mut self,
@@ -45,12 +61,38 @@ pub async fn run<
     G: OfflineGuard,
     P: Fn(Progress) + Send + Sync,
 >(
+    deps: Dependencies<'_, R, F, G>,
+    options: &RunOptions,
+    scan: ScanOptions,
+    cancel: &Cancellation,
+    progress: P,
+    operation: Action,
+) -> Result<Summary, CleanupError> {
+    run_with_details(
+        deps,
+        options,
+        scan,
+        cancel,
+        progress,
+        operation,
+        &IgnoreSelection,
+    )
+    .await
+}
+
+pub async fn run_with_details<
+    R: TreeRepository,
+    F: FullFileStore,
+    G: OfflineGuard,
+    P: Fn(Progress) + Send + Sync,
+>(
     mut deps: Dependencies<'_, R, F, G>,
     options: &RunOptions,
     scan: ScanOptions,
     cancel: &Cancellation,
     progress: P,
     operation: Action,
+    observer: &impl SelectionObserver,
 ) -> Result<Summary, CleanupError> {
     let mut summary = Summary::default();
     workflow::emit(Stage::Preflight, summary, &progress);
@@ -105,7 +147,10 @@ pub async fn run<
                 &mut deps,
                 options,
                 operation,
-                &progress,
+                batch::Observers {
+                    progress: &progress,
+                    selection: observer,
+                },
                 &mut map,
                 scanned,
                 &mut summary,

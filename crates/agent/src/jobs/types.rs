@@ -28,6 +28,8 @@ pub enum JobStoreError {
     InvalidTransition,
     #[error("job does not exist")]
     NotFound,
+    #[error("preview file metadata was not captured for this job")]
+    PreviewUnavailable,
     #[error("invalid or insufficiently protected receipt key")]
     InvalidKey,
     #[error("random source unavailable")]

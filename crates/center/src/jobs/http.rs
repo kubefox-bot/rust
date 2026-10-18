@@ -3,7 +3,10 @@ use crate::{
     http::{errors::ApiError, AppState},
 };
 use axum::{
-    extract::{rejection::JsonRejection, Path, State},
+    extract::{
+        rejection::{JsonRejection, QueryRejection},
+        Path, Query, State,
+    },
     routing::{get, post},
     Json, Router,
 };
@@ -17,9 +20,20 @@ pub(crate) fn routes() -> Router<AppState> {
         .route("/servers/{id}/jobs", post(submit))
         .route("/servers/{id}/cleanup-context", get(context))
         .route("/jobs/{id}", get(read))
+        .route("/jobs/{id}/files", get(preview_files))
         .route("/jobs/{id}/cancel", post(cancel))
         .route("/jobs/{id}/reconcile", post(reconcile))
         .route("/events", get(super::event_http::events))
+}
+async fn preview_files(
+    State(state): State<AppState>,
+    cookies: Cookies,
+    Path(id): Path<JobId>,
+    query: Result<Query<hmail_cleaner_protocol::PreviewFilesQuery>, QueryRejection>,
+) -> Result<Json<hmail_cleaner_protocol::PreviewFilesPage>, ApiError> {
+    let current = lease(&state, &cookies)?;
+    let Query(query) = query.map_err(|_| ApiError::bad_request())?;
+    Ok(Json(state.jobs.preview_files(id, query, &current).await?))
 }
 async fn context(
     State(state): State<AppState>,

@@ -4,6 +4,7 @@ mod fingerprint;
 mod keys;
 mod maintenance;
 mod observation;
+mod preview_files;
 mod recovery;
 mod repository;
 mod snapshot;

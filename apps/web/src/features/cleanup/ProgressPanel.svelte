@@ -16,6 +16,8 @@
     preview,
     dispatch,
     busy,
+    canShowDetails,
+    ondetails,
     oncancel,
     onreconcile,
   }: {
@@ -23,6 +25,8 @@
     preview: Job | null;
     dispatch: Dispatch;
     busy: boolean;
+    canShowDetails: boolean;
+    ondetails: () => void;
     oncancel: () => void;
     onreconcile: () => void;
   } = $props();
@@ -140,11 +144,18 @@
     </div>
   {/if}
   {#if job || dispatch.kind === "unknown"}<div class="progress-bottom">
-      <code title="Идентификатор задания"
-        >{job?.job_id ??
-          (dispatch.kind === "unknown" ? dispatch.intent.job_id : "")}</code
+      <span class="job-id"
+        >№ задания: <code title="Идентификатор задания"
+          >{job?.job_id ??
+            (dispatch.kind === "unknown" ? dispatch.intent.job_id : "")}</code
+        ></span
       >
       <div class="actions">
+        {#if canShowDetails}<Button
+            size="small"
+            variant="primary"
+            onclick={ondetails}>Подробности</Button
+          >{/if}
         <Button
           size="small"
           variant="quiet"
@@ -323,6 +334,11 @@
   .progress-bottom code {
     font-size: 9px;
     color: var(--muted);
+  }
+  .job-id {
+    font-size: 10px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
   }
   .progress-bottom .actions {
     margin: 0;

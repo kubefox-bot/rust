@@ -24,6 +24,21 @@
   let selected = $state("");
   let view = $state<CleanupState | null>(null);
   let busy = $state(false);
+  let detailsJobId = $state<string | null>(null);
+  let detailsImport = $state<Promise<
+    typeof import("./files/Details.svelte")
+  > | null>(null);
+  let filesRefreshVersion = $state(0);
+  const detailsTarget = $derived(
+    view?.job?.intent.operation === "preview"
+      ? view.job
+      : (view?.preview ?? null),
+  );
+  const openDetails = () => {
+    if (!detailsTarget) return;
+    detailsJobId = detailsTarget.job_id;
+    detailsImport = import("./files/Details.svelte");
+  };
   let error = $state("");
   let generation: string | null = null;
   let scope = new AbortController();
@@ -93,6 +108,7 @@
     scope = new AbortController();
     selected = id;
     view = null;
+    detailsJobId = null;
     error = "";
     selectServer({ id, servers: available });
     const current = generation;
@@ -113,7 +129,10 @@
         }
       },
       onResync: () => {
-        if (active(id, current)) refresh().catch(failure);
+        if (active(id, current)) {
+          filesRefreshVersion++;
+          refresh().catch(failure);
+        }
       },
       onUnauthorized: () => {
         auth?.refresh().catch(failure);
@@ -256,6 +275,7 @@
       operationId++;
       busy = false;
       view = null;
+      detailsJobId = null;
       available = [];
       agents = null;
       footer?.dispose();
@@ -345,7 +365,7 @@
       />{/if}
     {#if error}<div class="error" role="alert">{error}</div>{/if}
     {#if view}
-      {#if !view.context.configured}<div class="notice">
+      {#if !view.context.configured}<div class="notice notice-warning">
           Агент добавлен. <a href={`/settings/?server=${selected}`}
             >Настройте MySQL и пути</a
           >, чтобы выполнить предпросмотр.
@@ -356,6 +376,8 @@
           preview={view.preview}
           dispatch={view.dispatch}
           {busy}
+          canShowDetails={detailsTarget !== null}
+          ondetails={openDetails}
           oncancel={() => {
             jobAction("cancel").catch(failure);
           }}
@@ -390,6 +412,21 @@
           if (view) view = transition(view, { type: "expanded", expanded });
         }}
       />
+      {#if detailsJobId && detailsImport && detailsTarget?.job_id === detailsJobId}
+        {#await detailsImport}<p role="status">Загрузка подробностей…</p>
+        {:then module}
+          {#key detailsJobId}<module.default
+              jobId={detailsJobId}
+              revision={detailsTarget.revision}
+              refreshVersion={filesRefreshVersion}
+              ondismiss={() => (detailsJobId = null)}
+            />{/key}
+        {:catch}<div role="alert" class="error">
+            Не удалось открыть подробности. <Button onclick={openDetails}
+              >Повторить</Button
+            >
+          </div>{/await}
+      {/if}
       {#if view.confirmation}<Confirmation
           target={view.confirmation}
           ondismiss={() => {

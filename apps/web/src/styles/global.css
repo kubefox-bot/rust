@@ -2,6 +2,14 @@
 * {
   box-sizing: border-box;
 }
+html {
+  scrollbar-gutter: stable;
+}
+html:has(dialog:modal),
+body:has(dialog:modal) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 body {
   margin: 0;
 }
@@ -266,6 +274,15 @@ p {
   border-radius: 8px;
   margin: 14px 0;
 }
+.notice-warning {
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
+  color: var(--warning);
+}
+.notice-warning a {
+  color: inherit;
+  text-decoration: underline;
+}
 .field {
   display: flex;
   flex-direction: column;
@@ -313,6 +330,7 @@ p {
   border: 0;
 }
 dialog {
+  overscroll-behavior: contain;
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 28px;

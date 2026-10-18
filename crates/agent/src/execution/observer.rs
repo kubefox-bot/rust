@@ -17,6 +17,8 @@ pub(super) struct ProgressValue {
     pub summary: SummaryDto,
 }
 pub(super) struct Observer {
+    pub repository: Arc<crate::jobs::JobRepository>,
+    pub events: tokio::sync::broadcast::Sender<hmail_cleaner_protocol::JobSnapshot>,
     pub job_id: hmail_cleaner_protocol::JobId,
     pub journal: Option<hmail_cleaner_adapters::journal::RuntimeJournal>,
     pub last_stage: std::sync::Mutex<Option<hmail_cleaner_core::cleanup::Stage>>,
@@ -26,6 +28,18 @@ pub(super) struct Observer {
     pub cancel: Arc<Cancellation>,
 }
 impl RunObserver for Observer {
+    async fn selected_files(
+        &self,
+        files: &[hmail_cleaner_core::maintenance::recursive::SelectedFile],
+    ) -> hmail_cleaner_core::cleanup::PortResult<()> {
+        let result =
+            super::preview_files::persist(self.job_id, files, &self.repository, &self.events).await;
+        if result.is_err() {
+            self.failed.store(true, Ordering::Release);
+            self.cancel.request();
+        }
+        result
+    }
     fn progress(&self, progress: Progress) {
         if let Ok(mut stage) = self.last_stage.lock() {
             if *stage != Some(progress.stage) {

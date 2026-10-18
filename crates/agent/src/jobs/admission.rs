@@ -1,7 +1,7 @@
 use super::{AcceptOutcome, JobRepository, JobStoreError, RequestFingerprint};
 use chrono::Utc;
 use hmail_cleaner_protocol::{
-    Counter, JobPhase, JobSnapshot, ObservedMailState, SummaryDto, ValidatedJob,
+    Counter, JobPhase, JobSnapshot, ObservedMailState, Operation, SummaryDto, ValidatedJob,
 };
 use sqlx::Row;
 use subtle::ConstantTimeEq;
@@ -69,6 +69,12 @@ impl JobRepository {
             .bind(serde_json::to_string(&snapshot)?)
             .execute(&mut *transaction)
             .await?;
+        if job.command().operation == Operation::Preview {
+            sqlx::query("INSERT INTO preview_catalogs(job_id) VALUES (?)")
+                .bind(id.to_string())
+                .execute(&mut *transaction)
+                .await?;
+        }
         transaction.commit().await?;
         Ok(AcceptOutcome::New)
     }

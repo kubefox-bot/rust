@@ -3,6 +3,7 @@ mod mapping;
 mod native;
 mod observer;
 mod persist;
+mod preview_files;
 mod run;
 mod types;
 mod worker;

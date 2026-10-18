@@ -18,5 +18,15 @@ export const POPOVER_WIDTH_PX = 336;
 export const VIEWPORT_MARGIN_PX = 12;
 export const POPOVER_GAP_PX = 8;
 export const CALENDAR_LOCALE = "ru-RU";
+export const TIME_BASIS = {
+  server: {
+    caption: "Дата и время сервера",
+    hint: "Время почтового сервера, без пересчёта часового пояса.",
+  },
+  browser: {
+    caption: "Дата и время браузера",
+    hint: "Время в часовом поясе браузера.",
+  },
+} as const;
 export const MONTH_OPTIONS = { month: "long", timeZone: "UTC" } as const;
 export const DAY_OPTIONS = { dateStyle: "full", timeZone: "UTC" } as const;

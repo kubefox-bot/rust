@@ -70,6 +70,9 @@
     "prepare_recovery": {
       "$ref": "#/$defs/PrepareRecoveryInput"
     },
+    "preview_files_page": {
+      "$ref": "#/$defs/PreviewFilesPage"
+    },
     "profile": {
       "$ref": "#/$defs/EditableProfile"
     },
@@ -140,6 +143,7 @@
     "submit",
     "job",
     "job_event",
+    "preview_files_page",
     "history",
     "host_key",
     "ssh_target",
@@ -874,6 +878,66 @@
       "additionalProperties": false,
       "required": [
         "current_password"
+      ]
+    },
+    "PreviewFile": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "type": "string"
+        },
+        "orphan": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "size_bytes",
+        "created_at",
+        "orphan"
+      ]
+    },
+    "PreviewFilesPage": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "job_id": {
+          "$ref": "#/$defs/JobId"
+        },
+        "revision": {
+          "$ref": "#/$defs/Counter"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PreviewFile"
+          }
+        },
+        "total": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "rows",
+        "total",
+        "revision",
+        "complete"
       ]
     },
     "ProfileId": {

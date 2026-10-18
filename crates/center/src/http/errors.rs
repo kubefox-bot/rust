@@ -63,6 +63,7 @@ impl From<crate::agents::AgentError> for ApiError {
             AgentError::Protocol => Self(StatusCode::BAD_GATEWAY, ErrorCode::Unavailable),
             AgentError::Rejected => Self::bad_request(),
             AgentError::NotFound => Self(StatusCode::NOT_FOUND, ErrorCode::BadRequest),
+            AgentError::Gone => Self(StatusCode::GONE, ErrorCode::Unavailable),
             AgentError::Conflict => Self(StatusCode::CONFLICT, ErrorCode::Conflict),
             AgentError::Revoked => Self(StatusCode::UNAUTHORIZED, ErrorCode::Unauthorized),
         }

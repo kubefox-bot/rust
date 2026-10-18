@@ -65,6 +65,8 @@ impl<E: Executor> Worker<E> {
         let (service, mut service_events) = mpsc::channel(SERVICE_CAPACITY);
         diagnostics::record(self.0.journal.as_ref(), Event::JobStarted { job_id: id });
         let observer = Observer {
+            repository: self.0.repository.clone(),
+            events: self.0.events.clone(),
             job_id: id,
             journal: self.0.journal.clone(),
             last_stage: std::sync::Mutex::new(None),

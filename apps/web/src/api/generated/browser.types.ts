@@ -108,6 +108,7 @@ export interface BrowserContracts {
   packages: AgentPackageView[];
   phase: JobPhase;
   prepare_recovery: PrepareRecoveryInput;
+  preview_files_page: PreviewFilesPage;
   profile: EditableProfile;
   profile_validation: ProfileValidationResponse;
   profile_version: ProfileVersion;
@@ -309,6 +310,20 @@ export interface AgentPackageView {
 }
 export interface PrepareRecoveryInput {
   current_password: string;
+}
+export interface PreviewFilesPage {
+  complete: boolean;
+  job_id: JobId;
+  revision: Counter;
+  rows: PreviewFile[];
+  total: Counter;
+}
+export interface PreviewFile {
+  created_at: string;
+  id: string;
+  orphan: boolean;
+  path: string;
+  size_bytes: Counter;
 }
 export interface EditableProfile {
   agent_id: AgentId;

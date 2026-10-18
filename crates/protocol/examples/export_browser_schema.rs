@@ -29,6 +29,7 @@ pub struct BrowserContracts {
     pub submit: SubmitRequest,
     pub job: JobView,
     pub job_event: JobEvent,
+    pub preview_files_page: PreviewFilesPage,
     pub history: HistoryPage,
     pub host_key: HostKeyChallenge,
     pub ssh_target: SshTarget,
