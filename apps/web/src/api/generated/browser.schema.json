@@ -1208,6 +1208,12 @@
         },
         "profile_id": {
           "$ref": "#/$defs/ProfileId"
+        },
+        "slug": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,

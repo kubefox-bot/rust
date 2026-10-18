@@ -284,3 +284,23 @@ test("a login in another browser context revokes and clears the earlier account 
     await fixture.close();
   }
 }, 120000);
+
+test("an authenticated visit to login returns to the cleanup dashboard", async () => {
+  const { signIn } = await import("./cleanup-steps");
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await signIn(page, fixture.origin);
+    await page.goto(`${fixture.origin}/login/`);
+    await page
+      .getByRole("heading", { name: "Очистка почты", exact: true })
+      .waitFor();
+    expect(new URL(page.url()).pathname).toBe("/");
+    expect(await page.getByLabel("Пароль", { exact: true }).count()).toBe(0);
+    await page.getByRole("button", { name: "Выйти", exact: true }).click();
+    await page.getByLabel("Пароль", { exact: true }).waitFor();
+    expect(new URL(page.url()).pathname).toBe("/login/");
+  } finally {
+    await fixture.close();
+  }
+}, 120000);

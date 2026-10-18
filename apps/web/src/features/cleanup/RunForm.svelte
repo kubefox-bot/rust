@@ -10,10 +10,9 @@
     SCAN_OPTIONS,
     RETENTION_OPTIONS,
   } from "./conts";
-  import { displayCutoff, editedCutoff } from "./cutoff-input";
+  import { DateTimePicker } from "../../ui/date-time";
   import { formatServerDateTime } from "../../lib/time";
   import type { Job, RunParameters } from "./types";
-  import PreviewResult from "./PreviewResult.svelte";
   let {
     parameters,
     disabled,
@@ -66,7 +65,6 @@
       onpreview();
     }}
   >
-    {#if preview}<PreviewResult {preview} />{/if}
     <fieldset {disabled}>
       <div class="field-grid run-fields">
         <div class="field">
@@ -98,20 +96,16 @@
               value={parameters.retention.kind}
               {disabled}
               onchange={retentionKind}
-            />{#if parameters.retention.kind === "before"}<Input
-                aria-label="Граница по времени сервера"
-                aria-describedby="cutoff-hint"
-                type="datetime-local"
-                step="any"
+            />{#if parameters.retention.kind === "before"}<DateTimePicker
+                label="Граница по времени сервера"
+                describedBy="cutoff-hint"
                 required
-                value={displayCutoff(parameters.retention.local)}
-                onchange={(event) =>
+                {disabled}
+                value={parameters.retention.local}
+                onchange={(local) =>
                   onparameters({
                     ...parameters,
-                    retention: {
-                      kind: "before",
-                      local: editedCutoff(event.currentTarget.value),
-                    },
+                    retention: { kind: "before", local },
                   })}
               />{:else}<Input
                 aria-label="Срок хранения"
@@ -239,9 +233,6 @@
 <style>
   .run-config {
     padding: 18px;
-  }
-  form > :global(.preview-result) {
-    margin-bottom: 14px;
   }
   fieldset {
     border: 0;

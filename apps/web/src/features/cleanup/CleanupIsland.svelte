@@ -94,7 +94,7 @@
     selected = id;
     view = null;
     error = "";
-    selectServer(id);
+    selectServer({ id, servers: available });
     const current = generation;
     const loaded = await contexts.load({ serverId: id, signal: scope.signal });
     if (!loaded?.current() || !active(id, current)) return;
@@ -277,7 +277,7 @@
         footer = mountFooter((values) => {
           agents = values;
         });
-        const selectedId = selectedServer();
+        const selectedId = selectedServer(list);
         const target = selectedId
           ? list.find((server) => server.id === selectedId)
           : list[0];
@@ -353,6 +353,7 @@
       <div class="cleanup-workspace">
         <ProgressPanel
           job={view.job}
+          preview={view.preview}
           dispatch={view.dispatch}
           {busy}
           oncancel={() => {
@@ -472,6 +473,8 @@
     padding: 16px;
     margin-top: 0;
   }
+  :global(body.journal-expanded .preview-summary),
+  :global(body.journal-expanded .preview-meta),
   :global(body.journal-expanded .metrics) {
     display: none;
   }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AgentStatus from "../../shell/AgentStatus.svelte";
   import { Button } from "../../ui/button";
   import { onMount } from "svelte";
   import { formatDateTime } from "../../lib/time";
@@ -13,6 +14,7 @@
     revoke,
     message,
   } from "./agents/api";
+  import { isNewerAgentBuild } from "./agents/updates";
   import { ENROLLMENT_PHASES } from "./agents/conts";
   import type {
     AgentAction,
@@ -69,6 +71,16 @@
         candidate.server_id === selected &&
         candidate.agent_id === server?.agent_id,
     ),
+  );
+  const updatePackages = $derived(
+    resources.kind === "ready" && agent?.health.version
+      ? resources.packages.filter((candidate) =>
+          isNewerAgentBuild({
+            current: agent.health.version ?? "",
+            available: candidate.build,
+          }),
+        )
+      : [],
   );
   const load = async () => {
     resources = { kind: "loading" };
@@ -186,15 +198,7 @@
     <p class="target">Выбранный сервер: <strong>{server.name}</strong></p>
     {#if agent}
       <div class="badges">
-        <span class="badge"
-          >{agent.revoked
-            ? "Доступ отозван"
-            : agent.health.stale
-              ? "Данные устарели"
-              : agent.health.online
-                ? "На связи"
-                : "Нет связи"}</span
-        >
+        <AgentStatus {agent} />
         {#if configured === false}<span class="badge">Требуется настройка</span
           >{/if}
         {#if agent.certificate_expired}<span class="badge"
@@ -203,53 +207,64 @@
             >Срок сертификата истекает</span
           >{/if}
       </div>
+      <div class="version-row">
+        <span class="muted"
+          >Версия агента: {agent.health.version ?? "неизвестна"}</span
+        >
+        {#if updatePackages.length > 0}
+          <Button
+            type="button"
+            disabled={locked ||
+              actionPending ||
+              agent.revoked ||
+              agent.certificate_expired}
+            onclick={() => chooseMode({ kind: "binary", server })}
+            variant="primary">Обновить агента</Button
+          >
+        {/if}
+      </div>
       <p class="muted">
-        Версия агента: {agent.health.version ?? "неизвестна"} · Состояние получено:
+        Состояние получено:
         {#if agent.health.observed_at}<time datetime={agent.health.observed_at}
             >{formatDateTime(agent.health.observed_at)}</time
           >{:else}ещё нет данных{/if}
       </p>
-      {#if agent.certificate_expires_at}<p class="muted">
-          Сертификат действует до <time datetime={agent.certificate_expires_at}
-            >{formatDateTime(agent.certificate_expires_at)}</time
+      <details class="connection-security">
+        <summary>Действия с агентом</summary>
+        {#if agent.certificate_expires_at}<p class="muted">
+            Сертификат действует до <time
+              datetime={agent.certificate_expires_at}
+              >{formatDateTime(agent.certificate_expires_at)}</time
+            >
+          </p>{/if}
+        <div class="actions">
+          <Button
+            type="button"
+            disabled={locked || actionPending || agent.revoked}
+            onclick={() => chooseMode({ kind: "recover_identity", server })}
+            variant="warning">Восстановить доверие</Button
           >
-        </p>{/if}
-      <div class="actions">
-        <Button
-          type="button"
-          disabled={locked ||
-            actionPending ||
-            agent.revoked ||
-            agent.certificate_expired}
-          onclick={() => chooseMode({ kind: "binary", server })}
-          variant="primary">Обновить агента</Button
-        >
-        <Button
-          type="button"
-          disabled={locked || actionPending || agent.revoked}
-          onclick={() => chooseMode({ kind: "recover_identity", server })}
-          variant="warning">Восстановить доверие</Button
-        >
-        <Button
-          type="button"
-          disabled={locked ||
-            actionPending ||
-            agent.revoked ||
-            agent.certificate_expired}
-          onclick={() => {
-            action = { kind: "renew", server };
-          }}
-          variant="success">Обновить сертификат</Button
-        >
-        <Button
-          type="button"
-          disabled={locked || actionPending || agent.revoked}
-          onclick={() => {
-            action = { kind: "revoke", server };
-          }}
-          variant="danger">Отозвать доступ</Button
-        >
-      </div>
+          <Button
+            type="button"
+            disabled={locked ||
+              actionPending ||
+              agent.revoked ||
+              agent.certificate_expired}
+            onclick={() => {
+              action = { kind: "renew", server };
+            }}
+            variant="success">Обновить сертификат</Button
+          >
+          <Button
+            type="button"
+            disabled={locked || actionPending || agent.revoked}
+            onclick={() => {
+              action = { kind: "revoke", server };
+            }}
+            variant="danger">Отозвать доступ</Button
+          >
+        </div>
+      </details>
     {:else if agents === null}<p class="notice">
         Состояние агентов недоступно. Обновите настройки, чтобы повторить
         запрос.
@@ -274,7 +289,9 @@
   {#if current.kind === "wizard"}
     {#key current.revision}<Enrollment
         mode={current.mode}
-        packages={resources.packages}
+        packages={current.mode.kind === "binary"
+          ? updatePackages
+          : resources.packages}
         configured={current.mode.kind !== "install" && configured === true}
         {onrefresh}
         onlock={(value) => {
@@ -330,6 +347,27 @@
 {/if}
 
 <style>
+  .version-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+    font-size: 12px;
+  }
+  .connection-security {
+    border-top: 1px solid var(--line);
+    margin-top: 20px;
+    padding-top: 16px;
+  }
+  .connection-security summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .connection-security .actions {
+    margin-top: 16px;
+  }
   .heading {
     display: flex;
     gap: 16px;

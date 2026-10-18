@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AgentStatus from "./AgentStatus.svelte";
   import { Button } from "../ui/button";
   import type { BrowserContracts } from "../api";
   import { Select } from "../ui/select";
@@ -33,13 +34,7 @@
         {disabled}
       />
     </div>
-    <span
-      class="badge"
-      class:online={agent?.health.online && !agent.health.stale}
-      ><span class="dot"></span>{agent?.health.online && !agent.health.stale
-        ? "Агент на связи"
-        : "Нет свежих данных"}</span
-    >
+    <AgentStatus {agent} />
   </div>
   <Button
     variant="quiet"
@@ -65,22 +60,6 @@
   }
   .server-picker {
     min-width: 230px;
-  }
-  .badge {
-    height: 40px;
-    color: var(--muted);
-    background: #fff;
-  }
-  .badge.online {
-    color: var(--success);
-    background: #f0faf5;
-    border-color: #d2ecdf;
-  }
-  .dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: currentColor;
   }
   @media (max-width: 540px) {
     .server-header {

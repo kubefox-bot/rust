@@ -71,7 +71,7 @@ impl ProfileService {
             return Err(ProfileError::Unauthorized);
         }
         let rows = sqlx::query(
-            "SELECT id,name,agent_id,active_profile_id FROM servers ORDER BY name,id LIMIT 1000",
+            "SELECT id,name,agent_id,active_profile_id,slug FROM servers ORDER BY name,id LIMIT 1000",
         )
         .fetch_all(&self.store.pool)
         .await
@@ -87,6 +87,7 @@ impl ProfileService {
                     id: serde_json::from_value(serde_json::Value::String(id))
                         .map_err(|_| ProfileError::Storage)?,
                     name: row.try_get("name").map_err(|_| ProfileError::Storage)?,
+                    slug: row.try_get("slug").map_err(|_| ProfileError::Storage)?,
                     agent_id: serde_json::from_value(serde_json::Value::String(agent))
                         .map_err(|_| ProfileError::Storage)?,
                     profile_id: serde_json::from_value(serde_json::Value::String(profile))

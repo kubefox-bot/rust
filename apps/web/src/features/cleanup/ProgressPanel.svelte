@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PreviewResult from "./PreviewResult.svelte";
   import { Button } from "../../ui/button";
   import type { Dispatch, Job } from "./types";
   import { progressPercent } from "./model";
@@ -12,12 +13,14 @@
   } from "../../jobs/display";
   let {
     job,
+    preview,
     dispatch,
     busy,
     oncancel,
     onreconcile,
   }: {
     job: Job | null;
+    preview: Job | null;
     dispatch: Dispatch;
     busy: boolean;
     oncancel: () => void;
@@ -102,7 +105,16 @@
         : "Ожидание команды"}</span
     >
   </div>
-  {#if snapshot}
+  {#if preview}
+    <div class="preview-summary"><PreviewResult {preview} /></div>
+    <div class="preview-meta">
+      <span>Ошибок: {formatCount(preview.snapshot?.summary.failed)}</span><span
+        >Осталось старых: {formatCount(
+          preview.snapshot?.summary.remaining_old_files,
+        )}</span
+      >
+    </div>
+  {:else if snapshot}
     <div class="metrics">
       <div>
         <span>Выбрано</span><strong
@@ -254,6 +266,17 @@
   }
   .mail-state {
     margin-left: auto;
+  }
+  .preview-summary {
+    margin-top: 16px;
+  }
+  .preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--muted);
   }
   .metrics {
     display: grid;

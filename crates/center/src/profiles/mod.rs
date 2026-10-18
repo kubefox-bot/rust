@@ -1,6 +1,7 @@
 mod read;
 mod repository;
 mod save;
+pub(crate) mod slug;
 mod types;
 pub use types::{ProfileError, ProfileService, SelectedProfile, ServerRegistration};
 mod append;

@@ -44,6 +44,8 @@ pub struct EditableProfile {
 #[derive(Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ServerView {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slug: Option<String>,
     pub id: ServerId,
     pub name: String,
     pub agent_id: AgentId,

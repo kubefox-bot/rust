@@ -3096,7 +3096,7 @@ return errors === 0;
 }
 validate26.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
-const schema95 = {"type":"object","properties":{"agent_id":{"$ref":"#/$defs/AgentId"},"id":{"$ref":"#/$defs/ServerId"},"name":{"type":"string"},"profile_id":{"$ref":"#/$defs/ProfileId"}},"additionalProperties":false,"required":["id","name","agent_id","profile_id"]};
+const schema95 = {"type":"object","properties":{"agent_id":{"$ref":"#/$defs/AgentId"},"id":{"$ref":"#/$defs/ServerId"},"name":{"type":"string"},"profile_id":{"$ref":"#/$defs/ProfileId"},"slug":{"type":["string","null"]}},"additionalProperties":false,"required":["id","name","agent_id","profile_id"]};
 
 function validate38(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -3118,7 +3118,7 @@ return false;
 else {
 const _errs1 = errors;
 for(const key0 in data){
-if(!((((key0 === "agent_id") || (key0 === "id")) || (key0 === "name")) || (key0 === "profile_id"))){
+if(!(((((key0 === "agent_id") || (key0 === "id")) || (key0 === "name")) || (key0 === "profile_id")) || (key0 === "slug"))){
 validate38.errors = [{instancePath,schemaPath:"#/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key0},message:"must NOT have additional properties"}];
 return false;
 break;
@@ -3207,6 +3207,20 @@ var valid0 = _errs10 === errors;
 }
 else {
 var valid0 = true;
+}
+if(valid0){
+if(data.slug !== undefined){
+let data4 = data.slug;
+const _errs13 = errors;
+if((typeof data4 !== "string") && (data4 !== null)){
+validate38.errors = [{instancePath:instancePath+"/slug",schemaPath:"#/properties/slug/type",keyword:"type",params:{type: schema95.properties.slug.type},message:"must be string,null"}];
+return false;
+}
+var valid0 = _errs13 === errors;
+}
+else {
+var valid0 = true;
+}
 }
 }
 }

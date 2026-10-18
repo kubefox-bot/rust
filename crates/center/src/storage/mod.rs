@@ -1,6 +1,7 @@
 mod backup;
 mod connection;
 mod directory;
+mod migration;
 mod records;
 
 pub use backup::BackupManifest;

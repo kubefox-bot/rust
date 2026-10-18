@@ -89,7 +89,7 @@
     selected = id;
     view = null;
     sessionError = "";
-    selectServer(id);
+    selectServer({ id, servers: available });
     const current = generation;
     const active = () =>
       generation === current && selected === id && status === "authenticated";
@@ -164,7 +164,7 @@
         footer = mountFooter((values) => {
           agents = values;
         });
-        const requested = selectedServer();
+        const requested = selectedServer(list);
         const target = requested
           ? list.find((server) => server.id === requested)
           : list[0];

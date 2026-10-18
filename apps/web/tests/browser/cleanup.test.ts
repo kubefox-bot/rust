@@ -1,4 +1,4 @@
-import { selectValue } from "./controls";
+import { selectValue, selectDateTime } from "./controls";
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
 
@@ -70,14 +70,26 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
     await page
       .getByRole("heading", { name: "Завершено", exact: true })
       .waitFor();
-    const field = page.getByLabel("Граница по времени сервера", {
+    const field = page.getByRole("button", {
+      name: "Граница по времени сервера",
       exact: true,
     });
-    expect(await field.inputValue()).toBe("2026-09-18T02:55:44.049");
+    expect(await field.getAttribute("data-datetime-value")).toBe(exactLocal);
+    await field.click();
+    const picker = page.getByRole("dialog", {
+      name: "Граница по времени сервера",
+      exact: true,
+    });
+    await picker
+      .getByRole("spinbutton", { name: "Год календаря" })
+      .press("Enter");
+    expect(await picker.isVisible()).toBe(true);
+    expect(await field.getAttribute("data-datetime-value")).toBe(exactLocal);
+    await picker.getByRole("button", { name: "Отмена", exact: true }).click();
     expect(
       await field.evaluate(
         (input) =>
-          input instanceof HTMLInputElement && input.form?.checkValidity(),
+          input instanceof HTMLButtonElement && input.form?.checkValidity(),
       ),
     ).toBe(true);
     const cutoffDisplay = page
@@ -1119,11 +1131,14 @@ test("confirming the current retention option preserves the entered cutoff", asy
     const page = await fixture.context.newPage();
     await signIn(page, fixture.origin);
     await selectValue(page, { label: "Период хранения", value: "before" });
-    const cutoff = page.getByLabel("Граница по времени сервера", {
+    const cutoff = page.getByRole("button", {
+      name: "Граница по времени сервера",
       exact: true,
     });
-    await cutoff.fill("2026-01-02T03:04");
-    await cutoff.blur();
+    await selectDateTime(page, {
+      label: "Граница по времени сервера",
+      value: "2026-01-02T03:04:00",
+    });
     const period = page.getByRole("combobox", {
       name: "Период хранения",
       exact: true,
@@ -1133,9 +1148,13 @@ test("confirming the current retention option preserves the entered cutoff", asy
       .getByRole("listbox", { name: "Период хранения", exact: true })
       .waitFor();
     await period.press("Enter");
-    expect(await cutoff.inputValue()).toBe("2026-01-02T03:04");
+    expect(await cutoff.getAttribute("data-datetime-value")).toBe(
+      "2026-01-02T03:04:00",
+    );
     await selectValue(page, { label: "Период хранения", value: "before" });
-    expect(await cutoff.inputValue()).toBe("2026-01-02T03:04");
+    expect(await cutoff.getAttribute("data-datetime-value")).toBe(
+      "2026-01-02T03:04:00",
+    );
   } finally {
     await fixture.close();
   }

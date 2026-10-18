@@ -53,7 +53,7 @@
     selected = id;
     context = null;
     error = "";
-    selectServer(id);
+    selectServer({ id, servers: available });
     await refresh();
   };
   const navigate = (value: SettingsSection) => {
@@ -75,7 +75,7 @@
       await refresh();
       return;
     }
-    const fromUrl = selectedServer();
+    const fromUrl = selectedServer(list);
     const target = fromUrl
       ? list.find((server) => server.id === fromUrl)
       : list[0];

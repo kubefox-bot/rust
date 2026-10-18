@@ -54,14 +54,23 @@ impl ProfileService {
         if !trusted {
             return Err(ProfileError::Invalid);
         }
-        sqlx::query("INSERT INTO servers(id,name,agent_id,active_profile_id) VALUES(?,?,?,?)")
-            .bind(input.server_id.to_string())
-            .bind(input.name)
-            .bind(input.agent_id.to_string())
-            .bind(input.profile_id.to_string())
-            .execute(&mut *transaction)
-            .await
-            .map_err(super::repository::write_error)?;
+        let reserved: Vec<String> =
+            sqlx::query_scalar("SELECT slug FROM servers WHERE slug IS NOT NULL")
+                .fetch_all(&mut *transaction)
+                .await
+                .map_err(|_| ProfileError::Storage)?;
+        let slug = super::slug::allocate(&input.name, &reserved.into_iter().collect());
+        sqlx::query(
+            "INSERT INTO servers(id,name,agent_id,active_profile_id,slug) VALUES(?,?,?,?,?)",
+        )
+        .bind(input.server_id.to_string())
+        .bind(input.name)
+        .bind(input.agent_id.to_string())
+        .bind(input.profile_id.to_string())
+        .bind(slug)
+        .execute(&mut *transaction)
+        .await
+        .map_err(super::repository::write_error)?;
         sqlx::query("INSERT INTO encrypted_records VALUES(?,'profile',1,?)")
             .bind(record.to_string())
             .bind(bytes)

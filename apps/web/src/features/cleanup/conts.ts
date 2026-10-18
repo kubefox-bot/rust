@@ -21,5 +21,3 @@ export const RETENTION_OPTIONS = [
   { value: "years", label: "Лет" },
   { value: "before", label: "До даты" },
 ] as const;
-export const DATETIME_INPUT_FRACTION = /(\.\d{3})\d+$/;
-export const DATETIME_INPUT_MINUTES = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;

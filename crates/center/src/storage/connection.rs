@@ -4,7 +4,7 @@ use sqlx::{
     Connection, SqliteConnection, SqlitePool,
 };
 use std::{sync::Arc, time::Duration};
-pub(crate) const SCHEMA_VERSION: i64 = 1;
+pub(crate) const SCHEMA_VERSION: i64 = 2;
 #[derive(Clone)]
 pub struct CenterStore {
     pub(crate) pool: SqlitePool,
@@ -46,7 +46,7 @@ impl CenterStore {
             if integrity != "ok" {
                 return Err(StorageError::Database);
             }
-            if version != SCHEMA_VERSION {
+            if version != 1 && version != SCHEMA_VERSION {
                 return Err(StorageError::Schema);
             }
         }
@@ -74,6 +74,7 @@ impl CenterStore {
                 .await
                 .map_err(|_| StorageError::Database)?;
         }
+        super::migration::upgrade(&pool).await?;
         Ok(Self {
             pool,
             lease: directory.0.clone(),

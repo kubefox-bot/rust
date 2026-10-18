@@ -82,7 +82,7 @@ async fn center_health_before_login_reports_exact_build_and_schema_without_priva
     assert_eq!(
         serde_json::from_slice::<serde_json::Value>(&body).unwrap(),
         serde_json::json!({
-            "status":"ok", "build_version":"delivery-fixture.123", "schema_version":1
+            "status":"ok", "build_version":"delivery-fixture.123", "schema_version":2
         })
     );
 }
@@ -264,7 +264,7 @@ async fn backup_cli_requires_a_stopped_initialized_center_and_preserves_identity
         serde_json::from_slice(&std::fs::read(destination.join("manifest.json")).unwrap()).unwrap();
     assert_eq!(manifest.vault_id, Some(before));
     assert_eq!(manifest.build_version, "delivery-fixture.123");
-    assert_eq!(manifest.schema_version, 1);
+    assert_eq!(manifest.schema_version, 2);
     for name in ["https-cert.pem", "https-key.pem", "ca-cert.pem"] {
         assert_eq!(
             std::fs::read(root.path().join(name)).unwrap(),

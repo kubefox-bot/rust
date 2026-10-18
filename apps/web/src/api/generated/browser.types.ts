@@ -244,6 +244,7 @@ export interface ServerView {
   id: ServerId;
   name: string;
   profile_id: ProfileId;
+  slug?: string | null;
 }
 export interface ConfirmRecoveryInput {
   candidate_id: string;
