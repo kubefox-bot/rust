@@ -4,6 +4,10 @@ import type { EnrollmentMode } from "./types";
 export const SSH_PORT = 22;
 export const AGENT_PORT = 9443;
 export const MAX_PORT = 65535;
+export const SSH_METHOD_OPTIONS = [
+  { value: "password", label: "Пароль" },
+  { value: "key", label: "Закрытый ключ" },
+] as const;
 export const OPERATION_REFRESH_MS = 2000;
 export const ENROLLMENT_PHASES = {
   preparing: "Подготовка подключения",

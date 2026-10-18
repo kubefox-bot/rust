@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button, ButtonLink } from "../../ui/button";
   import { onMount } from "svelte";
   import type { BrowserContracts } from "../../api";
   import { ApiError } from "../../api";
@@ -132,12 +133,12 @@
     </section>
   {:else if status === "anonymous"}<section class="card empty">
       <p>Войдите для настройки центра.</p>
-      <a class="button primary" href="/login/">Войти в центр</a>
+      <ButtonLink variant="primary" href="/login/">Войти в центр</ButtonLink>
     </section>
   {:else if status === "failed"}<section class="card">
       <div class="error" role="alert">{error || "Нет связи с центром."}</div>
-      <button class="button" onclick={() => auth?.refresh().catch(fail)}
-        >Проверить соединение</button
+      <Button onclick={() => auth?.refresh().catch(fail)}
+        >Проверить соединение</Button
       >
     </section>
   {:else}
@@ -146,9 +147,7 @@
         <h1>Настройки</h1>
         <p class="subtitle">Серверы, агенты и учётная запись центра.</p>
       </div>
-      <button class="button" onclick={() => navigate("agents")}
-        >Добавить сервер</button
-      >
+      <Button onclick={() => navigate("agents")}>Добавить сервер</Button>
     </div>
     {#if available.length}<ServerHeader
         servers={available}
@@ -158,11 +157,11 @@
         onrefresh={refreshAll}
       />{/if}
     <nav class="settings-tabs" aria-label="Разделы настроек">
-      {#each SECTIONS as [id, label]}<button
-          class:active={section === id}
-          class="button quiet"
+      {#each SECTIONS as [id, label]}<Button
+          class={section === id ? "active" : undefined}
+          variant="quiet"
           aria-current={section === id ? "page" : undefined}
-          onclick={() => navigate(id)}>{label}</button
+          onclick={() => navigate(id)}>{label}</Button
         >{/each}
     </nav>
     {#if error}<div class="error" role="alert">{error}</div>{/if}
@@ -197,9 +196,9 @@
     padding-bottom: 15px;
     margin-bottom: 24px;
   }
-  .settings-tabs .active {
-    background: #eaf0ff;
-    border-color: #cbd9fb;
+  .settings-tabs :global(.button.active) {
+    background: var(--accent-soft);
+    border-color: var(--accent-line);
     color: var(--accent);
   }
 </style>

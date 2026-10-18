@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
 import { signIn } from "./cleanup-steps";
+import { selectValue } from "./controls";
 
 test("session settings expose and persist exactly the agreed idle intervals", async () => {
   const fixture = await startFixture();
@@ -10,22 +11,25 @@ test("session settings expose and persist exactly the agreed idle intervals", as
     await page.goto(`${fixture.origin}/settings/#account`);
     const timeout = page.getByLabel("Выход при бездействии", { exact: true });
     await timeout.waitFor({ timeout: 3000 });
+    await timeout.click();
     expect(
-      await timeout
-        .locator("option")
+      await page
+        .getByRole("listbox", { name: "Выход при бездействии", exact: true })
+        .getByRole("option")
         .evaluateAll((options) =>
-          options.map((option) => option.getAttribute("value")),
+          options.map((option) => option.getAttribute("data-value")),
         ),
     ).toEqual(["15", "30", "60", "1440"]);
-    await timeout.selectOption("60");
+    await timeout.press("Escape");
+    await selectValue(page, { label: "Выход при бездействии", value: 60 });
     await page
       .getByRole("button", { name: "Сохранить таймаут", exact: true })
       .click();
     await page.getByText("Таймаут сохранён", { exact: true }).waitFor();
     await page.reload();
     await page.waitForFunction(() => {
-      const select = document.querySelector<HTMLSelectElement>("#account-idle");
-      return select?.value === "60" && !select.disabled;
+      const select = document.querySelector<HTMLButtonElement>("#account-idle");
+      return select?.textContent?.trim() === "1 час" && !select.disabled;
     });
     expect(
       await page

@@ -1,3 +1,4 @@
+import { selectValue } from "./controls";
 import type { Page } from "playwright";
 import type { startFixture } from "./fixture";
 export const signIn = async (page: Page, origin: string) => {
@@ -16,7 +17,7 @@ export const completedPreview = async (
   fixture: Awaited<ReturnType<typeof startFixture>>,
   server: string,
 ) => {
-  await page.getByLabel("Сервер", { exact: true }).selectOption(server);
+  await selectValue(page, { label: "Сервер", value: server });
   await page.getByRole("button", { name: "Предпросмотр", exact: true }).click();
   await page.getByText("Выполняется", { exact: true }).waitFor();
   await fixture.finishLatest(server);

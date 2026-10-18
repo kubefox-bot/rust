@@ -1,3 +1,4 @@
+import { selectValue } from "./controls";
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
 
@@ -91,9 +92,7 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
     await page.setViewportSize({ width: 1440, height: 900 });
     await field.focus();
     await field.blur();
-    await page
-      .getByLabel("Режим сканирования", { exact: true })
-      .selectOption("fast");
+    await selectValue(page, { label: "Режим сканирования", value: "fast" });
     const nextResolution = page.waitForRequest(
       (request) =>
         new URL(request.url()).pathname ===
@@ -172,9 +171,7 @@ test("login, exact-target preview and confirmation work through Rust HTTPS", asy
     await page
       .getByRole("button", { name: "Войти в центр", exact: true })
       .click();
-    await page
-      .getByLabel("Сервер", { exact: true })
-      .selectOption(fixture.servers[0].id);
+    await selectValue(page, { label: "Сервер", value: fixture.servers[0].id });
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
@@ -275,9 +272,7 @@ test("full preview while mail runs sends no job; fullscreen keeps one SSE and fo
     const page = await fixture.context.newPage();
     await instrumentEvents(page);
     await signIn(page, fixture.origin);
-    await page
-      .getByLabel("Режим сканирования", { exact: true })
-      .selectOption("full");
+    await selectValue(page, { label: "Режим сканирования", value: "full" });
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
@@ -290,9 +285,7 @@ test("full preview while mail runs sends no job; fullscreen keeps one SSE and fo
         (value) => value.puts === 0 && value.cancels === 0,
       ),
     ).toBe(true);
-    await page
-      .getByLabel("Режим сканирования", { exact: true })
-      .selectOption("fast");
+    await selectValue(page, { label: "Режим сканирования", value: "fast" });
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
@@ -1114,3 +1107,31 @@ test("passive SSE resync cannot silently consume an owned preview preflight", as
     await fixture.close();
   }
 }, 60000);
+test("confirming the current retention option preserves the entered cutoff", async () => {
+  const { signIn } = await import("./cleanup-steps");
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await signIn(page, fixture.origin);
+    await selectValue(page, { label: "Период хранения", value: "before" });
+    const cutoff = page.getByLabel("Граница по времени сервера", {
+      exact: true,
+    });
+    await cutoff.fill("2026-01-02T03:04");
+    await cutoff.blur();
+    const period = page.getByRole("combobox", {
+      name: "Период хранения",
+      exact: true,
+    });
+    await period.press("ArrowDown");
+    await page
+      .getByRole("listbox", { name: "Период хранения", exact: true })
+      .waitFor();
+    await period.press("Enter");
+    expect(await cutoff.inputValue()).toBe("2026-01-02T03:04");
+    await selectValue(page, { label: "Период хранения", value: "before" });
+    expect(await cutoff.inputValue()).toBe("2026-01-02T03:04");
+  } finally {
+    await fixture.close();
+  }
+}, 120000);

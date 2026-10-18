@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "../../../ui/button";
   import { onMount } from "svelte";
   import type { AgentAction } from "./types";
   let {
@@ -13,7 +14,7 @@
     onclose: () => void;
   } = $props();
   let dialog: HTMLDialogElement | undefined = undefined;
-  let cancelButton: HTMLButtonElement | undefined = undefined;
+  let cancelButton = $state<HTMLButtonElement | undefined>(undefined);
   let acknowledged = $state(false);
   onMount(() => {
     dialog?.showModal();
@@ -52,18 +53,17 @@
     />Подтверждаю действие для этого сервера</label
   >
   <div class="actions">
-    <button
+    <Button
       type="button"
-      class="button"
-      bind:this={cancelButton}
+      bind:element={cancelButton}
       disabled={pending}
-      onclick={onclose}>Отмена</button
-    ><button
+      onclick={onclose}>Отмена</Button
+    ><Button
+      loading={pending}
       type="button"
-      class:danger={action.kind === "revoke"}
-      class="button primary"
+      variant={action.kind === "revoke" ? "danger" : "primary"}
       disabled={!acknowledged || pending}
-      onclick={onconfirm}>{pending ? "Выполнение…" : "Подтвердить"}</button
+      onclick={onconfirm}>{pending ? "Выполнение…" : "Подтвердить"}</Button
     >
   </div>
 </dialog>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button, ButtonLink } from "../../ui/button";
   import { onMount } from "svelte";
   import { ApiError } from "../../api";
   import type { BrowserContracts } from "../../api";
@@ -192,21 +193,23 @@
   {:else if status === "anonymous"}
     <section class="card empty">
       <p>Войдите, чтобы просмотреть историю сервера.</p>
-      <a class="button primary" href="/login/">Войти в центр</a>
+      <ButtonLink variant="primary" href="/login/">Войти в центр</ButtonLink>
     </section>
   {:else if status === "failed"}
     <section class="card">
       <div class="error" role="alert">
         {sessionError || "Нет связи с центром."}
       </div>
-      <button class="button" onclick={() => auth?.refresh().catch(failure)}
-        >Проверить соединение</button
+      <Button onclick={() => auth?.refresh().catch(failure)}
+        >Проверить соединение</Button
       >
     </section>
   {:else if available.length === 0}
     <section class="card empty">
       <p>Почтовые серверы пока не добавлены.</p>
-      <a class="button primary" href="/settings/">Добавить сервер</a>
+      <ButtonLink variant="primary" href="/settings/"
+        >Добавить сервер</ButtonLink
+      >
     </section>
   {:else}
     <ServerHeader
@@ -234,11 +237,10 @@
               >{loaded.receivedAt.replace("T", " ")}</time
             >.
           </p>{/if}
-        <button
-          class="button"
+        <Button
           onclick={() => {
             if (view?.kind === "failed") load(view.request).catch(failure);
-          }}>Повторить загрузку</button
+          }}>Повторить загрузку</Button
         >
       {/if}
       {#if busy}<p class="muted" role="status">Загрузка истории…</p>{/if}
@@ -248,22 +250,20 @@
           </p>
         {:else}<HistoryTable jobs={loaded.data.jobs} />{/if}
         <nav class="pagination" aria-label="Страницы истории">
-          <button
-            class="button"
+          <Button
             disabled={busy || loaded.request.previousCursors.length === 0}
             onclick={() => {
               previous().catch(failure);
-            }}>Предыдущая страница</button
+            }}>Предыдущая страница</Button
           >
           <span aria-live="polite"
             >Страница {loaded.request.previousCursors.length + 1}</span
           >
-          <button
-            class="button"
+          <Button
             disabled={busy || !loaded.data.next_cursor}
             onclick={() => {
               next().catch(failure);
-            }}>Следующая страница</button
+            }}>Следующая страница</Button
           >
         </nav>
       {/if}
@@ -291,7 +291,7 @@
     .pagination {
       justify-content: center;
     }
-    .pagination .button {
+    .pagination :global(.button) {
       flex: 1;
     }
   }

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
+  import { Input } from "../../ui/input";
   import { onDestroy } from "svelte";
   import {
     install,
@@ -18,6 +20,7 @@
   import type { BrowserContracts } from "../../api";
   import Credentials from "./agents/Credentials.svelte";
   import OperationStatus from "./agents/OperationStatus.svelte";
+  import VersionSelect from "./agents/VersionSelect.svelte";
   let {
     mode,
     packages,
@@ -230,15 +233,15 @@
     <div class="field-grid details">
       {#if mode.kind === "install"}
         <label class="field"
-          >Название сервера<input
+          >Название сервера<Input
             bind:value={name}
             disabled={wizard.kind !== "target" || probing}
-            maxlength="128"
+            maxlength={128}
             placeholder="Почтовый сервер"
           /></label
         >
         <label class="field"
-          >Адрес API агента<input
+          >Адрес API агента<Input
             type="url"
             bind:value={endpoint}
             disabled={wizard.kind !== "target" || probing}
@@ -247,17 +250,11 @@
           ></label
         >
       {/if}
-      <label class="field"
-        >Версия агента<select
-          bind:value={packageVersion}
-          disabled={wizard.kind !== "target" ||
-            probing ||
-            packages.length === 0}
-          >{#each packages as candidate}<option value={candidate.build}
-              >{candidate.build}</option
-            >{/each}</select
-        ></label
-      >
+      <VersionSelect
+        {packages}
+        bind:value={packageVersion}
+        disabled={wizard.kind !== "target" || probing}
+      />
     </div>
     {#if packages.length === 0}<p class="notice">
         Доверенные пакеты пока недоступны. Добавьте совместимый пакет в поставку
@@ -267,18 +264,18 @@
       <form onsubmit={checkHost}>
         <div class="field-grid">
           <label class="field"
-            >Хост SSH<input
+            >Хост SSH<Input
               bind:value={host}
               required
               disabled={probing}
-              maxlength="253"
+              maxlength={253}
               placeholder="mail.example"
               autocomplete="off"
               spellcheck="false"
             /></label
           >
           <label class="field"
-            >Порт SSH<input
+            >Порт SSH<Input
               type="number"
               bind:value={port}
               required
@@ -290,8 +287,12 @@
           >
         </div>
         <div class="actions">
-          <button type="submit" class="button primary" disabled={probing}
-            >{probing ? "Проверка ключа…" : "Проверить SSH-ключ"}</button
+          <Button
+            loading={probing}
+            type="submit"
+            variant="primary"
+            disabled={probing}
+            >{probing ? "Проверка ключа…" : "Проверить SSH-ключ"}</Button
           >
         </div>
       </form>
@@ -307,13 +308,12 @@
         сервера</label
       >
       <div class="actions">
-        <button type="button" class="button" onclick={reset}
-          >Изменить SSH-сервер</button
-        ><button
+        <Button type="button" onclick={reset}>Изменить SSH-сервер</Button
+        ><Button
           type="button"
-          class="button primary"
+          variant="primary"
           disabled={!acknowledged}
-          onclick={continueToCredentials}>Продолжить</button
+          onclick={continueToCredentials}>Продолжить</Button
         >
       </div>
     {:else if wizard.kind === "credentials"}

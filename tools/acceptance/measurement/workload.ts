@@ -1,5 +1,6 @@
 import { decode } from "../../../apps/web/src/api";
 import { statsMessage } from "../../../apps/web/tests/browser/fixture-protocol";
+import { selectValue } from "../../../apps/web/tests/browser/controls";
 import {
   FIXTURE_PASSWORD,
   PREVIEW_STEPS,
@@ -77,9 +78,10 @@ export const measureWorkload = async (config: MeasurementConfig) => {
       await page
         .getByRole("button", { name: "Войти в центр", exact: true })
         .click();
-      await page
-        .getByLabel("Сервер", { exact: true })
-        .selectOption(fixture.servers[0].id);
+      await selectValue(page, {
+        label: "Сервер",
+        value: fixture.servers[0].id,
+      });
       await page
         .getByRole("button", { name: "Предпросмотр", exact: true })
         .click({ trial: true });
@@ -120,9 +122,7 @@ export const measureWorkload = async (config: MeasurementConfig) => {
     await other.close();
     for (const scan of PREVIEW_STEPS) {
       if (scan === "full") await fixture.stopMail(fixture.servers[0].id);
-      await page
-        .getByLabel("Режим сканирования", { exact: true })
-        .selectOption(scan);
+      await selectValue(page, { label: "Режим сканирования", value: scan });
       await measure(`center_${scan}_preview_protocol_fixture`, async () => {
         // The shared TLS fixture profile validator always reports Running. Full mode
         // therefore measures real center protocol dispatch, followed by the real UI observer.
@@ -144,9 +144,7 @@ export const measureWorkload = async (config: MeasurementConfig) => {
         await browserSnapshot({ name: `${scan}_preview_completed`, page }),
       );
     }
-    await page
-      .getByLabel("Режим сканирования", { exact: true })
-      .selectOption("fast");
+    await selectValue(page, { label: "Режим сканирования", value: "fast" });
     await measure("center_cancel_protocol_fixture", async () => {
       await page
         .getByRole("button", { name: "Предпросмотр", exact: true })

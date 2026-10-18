@@ -4,16 +4,29 @@ import { AGENT_STATUS_LABELS } from "../conts";
 
 export const footerView = () => {
   const summary = document.querySelector("[data-agents-footer]");
+  const message = document.querySelector<HTMLElement>("[data-agents-message]");
   const list = document.querySelector("[data-agents-list]");
   const details = document.querySelector<HTMLDetailsElement>(
     "[data-agents-details]",
   );
-  const showMessage = (message: string) => {
-    if (summary) summary.textContent = message;
+  const showMessage = (text: string) => {
+    if (message) {
+      message.textContent = text;
+      message.hidden = false;
+    }
     list?.replaceChildren();
-    if (details) details.open = false;
+    if (details) {
+      details.open = false;
+      details.hidden = true;
+    }
   };
   const showAgents = (agents: BrowserContracts["agents"]) => {
+    if (!agents.length) {
+      showMessage(footerText(agents));
+      return;
+    }
+    if (message) message.hidden = true;
+    if (details) details.hidden = false;
     if (summary) summary.textContent = footerText(agents);
     if (!list) return;
     const rows = document.createDocumentFragment();

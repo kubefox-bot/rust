@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { Button } from "../../../ui/button";
+  import { Input } from "../../../ui/input";
+  import { Select } from "../../../ui/select";
+  import { SSH_METHOD_OPTIONS } from "./conts";
   import { onDestroy } from "svelte";
   import type { BrowserContracts } from "../../../api";
   let {
@@ -50,28 +54,27 @@
   </p>
   <div class="field-grid">
     <label class="field"
-      >Пользователь SSH<input
+      >Пользователь SSH<Input
         bind:value={username}
         required
-        maxlength="256"
+        maxlength={256}
         autocomplete="off"
         spellcheck="false"
       /></label
     >
-    <label class="field"
-      >Способ входа SSH<select bind:value={method} onchange={clearSecrets}
-        ><option value="password">Пароль</option><option value="key"
-          >Закрытый ключ</option
-        ></select
-      ></label
-    >
+    <Select
+      label="Способ входа SSH"
+      options={SSH_METHOD_OPTIONS}
+      bind:value={method}
+      onchange={clearSecrets}
+    />
     {#if method === "password"}
       <label class="field"
-        >Пароль SSH<input
+        >Пароль SSH<Input
           type="password"
           bind:value={password}
           required
-          maxlength="16384"
+          maxlength={16384}
           autocomplete="off"
         /></label
       >
@@ -86,19 +89,20 @@
           spellcheck="false"></textarea></label
       >
       <label class="field"
-        >Пароль ключа SSH<input
+        >Пароль ключа SSH<Input
           type="password"
           bind:value={passphrase}
-          maxlength="4096"
+          maxlength={4096}
           autocomplete="off"
         /></label
       >
     {/if}
   </div>
   <div class="actions">
-    <button type="button" class="button" onclick={onback}
-      >Изменить SSH-сервер</button
-    ><button type="submit" class="button primary">{submitLabel}</button>
+    <Button type="button" onclick={onback}>Изменить SSH-сервер</Button><Button
+      type="submit"
+      variant="primary">{submitLabel}</Button
+    >
   </div>
 </form>
 

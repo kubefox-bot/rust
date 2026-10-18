@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
+  import { Input } from "../../ui/input";
   import { login } from "./api";
   import { LOGIN_MAX_UTF16_UNITS } from "./conts";
   let username = $state("");
@@ -30,7 +32,7 @@
     <p class="subtitle">Войдите в центр управления почтовыми серверами</p>
     <form onsubmit={submit}>
       <label class="field"
-        >Логин<input
+        >Логин<Input
           name="username"
           autocomplete="username"
           required
@@ -39,20 +41,21 @@
           disabled={pending}
         /></label
       ><label class="field"
-        >Пароль<input
+        >Пароль<Input
           name="password"
           type="password"
           autocomplete="current-password"
           required
-          maxlength="4096"
+          maxlength={4096}
           bind:value={password}
           disabled={pending}
         /></label
-      >{#if error}<div class="error" role="alert">{error}</div>{/if}<button
-        class="button primary"
+      >{#if error}<div class="error" role="alert">{error}</div>{/if}<Button
+        loading={pending}
+        variant="primary"
         type="submit"
         disabled={pending}
-        >{pending ? "Выполняется вход…" : "Войти в центр"}</button
+        >{pending ? "Выполняется вход…" : "Войти в центр"}</Button
       >
     </form>
     <p class="login-note">
@@ -90,10 +93,6 @@
     display: grid;
     gap: 19px;
     margin-top: 30px;
-  }
-  .login-card button {
-    margin-top: 5px;
-    padding: 13px;
   }
   .login-note {
     font-size: 10px;

@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { Button } from "../ui/button";
 import { publicBuild } from "../config/build";
 interface Props {
   title: string;
@@ -15,7 +16,7 @@ const build = publicBuild();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
-    <title>{title} · Mail Control</title>
+    <title>{title} · Sochi Center</title>
   </head>
   <body>
     <div class="app-shell">
@@ -41,7 +42,7 @@ const build = publicBuild();
               <path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" />
             </svg>
           </span>
-          Mail Control
+          Sochi Center
         </a>
         <nav>
           <div class="nav-label">РАБОЧАЯ ОБЛАСТЬ</div>
@@ -68,11 +69,7 @@ const build = publicBuild();
             Очистка почты
           </a>
         </nav>
-        <div class="sidebar-note">
-          Центр управления
-          <br />
-          hMailServer
-        </div>
+        <div class="sidebar-note">Серверы и службы</div>
       </aside>
       <div class="workspace">
         <header class="topbar">
@@ -102,9 +99,9 @@ const build = publicBuild();
               </span>
               <span data-account-label>Вход</span>
             </a>
-            <button class="link" type="button" data-logout hidden>
+            <Button variant="link" type="button" data-logout hidden>
               Выйти
-            </button>
+            </Button>
           </nav>
         </header>
         <main class="main">
@@ -112,9 +109,12 @@ const build = publicBuild();
         </main>
         <footer class="footer">
           <span>
-            Mail Control <span class="build">· {build.version}</span>
+            Sochi Center <span class="build">· {build.version}</span>
           </span>
-          <details class="agents-summary" data-agents-details>
+          <span class="agents-summary" data-agents-message>
+            Агенты · состояние доступно после входа
+          </span>
+          <details class="agents-summary" data-agents-details hidden>
             <summary data-agents-footer>
               Агенты · состояние доступно после входа
             </summary>

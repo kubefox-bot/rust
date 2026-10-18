@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
   import { onMount } from "svelte";
   import type { ConfirmedRun } from "./types";
   let {
@@ -8,7 +9,7 @@
   }: { target: ConfirmedRun; onconfirm: () => void; ondismiss: () => void } =
     $props();
   let dialog: HTMLDialogElement | undefined = undefined;
-  let cancelButton: HTMLButtonElement | undefined = undefined;
+  let cancelButton = $state<HTMLButtonElement | undefined>(undefined);
   let acknowledged = $state(false);
   onMount(() => {
     dialog?.showModal();
@@ -59,16 +60,13 @@
     зафиксированы по предпросмотру.
   </p>
   <div class="actions">
-    <button
-      class="button"
-      type="button"
-      bind:this={cancelButton}
-      onclick={ondismiss}>Отмена</button
-    ><button
-      class="button danger"
+    <Button type="button" bind:element={cancelButton} onclick={ondismiss}
+      >Отмена</Button
+    ><Button
+      variant="danger"
       type="button"
       disabled={!acknowledged}
-      onclick={onconfirm}>Подтвердить очистку</button
+      onclick={onconfirm}>Подтвердить очистку</Button
     >
   </div>
 </dialog>

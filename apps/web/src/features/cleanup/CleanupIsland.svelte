@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button, ButtonLink } from "../../ui/button";
   import { onMount } from "svelte";
   import { ApiError, subscribe } from "../../api";
   import type { BrowserContracts } from "../../api";
@@ -313,18 +314,20 @@
     </section>
   {:else if status === "anonymous"}<section class="card empty">
       <p>Войдите, чтобы выбрать сервер и выполнить очистку.</p>
-      <a class="button primary" href="/login/">Войти в центр</a>
+      <ButtonLink variant="primary" href="/login/">Войти в центр</ButtonLink>
     </section>
   {:else if status === "failed"}<section class="card">
       <div class="error" role="alert">{error || "Нет связи с центром."}</div>
-      <button class="button" onclick={() => auth?.refresh().catch(failure)}
-        >Проверить соединение</button
+      <Button onclick={() => auth?.refresh().catch(failure)}
+        >Проверить соединение</Button
       >
     </section>
   {:else}
     {#if available.length === 0}<section class="card empty">
         <p>Почтовые серверы пока не добавлены.</p>
-        <a class="button primary" href="/settings/">Добавить сервер</a>
+        <ButtonLink variant="primary" href="/settings/"
+          >Добавить сервер</ButtonLink
+        >
       </section>
     {:else}<ServerHeader
         servers={available}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
   import type { Dispatch, Job } from "./types";
   import { screenStatus, progressPercent } from "./model";
   import {
@@ -99,16 +100,17 @@
           (dispatch.kind === "unknown" ? dispatch.intent.job_id : "")}</code
       >
       <div class="actions">
-        <button
-          class="button quiet"
+        <Button
+          size="small"
+          variant="quiet"
           type="button"
           onclick={onreconcile}
-          disabled={busy}>Проверить состояние</button
-        >{#if canCancel}<button
-            class="button"
+          disabled={busy}>Проверить состояние</Button
+        >{#if canCancel}<Button
+            size="small"
             type="button"
             onclick={oncancel}
-            disabled={busy}>Отменить задание</button
+            disabled={busy}>Отменить задание</Button
           >{/if}
       </div>
     </div>{/if}{#if job && !snapshot}<div class="notice">
@@ -148,7 +150,7 @@
   .badge.active {
     background: var(--accent-soft);
     color: var(--accent);
-    border-color: #dce5ff;
+    border-color: var(--accent-line);
   }
   .stage {
     font-size: 11px;
@@ -232,10 +234,6 @@
   }
   .progress-bottom .actions {
     margin: 0;
-  }
-  .progress-bottom button {
-    font-size: 10px;
-    padding: 8px 10px;
   }
   @media (max-width: 600px) {
     .progress-bottom {

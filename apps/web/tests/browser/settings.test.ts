@@ -1,3 +1,4 @@
+import { selectValue } from "./controls";
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
 import { signIn } from "./cleanup-steps";
@@ -28,9 +29,7 @@ test("profile edits preserve the stored password with Keep and unconfigured agen
     const input = decode("save_profile", (await saved).postDataJSON());
     expect(input.profile.password.kind).toBe("keep");
     await page.getByText("Профиль сохранён", { exact: true }).waitFor();
-    await page
-      .getByLabel("Сервер", { exact: true })
-      .selectOption(f.servers[1].id);
+    await selectValue(page, { label: "Сервер", value: f.servers[1].id });
     await page
       .getByText("Требуется настройка", { exact: true })
       .first()
@@ -77,9 +76,7 @@ test("replacement password is sent only to the selected server and cleared after
           JSON.stringify({ ...sessionStorage }),
       ),
     ).not.toContain("replacement-fixture-password");
-    await page
-      .getByLabel("Сервер", { exact: true })
-      .selectOption(f.servers[1].id);
+    await selectValue(page, { label: "Сервер", value: f.servers[1].id });
     await page
       .getByText("Требуется настройка", { exact: true })
       .first()

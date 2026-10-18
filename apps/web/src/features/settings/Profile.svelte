@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
+  import { Input } from "../../ui/input";
+  import { Select } from "../../ui/select";
   import { onMount } from "svelte";
   import type { Profile } from "./types";
-  import { MYSQL_PORT_MAX } from "./conts";
+  import { MYSQL_PORT_MAX, MYSQL_TLS_OPTIONS } from "./conts";
   import * as api from "./api";
   let {
     serverId,
@@ -107,8 +110,8 @@
   <p class="subtitle">MySQL и пути на выбранном почтовом сервере.</p>
   {#if error}<div class="error" role="alert">
       {error}
-      <button class="link" onclick={() => load().catch(fail)}
-        >Перечитать профиль</button
+      <Button variant="link" onclick={() => load().catch(fail)}
+        >Перечитать профиль</Button
       >
     </div>{/if}
   {#if notice}<div class="notice" role="status">{notice}</div>{/if}
@@ -119,15 +122,15 @@
       <fieldset disabled={busy}>
         <div class="field-grid">
           <label class="field"
-            >Хост MySQL<input
+            >Хост MySQL<Input
               aria-label="Хост MySQL"
               bind:value={current.mysql_host}
               required
-              maxlength="253"
+              maxlength={253}
             /></label
           >
           <label class="field"
-            >Порт MySQL<input
+            >Порт MySQL<Input
               aria-label="Порт MySQL"
               type="number"
               bind:value={current.mysql_port}
@@ -137,33 +140,28 @@
             /></label
           >
           <label class="field"
-            >База MySQL<input
+            >База MySQL<Input
               aria-label="База MySQL"
               bind:value={current.mysql_database}
               required
-              maxlength="128"
+              maxlength={128}
             /></label
           >
           <label class="field"
-            >Пользователь MySQL<input
+            >Пользователь MySQL<Input
               aria-label="Пользователь MySQL"
               bind:value={current.mysql_username}
               required
-              maxlength="128"
+              maxlength={128}
               autocomplete="off"
             /></label
           >
-          <label class="field"
-            >Шифрование MySQL<select
-              aria-label="Шифрование MySQL"
-              bind:value={current.mysql_tls}
-              ><option value="preferred">По возможности</option><option
-                value="required">Обязательно</option
-              ><option value="disabled_local"
-                >Локальное подключение без TLS</option
-              ></select
-            ></label
-          >
+          <Select
+            label="Шифрование MySQL"
+            options={MYSQL_TLS_OPTIONS}
+            bind:value={current.mysql_tls}
+            disabled={busy}
+          />
           <div class="password">
             {#if current.password_set}<label class="toggle"
                 ><input
@@ -173,14 +171,14 @@
                 />Заменить пароль MySQL</label
               >{/if}
             <label class="field"
-              >Пароль MySQL<input
+              >Пароль MySQL<Input
                 aria-label="Пароль MySQL"
                 type="password"
                 bind:value={password}
                 disabled={!replace}
                 required={replace}
                 autocomplete="new-password"
-                maxlength="4096"
+                maxlength={4096}
               /><small
                 >{replace
                   ? "Введите новый пароль."
@@ -189,37 +187,36 @@
             >
           </div>
           <label class="field"
-            >Каталог почты<input
+            >Каталог почты<Input
               aria-label="Каталог почты"
               bind:value={current.data_dir}
               required
-              maxlength="32767"
+              maxlength={32767}
             /></label
           >
           <label class="field"
-            >Файл hMailServer.ini<input
+            >Файл hMailServer.ini<Input
               aria-label="Файл hMailServer.ini"
               bind:value={current.hmail_ini}
               required
-              maxlength="32767"
+              maxlength={32767}
             /></label
           >
           <label class="field"
-            >Имя службы<input
+            >Имя службы<Input
               aria-label="Имя службы"
               bind:value={current.service_name}
               required
-              maxlength="256"
+              maxlength={256}
             /></label
           >
         </div>
         <div class="actions">
-          <button class="button primary" type="submit">Сохранить профиль</button
-          ><button
-            class="button"
+          <Button variant="primary" type="submit">Сохранить профиль</Button
+          ><Button
             type="button"
             disabled={!current.configured}
-            onclick={validate}>Проверить подключение</button
+            onclick={validate}>Проверить подключение</Button
           ><span class="muted">Версия {current.version}</span>
         </div>
       </fieldset>

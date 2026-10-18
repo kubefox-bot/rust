@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { DEFAULT_RETENTION_DAYS, MAX_BATCH_SIZE, MAX_WORKERS } from "./conts";
+  import { Button } from "../../ui/button";
+  import { Input } from "../../ui/input";
+  import { Select } from "../../ui/select";
+  import {
+    DEFAULT_RETENTION_DAYS,
+    MAX_BATCH_SIZE,
+    MAX_WORKERS,
+    SCAN_OPTIONS,
+    RETENTION_OPTIONS,
+  } from "./conts";
   import { displayCutoff, editedCutoff } from "./cutoff-input";
   import type { RunParameters } from "./types";
   let {
@@ -58,37 +67,33 @@
   >
     <fieldset {disabled}>
       <div class="field-grid">
-        <label class="field"
-          >Режим сканирования<select
-            aria-label="Режим сканирования"
+        <div class="field">
+          <Select
+            label="Режим сканирования"
             aria-describedby="scan-hint"
+            options={SCAN_OPTIONS}
             value={parameters.scan}
-            onchange={(event) =>
+            {disabled}
+            onchange={(scan) =>
               onparameters({
                 ...parameters,
-                scan: event.currentTarget.value === "full" ? "full" : "fast",
+                scan,
               })}
-            ><option value="fast">По базе — быстро</option><option value="full"
-              >Полная сверка файлов</option
-            ></select
-          ><small id="scan-hint"
+          /><small id="scan-hint"
             >Полная сверка требует остановленной почтовой службы.</small
-          ></label
-        >
+          >
+        </div>
         <div class="field">
           <label for="retention-kind">Период хранения</label>
           <div class="retention">
-            <select
+            <Select
               id="retention-kind"
               aria-label="Период хранения"
+              options={RETENTION_OPTIONS}
               value={parameters.retention.kind}
-              onchange={(event) => retentionKind(event.currentTarget.value)}
-              ><option value="days">Дней</option><option value="months"
-                >Месяцев</option
-              ><option value="years">Лет</option><option value="before"
-                >До даты</option
-              ></select
-            >{#if parameters.retention.kind === "before"}<input
+              {disabled}
+              onchange={retentionKind}
+            />{#if parameters.retention.kind === "before"}<Input
                 aria-label="Граница по времени сервера"
                 aria-describedby="cutoff-hint"
                 type="datetime-local"
@@ -103,7 +108,7 @@
                       local: editedCutoff(event.currentTarget.value),
                     },
                   })}
-              />{:else}<input
+              />{:else}<Input
                 aria-label="Срок хранения"
                 type="number"
                 min="1"
@@ -151,7 +156,7 @@
         <summary>Дополнительные параметры</summary>
         <div class="field-grid advanced">
           <label class="field"
-            >Размер пакета<input
+            >Размер пакета<Input
               type="number"
               min="1"
               max={MAX_BATCH_SIZE}
@@ -167,7 +172,7 @@
                 })}
             /></label
           ><label class="field"
-            >Параллельные операции<input
+            >Параллельные операции<Input
               type="number"
               min="1"
               max={MAX_WORKERS}
@@ -192,12 +197,11 @@
     <div class="form-bottom">
       <span class="muted">Сначала проверьте объём в предпросмотре.</span>
       <div class="actions">
-        <button class="button" type="submit" {disabled}>Предпросмотр</button
-        ><button
-          class="button primary"
+        <Button type="submit" {disabled}>Предпросмотр</Button><Button
+          variant="primary"
           type="button"
           disabled={disabled || !canClean}
-          onclick={onclean}>Очистить</button
+          onclick={onclean}>Очистить</Button
         >
       </div>
     </div>
@@ -221,16 +225,9 @@
     margin: 0;
   }
   .retention {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 43fr) minmax(0, 57fr);
     gap: 8px;
-  }
-  .retention select {
-    width: 43%;
-  }
-  .retention input {
-    flex: 1;
-    width: 57%;
-    min-width: 0;
   }
   .manage {
     display: flex;
@@ -294,11 +291,7 @@
       grid-template-columns: 1fr 1fr;
     }
     .retention {
-      flex-wrap: wrap;
-    }
-    .retention select,
-    .retention input {
-      width: 100%;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>

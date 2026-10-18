@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { Button } from "../ui/button";
   import type { BrowserContracts } from "../api";
+  import { Select } from "../ui/select";
   let {
     servers,
     selected,
@@ -15,21 +17,23 @@
     onrefresh: () => void;
     disabled?: boolean;
   } = $props();
+  const options = $derived(
+    servers.map((server) => ({ value: server.id, label: server.name })),
+  );
 </script>
 
 <div class="server-header">
   <div class="server-selection">
-    <label class="field"
-      >Сервер<select
-        aria-label="Сервер"
+    <div class="server-picker">
+      <Select
+        label="Сервер"
+        {options}
         value={selected}
-        onchange={(event) => onselect(event.currentTarget.value)}
+        onchange={onselect}
         {disabled}
-        >{#each servers as server (server.id)}<option value={server.id}
-            >{server.name}</option
-          >{/each}</select
-      ></label
-    ><span
+      />
+    </div>
+    <span
       class="badge"
       class:online={agent?.health.online && !agent.health.stale}
       ><span class="dot"></span>{agent?.health.online && !agent.health.stale
@@ -37,11 +41,12 @@
         : "Нет свежих данных"}</span
     >
   </div>
-  <button
-    class="button quiet"
+  <Button
+    size="small"
+    variant="quiet"
     type="button"
     onclick={onrefresh}
-    aria-label="Обновить состояние">↻ Обновить</button
+    aria-label="Обновить состояние">↻ Обновить</Button
   >
 </div>
 
@@ -59,7 +64,7 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  .server-selection .field {
+  .server-picker {
     min-width: 230px;
   }
   .badge {
@@ -78,10 +83,6 @@
     border-radius: 50%;
     background: currentColor;
   }
-  .server-header .button {
-    padding: 10px;
-    font-size: 11px;
-  }
   @media (max-width: 540px) {
     .server-header {
       flex-wrap: wrap;
@@ -89,11 +90,11 @@
     .server-selection {
       width: 100%;
     }
-    .server-selection .field {
+    .server-picker {
       min-width: 0;
       flex: 1;
     }
-    .server-header > .button {
+    .server-header > :global(.button) {
       margin-left: auto;
     }
   }

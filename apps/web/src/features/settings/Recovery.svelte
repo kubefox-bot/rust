@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
+  import { Input } from "../../ui/input";
   import { onDestroy, tick } from "svelte";
   import { confirmRecovery, prepareRecovery } from "./account/api";
   import {
@@ -107,7 +109,7 @@
   {#if recoveryState.kind === "password" || recoveryState.kind === "preparing"}
     <form onsubmit={prepare} autocomplete="off">
       <label class="field"
-        >Текущий пароль для замены ключа<input
+        >Текущий пароль для замены ключа<Input
           type="password"
           autocomplete="current-password"
           required
@@ -117,13 +119,13 @@
         /></label
       >
       <div class="actions">
-        <button
-          class="button"
+        <Button
+          loading={recoveryState.kind === "preparing"}
           type="submit"
           disabled={recoveryState.kind === "preparing"}
           >{recoveryState.kind === "preparing"
             ? "Подготовка ключа…"
-            : "Создать новый ключ"}</button
+            : "Создать новый ключ"}</Button
         >
       </div>
     </form>
@@ -138,17 +140,15 @@
       >{recoveryState.candidate.recovery_key}</output
     >
     <div class="actions">
-      <button class="button primary" type="button" onclick={saved}
-        >Я сохранил ключ</button
-      ><button class="button" type="button" onclick={discard}
-        >Отменить замену</button
-      >
+      <Button variant="primary" type="button" onclick={saved}
+        >Я сохранил ключ</Button
+      ><Button type="button" onclick={discard}>Отменить замену</Button>
     </div>
   {:else}
     <form onsubmit={confirm} autocomplete="off">
       <label class="field"
-        >Повторите ключ восстановления<input
-          bind:this={confirmationInput}
+        >Повторите ключ восстановления<Input
+          bind:element={confirmationInput}
           type="password"
           autocomplete="off"
           autocapitalize="off"
@@ -163,18 +163,18 @@
         Введите сохранённый ключ. После подтверждения потребуется обычный вход.
       </p>
       <div class="actions">
-        <button
-          class="button primary"
+        <Button
+          loading={recoveryState.kind === "confirming"}
+          variant="primary"
           type="submit"
           disabled={recoveryState.kind === "confirming"}
           >{recoveryState.kind === "confirming"
             ? "Подтверждение…"
-            : "Подтвердить новый ключ"}</button
-        ><button
-          class="button"
+            : "Подтвердить новый ключ"}</Button
+        ><Button
           type="button"
           onclick={discard}
-          disabled={recoveryState.kind === "confirming"}>Отменить замену</button
+          disabled={recoveryState.kind === "confirming"}>Отменить замену</Button
         >
       </div>
     </form>

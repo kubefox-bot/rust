@@ -1,3 +1,4 @@
+import { selectValue } from "./controls";
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
 import { signIn } from "./cleanup-steps";
@@ -43,9 +44,7 @@ test("history is scoped, paginated and loaded only on its own page", async () =>
       .click();
     await page.getByText("Страница 1", { exact: true }).waitFor();
     expect(await page.locator("tbody tr").count()).toBe(50);
-    await page
-      .getByLabel("Сервер", { exact: true })
-      .selectOption(fixture.servers[1].id);
+    await selectValue(page, { label: "Сервер", value: fixture.servers[1].id });
     await page.getByText("Запусков пока нет", { exact: true }).waitFor();
     expect(new URL(page.url()).searchParams.get("server")).toBe(
       fixture.servers[1].id,
@@ -164,9 +163,7 @@ test("a delayed page from the previous server cannot replace the selected histor
       `${fixture.origin}/history/?server=${fixture.servers[0].id}`,
     );
     await responseReady.promise;
-    await page
-      .getByLabel("Сервер", { exact: true })
-      .selectOption(fixture.servers[1].id);
+    await selectValue(page, { label: "Сервер", value: fixture.servers[1].id });
     await page.getByText("Запусков пока нет", { exact: true }).waitFor();
     releaseResponse.resolve();
     await responseFinished.promise;
@@ -311,9 +308,7 @@ test("open history follows job completion and releases its sole event source on 
     // Initial read/resync, first observed job, and terminal result stay bounded.
     expect(historyRequests.length).toBeLessThanOrEqual(4);
     expect((await sourceCounts(page))?.active).toBe(1);
-    await page
-      .getByLabel("Сервер", { exact: true })
-      .selectOption(fixture.servers[1].id);
+    await selectValue(page, { label: "Сервер", value: fixture.servers[1].id });
     await page.getByText("Запусков пока нет", { exact: true }).waitFor();
     expect(await sourceCounts(page)).toEqual({ active: 1, created: 2 });
     await page.evaluate(() =>

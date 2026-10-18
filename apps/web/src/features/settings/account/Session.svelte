@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { Button } from "../../../ui/button";
   import { onMount } from "svelte";
+  import { Select } from "../../../ui/select";
   import { sessionSettings, saveSessionSettings } from "./api";
-  import { IDLE_INTERVALS } from "./conts";
+  import { IDLE_INTERVALS, IDLE_OPTIONS } from "./conts";
   import { failureMessage } from "./failure-message";
   import type { SessionSettingsState } from "./types";
 
@@ -50,11 +52,11 @@
       controller.abort();
     };
   });
-  const select = (event: Event & { currentTarget: HTMLSelectElement }) => {
+  const select = (minutes: number) => {
     if (sessionState.kind !== "ready" || sessionState.saving) return;
     sessionState = {
       ...sessionState,
-      minutes: Number(event.currentTarget.value),
+      minutes,
       saved: false,
       error: "",
     };
@@ -101,17 +103,16 @@
     <div class="error" role="alert">{sessionState.message}</div>
   {:else}
     <form onsubmit={save}>
-      <label class="field" for="account-idle">Выход при бездействии</label>
-      <select
-        id="account-idle"
-        value={sessionState.minutes}
-        onchange={select}
-        disabled={sessionState.saving}
-      >
-        {#each IDLE_INTERVALS as interval}
-          <option value={interval.minutes}>{interval.label}</option>
-        {/each}
-      </select>
+      <div class="timeout-field">
+        <Select
+          id="account-idle"
+          label="Выход при бездействии"
+          options={IDLE_OPTIONS}
+          value={sessionState.minutes}
+          onchange={select}
+          disabled={sessionState.saving}
+        />
+      </div>
       {#if sessionState.error}<div class="error" role="alert">
           {sessionState.error}
         </div>{/if}
@@ -119,8 +120,11 @@
           Таймаут сохранён
         </p>{/if}
       <div class="actions">
-        <button class="button" type="submit" disabled={sessionState.saving}
-          >{sessionState.saving ? "Сохранение…" : "Сохранить таймаут"}</button
+        <Button
+          loading={sessionState.saving}
+          type="submit"
+          disabled={sessionState.saving}
+          >{sessionState.saving ? "Сохранение…" : "Сохранить таймаут"}</Button
         >
       </div>
     </form>
@@ -131,16 +135,9 @@
   form {
     margin-top: 22px;
   }
-  select {
+  .timeout-field {
     width: 100%;
-    max-width: 280px;
-    margin-top: 8px;
-    border: 1px solid #dce1ea;
-    border-radius: 8px;
-    background: #fff;
-    color: var(--ink);
-    padding: 10px 12px;
-    font-size: 12px;
+    max-width: 320px;
   }
   .saved {
     color: var(--success);

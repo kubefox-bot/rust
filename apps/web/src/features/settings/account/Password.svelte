@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from "../../../ui/button";
+  import { Input } from "../../../ui/input";
   import { onDestroy } from "svelte";
   import { changePassword } from "./api";
   import { MIN_PASSWORD_CHARACTERS, MAX_PASSWORD_INPUT_LENGTH } from "./conts";
@@ -62,7 +64,7 @@
   </p>
   <form onsubmit={save} autocomplete="off">
     <label class="field"
-      >Текущий пароль<input
+      >Текущий пароль<Input
         type="password"
         autocomplete="current-password"
         required
@@ -73,7 +75,7 @@
     >
     <div class="field-grid">
       <label class="field"
-        >Новый пароль<input
+        >Новый пароль<Input
           type="password"
           autocomplete="new-password"
           required
@@ -84,7 +86,7 @@
         /></label
       >
       <label class="field"
-        >Повторите новый пароль<input
+        >Повторите новый пароль<Input
           type="password"
           autocomplete="new-password"
           required
@@ -97,8 +99,12 @@
     </div>
     {#if error}<div class="error" role="alert">{error}</div>{/if}
     <div class="actions">
-      <button class="button primary" type="submit" disabled={pending}
-        >{pending ? "Изменение пароля…" : "Изменить пароль"}</button
+      <Button
+        loading={pending}
+        variant="primary"
+        type="submit"
+        disabled={pending}
+        >{pending ? "Изменение пароля…" : "Изменить пароль"}</Button
       >
     </div>
   </form>

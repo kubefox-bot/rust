@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
   import { onMount } from "svelte";
   import type { BrowserContracts } from "../../api";
   import Enrollment from "./Enrollment.svelte";
@@ -174,11 +175,10 @@
 <section class="card" aria-label="Агенты серверов">
   <div class="heading">
     <h2>Агенты серверов</h2>
-    <button
-      class="button"
+    <Button
       type="button"
       disabled={locked || actionPending}
-      onclick={() => chooseMode({ kind: "install" })}>Новое подключение</button
+      onclick={() => chooseMode({ kind: "install" })}>Новое подключение</Button
     >
   </div>
   {#if server}
@@ -210,25 +210,22 @@
           Сертификат действует до {agent.certificate_expires_at}
         </p>{/if}
       <div class="actions">
-        <button
-          class="button"
+        <Button
           type="button"
           disabled={locked ||
             actionPending ||
             agent.revoked ||
             agent.certificate_expired}
           onclick={() => chooseMode({ kind: "binary", server })}
-          >Обновить агента</button
+          >Обновить агента</Button
         >
-        <button
-          class="button"
+        <Button
           type="button"
           disabled={locked || actionPending || agent.revoked}
           onclick={() => chooseMode({ kind: "recover_identity", server })}
-          >Восстановить доверие</button
+          >Восстановить доверие</Button
         >
-        <button
-          class="button"
+        <Button
           type="button"
           disabled={locked ||
             actionPending ||
@@ -236,15 +233,14 @@
             agent.certificate_expired}
           onclick={() => {
             action = { kind: "renew", server };
-          }}>Обновить сертификат</button
+          }}>Обновить сертификат</Button
         >
-        <button
-          class="button"
+        <Button
           type="button"
           disabled={locked || actionPending || agent.revoked}
           onclick={() => {
             action = { kind: "revoke", server };
-          }}>Отозвать доступ</button
+          }}>Отозвать доступ</Button
         >
       </div>
     {:else if agents === null}<p class="notice">
@@ -265,9 +261,7 @@
   </p>
 {:else if resources.kind === "error"}<section class="card">
     <p class="error" role="alert">{resources.message}</p>
-    <button class="button" type="button" onclick={load}
-      >Повторить загрузку подключений</button
-    >
+    <Button type="button" onclick={load}>Повторить загрузку подключений</Button>
   </section>
 {:else}
   {#if current.kind === "wizard"}
@@ -306,11 +300,10 @@
                 )?.name ?? `Сервер ${operation.server_id}`}</strong
               >
               · {ENROLLMENT_PHASES[operation.phase]}</span
-            ><button
+            ><Button
               type="button"
-              class="button"
               disabled={locked || actionPending}
-              onclick={() => inspect(operation)}>Проверить операцию</button
+              onclick={() => inspect(operation)}>Проверить операцию</Button
             >
           </li>{/each}
       </ul>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "../../ui/button";
   import { tick } from "svelte";
   import type { JournalEntry } from "./types";
   import { JOURNAL_FOLLOW_DISTANCE_PX, JOURNAL_LIMIT } from "./conts";
@@ -12,7 +13,7 @@
     onexpanded: (value: boolean) => void;
   } = $props();
   let log: HTMLDivElement | undefined = undefined;
-  let toggleButton: HTMLButtonElement | undefined = undefined;
+  let toggleButton = $state<HTMLButtonElement | undefined>(undefined);
   let follow = true;
   const resize = (value: boolean) => {
     onexpanded(value);
@@ -50,13 +51,14 @@
       <h2>Журнал событий</h2>
       <span>Время UTC · последние {JOURNAL_LIMIT} событий</span>
     </div>
-    <button
-      class="button quiet"
+    <Button
+      size="small"
+      variant="quiet"
       type="button"
-      bind:this={toggleButton}
+      bind:element={toggleButton}
       onclick={() => resize(!expanded)}
       aria-expanded={expanded}
-      >{expanded ? "Свернуть журнал" : "Развернуть журнал"}</button
+      >{expanded ? "Свернуть журнал" : "Развернуть журнал"}</Button
     >
   </div>
   <div
@@ -109,10 +111,6 @@
   .journal-header span {
     font-size: 9px;
     color: var(--muted);
-  }
-  .journal-header button {
-    font-size: 10px;
-    padding: 8px 10px;
   }
   .log {
     padding: 15px 22px;
@@ -172,9 +170,6 @@
     }
     .journal-header {
       align-items: start;
-    }
-    .journal-header button {
-      font-size: 9px;
     }
     .expanded .log {
       max-height: calc(100dvh - 480px);

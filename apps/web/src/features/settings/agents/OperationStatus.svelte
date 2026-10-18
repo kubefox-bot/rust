@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from "../../../ui/button";
   import { onMount } from "svelte";
   import { read, reconcile, verifiedOperation, message } from "./api";
   import { ENROLLMENT_PHASES, OPERATION_REFRESH_MS } from "./conts";
@@ -94,17 +95,14 @@
   {:else}
     <p class="muted">Пакет {attempt.packageVersion}</p>
     <div class="actions">
-      <button
-        type="button"
-        class="button"
-        disabled={pending}
-        onclick={() => refresh("read")}>Обновить состояние</button
+      <Button type="button" disabled={pending} onclick={() => refresh("read")}
+        >Обновить состояние</Button
       >
-      <button
+      <Button
         type="button"
-        class="button primary"
+        variant="primary"
         disabled={pending}
-        onclick={() => refresh("reconcile")}>Согласовать состояние</button
+        onclick={() => refresh("reconcile")}>Согласовать состояние</Button
       >
     </div>
   {/if}
