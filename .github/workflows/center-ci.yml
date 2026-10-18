@@ -156,6 +156,11 @@ jobs:
           LIBGUESTFS_BACKEND: direct
           LIBGUESTFS_BACKEND_SETTINGS: force_tcg
         run: mise run appliance:build
+      - name: Validate generated Ignition with pinned CoreOS validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --mount "type=bind,src=$HMAIL_DELIVERY_DIRECTORY/appliance/base.ign,dst=/config.ign,readonly" quay.io/coreos/ignition-validate@sha256:3b21a2271b4cfe295bc5fea25f61ab732d0578654863971013fb47a528ca836a /config.ign
       - name: Bind green lifecycle receipt to source and release manifest
         run: mise exec -- bun tools/release/ci-receipt.ts
       - id: identity

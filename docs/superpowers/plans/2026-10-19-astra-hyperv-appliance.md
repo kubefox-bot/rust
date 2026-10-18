@@ -34,38 +34,40 @@
 - [x] Написать RED-тест передачи настоящего backup центра updater и тесты schema mismatch/unsupported schema.
 - [x] Ввести единый Rust-контракт и машинный export для tooling; генерировать проверяемую JSON-метаинформацию.
 - [x] Перевести consumers на schema 2; явно разрешить backup 1/2 и проверить SQLite user_version.
-- [ ] Проверить targeted Rust tests, contract reproducibility и release tests.
+- [x] Проверить targeted Rust tests, contract reproducibility и release tests.
 
 ## Task 2 — First boot and initialization
 
 **Owners:** deploy/appliance, deploy/updater/install.sh, iac/fcos.
 
-- [ ] Тесты на отказ повреждённого payload, приватные файлы, retry и раздельные prepare/activate.
-- [ ] Реализовать подготовку пользователя/OCI/volume/units с durable этапами и guard до init.
-- [ ] Реализовать интерактивный init, восстановление после потерянного ответа и health; timer остаётся выключенным.
-- [ ] Проверить Bash boundaries с изолированными command adapters; native SELinux/socket отметить отдельно.
+- [x] Тесты на отказ повреждённого payload, приватные файлы, retry и раздельные prepare/activate.
+- [x] Реализовать подготовку пользователя/OCI/volume/units с durable этапами и guard до init.
+- [x] Реализовать интерактивный init, восстановление после потерянного ответа и health; timer остаётся выключенным.
+- [x] Проверить Bash boundaries с изолированными command adapters; native SELinux/socket отметить отдельно.
 
 ## Task 3 — Image factory and installer
 
 **Owners:** tools/appliance, deploy/appliance/Install-Astra.ps1, lock-файлы.
 
-- [ ] Проверки same-SHA inputs, allowlist, unsafe paths/symlinks, hash mismatch и changed inputs.
-- [ ] Добавить закреплённые FCOS/KVP inputs, streaming download, payload и libguestfs image assembly/inspection.
-- [ ] Собрать installer и bundle с manifest/checksums; installer создаёт только новую ВМ и свой диск.
-- [ ] Проверить PowerShell на Windows через fixture boundaries, Linux builder через реальные tools при наличии окружения.
+- [x] Проверки same-SHA inputs, allowlist, unsafe paths/symlinks, hash mismatch и changed inputs.
+- [x] Добавить закреплённые FCOS/KVP inputs, streaming download, payload и libguestfs image assembly/inspection.
+- [x] Собрать installer и bundle с manifest/checksums; installer создаёт только новую ВМ и свой диск.
+- [x] Проверить fixture boundaries на доступном PowerShell 7; настроить Windows PowerShell 5.1 в CI. Выполнить реальную Linux-сборку и readback VHDX. Native Windows/Hyper-V: NOT RUN.
 
 ## Task 4 — CI and publication
 
 **Owners:** workflows, release receipts/gate/assets, mise tasks.
 
-- [ ] RED-тесты binding appliance bytes и отклонения подмены/отсутствия receipt.
-- [ ] Включить source inputs iac/fcos, сборку после same-SHA release и validation перед upload.
-- [ ] Связать appliance hashes с CI receipt, добавить явные published assets, сохранить existing signatures/gates.
-- [ ] Добавить PowerShell tests и отдельные boot/native acceptance receipts; не выдавать mock за Hyper-V.
+- [x] RED-тесты binding appliance bytes и отклонения подмены/отсутствия receipt.
+- [x] Включить source inputs iac/fcos, сборку после same-SHA release и validation перед upload.
+- [x] Связать appliance hashes с CI receipt, добавить явные published assets, сохранить existing signatures/gates.
+- [x] Добавить PowerShell tests и отдельные boot/native acceptance receipts; не выдавать mock за Hyper-V.
 
 ## Task 5 — Verification and handoff
 
-- [ ] Runbook установки/инициализации/retry/backup и native acceptance checklist.
-- [ ] Выполнить обязательные source checks и доступную сборку, исправить внесённые ошибки.
-- [ ] Провести review изменённых contracts, trust boundaries и recovery; проверить отсутствие секретов/случайных inputs.
-- [ ] Отчитаться об артефакте, выполненных проверках и точных NOT RUN без публикации/установки у заказчика.
+- [x] Runbook установки/инициализации/retry/backup и native acceptance checklist.
+- [x] Выполнить обязательные source checks и доступную сборку, исправить внесённые ошибки.
+- [x] Провести review изменённых contracts, trust boundaries и recovery; проверить отсутствие секретов/случайных inputs.
+- [x] Отчитаться об артефакте, выполненных проверках и точных NOT RUN без публикации/установки у заказчика.
+
+Результаты и принятые решения: [отчёт проверки](../../hyperv-appliance-verification-2026-10-19.md).
