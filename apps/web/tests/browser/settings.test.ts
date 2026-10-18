@@ -112,3 +112,95 @@ test("an explicit missing server never silently opens another technical profile"
     await f.close();
   }
 }, 120000);
+
+test("center update policy is configurable without a selected server and persists after reload", async () => {
+  const f = await startFixture();
+  try {
+    const page = await f.context.newPage();
+    await signIn(page, f.origin);
+    await page.goto(`${f.origin}/settings/#updates`);
+    const interval = page.getByLabel("Проверять обновления каждые, секунд", {
+      exact: true,
+    });
+    await interval.waitFor({ timeout: 3000 });
+    expect(await interval.inputValue()).toBe("60");
+    await interval.fill("120");
+    await page
+      .getByLabel("Ожидать завершения работы, минут", { exact: true })
+      .fill("30");
+    await page
+      .getByRole("button", {
+        name: "Сохранить настройки обновлений",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByText("Настройки обновлений сохранены", { exact: true })
+      .waitFor();
+    await page.reload();
+    await page.waitForFunction(
+      () =>
+        document.querySelector<HTMLInputElement>("#update-check-interval")
+          ?.value === "120",
+    );
+    expect(
+      await page
+        .getByLabel("Ожидать завершения работы, минут", { exact: true })
+        .inputValue(),
+    ).toBe("30");
+    expect(await interval.getAttribute("min")).toBe("30");
+    expect(await interval.getAttribute("max")).toBe("86400");
+  } finally {
+    await f.close();
+  }
+}, 120000);
+
+test("failed update policy save preserves the draft and never claims success", async () => {
+  const f = await startFixture();
+  try {
+    const page = await f.context.newPage();
+    await signIn(page, f.origin);
+    await page.goto(`${f.origin}/settings/#updates`);
+    const interval = page.getByLabel("Проверять обновления каждые, секунд", {
+      exact: true,
+    });
+    await interval.waitFor({ timeout: 3000 });
+    await interval.fill("300");
+    await page.route("**/api/v1/settings/updates", async (route) => {
+      if (route.request().method() === "PATCH")
+        await route.fulfill({ status: 503, body: "" });
+      else await route.continue();
+    });
+    await page
+      .getByRole("button", {
+        name: "Сохранить настройки обновлений",
+        exact: true,
+      })
+      .click();
+    await page.getByRole("alert").waitFor();
+    expect(await interval.inputValue()).toBe("300");
+    expect(
+      await page
+        .getByText("Настройки обновлений сохранены", { exact: true })
+        .count(),
+    ).toBe(0);
+    await page.unroute("**/api/v1/settings/updates");
+    await page
+      .getByRole("button", {
+        name: "Сохранить настройки обновлений",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByText("Настройки обновлений сохранены", { exact: true })
+      .waitFor();
+    await page.reload();
+    await page.waitForFunction(
+      () =>
+        document.querySelector<HTMLInputElement>("#update-check-interval")
+          ?.value === "300",
+    );
+  } finally {
+    await f.close();
+  }
+}, 120000);

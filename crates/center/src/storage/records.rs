@@ -9,6 +9,10 @@ impl CenterStore {
         version: i64,
         record: &EncryptedRecord,
     ) -> Result<(), StorageError> {
+        let maintenance = self
+            .maintenance()
+            .admit()
+            .map_err(|_| StorageError::Database)?;
         let header = record.header();
         let stored_kind = match header.kind() {
             crate::vault::RecordKind::Profile => "profile",
@@ -25,15 +29,22 @@ impl CenterStore {
             return Err(StorageError::Account);
         }
         let bytes = record.encode().map_err(|_| StorageError::Account)?;
-        sqlx::query("INSERT INTO encrypted_records(id,kind,version,envelope) VALUES(?,?,?,?)")
-            .bind(id.to_string())
-            .bind(kind)
-            .bind(version)
-            .bind(bytes)
-            .execute(&self.pool)
-            .await
-            .map_err(|_| StorageError::Database)?;
-        Ok(())
+        let store = self.clone();
+        let kind = kind.to_owned();
+        tokio::spawn(async move {
+            let _maintenance = maintenance;
+            sqlx::query("INSERT INTO encrypted_records(id,kind,version,envelope) VALUES(?,?,?,?)")
+                .bind(id.to_string())
+                .bind(kind)
+                .bind(version)
+                .bind(bytes)
+                .execute(&store.pool)
+                .await
+                .map_err(|_| StorageError::Database)?;
+            Ok(())
+        })
+        .await
+        .map_err(|_| StorageError::Database)?
     }
     pub async fn encrypted(
         &self,

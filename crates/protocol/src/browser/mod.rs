@@ -6,3 +6,4 @@ pub mod enrollment;
 pub mod jobs;
 pub mod profiles;
 pub mod settings;
+pub mod updates;

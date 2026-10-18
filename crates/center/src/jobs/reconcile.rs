@@ -8,6 +8,11 @@ use hmail_cleaner_protocol::{browser::jobs::JobView, JobId, JobSnapshot};
 const MAX_SERVICE_OBSERVATION_AGE_SECONDS: u64 = 30;
 impl JobService {
     pub async fn reconcile(&self, id: JobId, lease: &SessionLease) -> Result<JobView, SubmitError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .continuation()
+            .map_err(|_| SubmitError::Busy)?;
         let permit = self
             .operation
             .clone()
@@ -16,6 +21,7 @@ impl JobService {
         let service = self.clone();
         let lease = lease.clone();
         tokio::spawn(async move {
+            let _maintenance = maintenance;
             let _permit = permit;
             let view = service.get(id, &lease).await?;
             if !view.slot_held {
@@ -58,6 +64,11 @@ impl JobService {
         client: &AgentClient,
         lease: &SessionLease,
     ) -> Result<(), SubmitError> {
+        let _maintenance = self
+            .store
+            .maintenance()
+            .continuation()
+            .map_err(|_| SubmitError::Busy)?;
         let view = self.load(id).await?;
         let selected = self.selected(&view, lease).await?;
         super::receipt::validate(&view, &snapshot, &selected)?;

@@ -17,7 +17,12 @@ pub(super) async fn activate(
         .clone()
         .try_lock_owned()
         .map_err(|_| IdentityError)?;
+    let maintenance = store
+        .maintenance()
+        .continuation()
+        .map_err(|_| IdentityError)?;
     tokio::spawn(async move {
+        let _maintenance = maintenance;
         let _writer=writer;
         if !lease.is_live(){return Err(IdentityError);}
         let mut transaction=store.pool.begin().await.map_err(|_|IdentityError)?;
@@ -51,7 +56,12 @@ pub(super) async fn revoke(
         .clone()
         .try_lock_owned()
         .map_err(|_| IdentityError)?;
+    let maintenance = store
+        .maintenance()
+        .continuation()
+        .map_err(|_| IdentityError)?;
     tokio::spawn(async move {
+        let _maintenance = maintenance;
         let _writer = writer;
         if !lease.is_live() {
             return Err(IdentityError);

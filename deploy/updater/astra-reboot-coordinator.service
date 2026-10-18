@@ -1,0 +1,15 @@
+[Unit]
+Description=Astra local OS reboot coordinator
+Wants=hmail-center.service
+After=astra-updater-recover.service hmail-center.service
+
+[Service]
+ExecStart=%h/.local/bin/astra-updater coordinate-reboot --config %h/.config/astra-updater/config.json
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=default.target

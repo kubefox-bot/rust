@@ -3,6 +3,11 @@ use crate::{agents::AgentClient, auth::SessionLease};
 use hmail_cleaner_protocol::{browser::jobs::JobView, JobId};
 impl JobService {
     pub async fn cancel(&self, id: JobId, lease: &SessionLease) -> Result<JobView, SubmitError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .continuation()
+            .map_err(|_| SubmitError::Busy)?;
         let permit = self
             .operation
             .clone()
@@ -11,6 +16,7 @@ impl JobService {
         let service = self.clone();
         let lease = lease.clone();
         tokio::spawn(async move {
+            let _maintenance = maintenance;
             let _permit = permit;
             let view = service.get(id, &lease).await?;
             if !view.slot_held {

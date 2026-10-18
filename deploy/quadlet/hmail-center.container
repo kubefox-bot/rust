@@ -12,6 +12,7 @@ User=10001
 Group=10001
 UserNS=keep-id:uid=10001,gid=10001
 Volume=hmail-center-data.volume:/data:Z,U
+Volume=%t/astra-maintenance:/run/astra-maintenance:Z
 PublishPort=8443:8443
 ReadOnly=true
 NoNewPrivileges=true
@@ -24,6 +25,8 @@ HealthRetries=3
 StopTimeout=30
 
 [Service]
+RuntimeDirectory=astra-maintenance
+RuntimeDirectoryMode=0700
 Restart=on-failure
 RestartSec=5
 TimeoutStartSec=120

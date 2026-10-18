@@ -117,6 +117,9 @@
     },
     "update": {
       "$ref": "#/$defs/UpdateRequest"
+    },
+    "update_policy": {
+      "$ref": "#/$defs/UpdatePolicy"
     }
   },
   "required": [
@@ -132,6 +135,7 @@
     "recovery_candidate",
     "confirm_recovery",
     "session_settings",
+    "update_policy",
     "servers",
     "agents",
     "profile",
@@ -1571,6 +1575,28 @@
       "enum": [
         "binary",
         "recover_identity"
+      ]
+    },
+    "UpdatePolicy": {
+      "type": "object",
+      "properties": {
+        "check_interval_seconds": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 86400,
+          "minimum": 30
+        },
+        "graceful_timeout_minutes": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 1440,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "check_interval_seconds",
+        "graceful_timeout_minutes"
       ]
     },
     "UpdateRequest": {

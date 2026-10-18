@@ -1,5 +1,5 @@
 use hmail_cleaner_protocol::{
-    browser::{agents::*, auth::*, enrollment::*, jobs::*, profiles::*, settings::*},
+    browser::{agents::*, auth::*, enrollment::*, jobs::*, profiles::*, settings::*, updates::*},
     *,
 };
 use schemars::JsonSchema;
@@ -18,6 +18,7 @@ pub struct BrowserContracts {
     pub recovery_candidate: RecoveryCandidate,
     pub confirm_recovery: ConfirmRecoveryInput,
     pub session_settings: SessionSettings,
+    pub update_policy: UpdatePolicy,
     pub servers: Vec<ServerView>,
     pub agents: Vec<AgentView>,
     pub profile: EditableProfile,

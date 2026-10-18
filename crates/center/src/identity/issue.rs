@@ -79,6 +79,34 @@ impl IdentityService {
         csr: &str,
         lease: &SessionLease,
     ) -> Result<IssuedAgent, IdentityError> {
+        let _maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| IdentityError)?;
+        self.issue_agent_owned(agent, host, csr, lease).await
+    }
+    pub(crate) async fn issue_agent_continuing(
+        &self,
+        agent: AgentId,
+        host: &str,
+        csr: &str,
+        lease: &SessionLease,
+    ) -> Result<IssuedAgent, IdentityError> {
+        let _maintenance = self
+            .store
+            .maintenance()
+            .continuation()
+            .map_err(|_| IdentityError)?;
+        self.issue_agent_owned(agent, host, csr, lease).await
+    }
+    async fn issue_agent_owned(
+        &self,
+        agent: AgentId,
+        host: &str,
+        csr: &str,
+        lease: &SessionLease,
+    ) -> Result<IssuedAgent, IdentityError> {
         let issued = self.sign_agent(agent, host, csr, lease).await?;
         super::repository::activate(
             self.store.clone(),
@@ -112,6 +140,11 @@ impl IdentityService {
         agent: AgentId,
         lease: &SessionLease,
     ) -> Result<(), IdentityError> {
+        let _maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| IdentityError)?;
         super::repository::revoke(self.store.clone(), lease.clone(), agent).await
     }
 }

@@ -60,10 +60,16 @@ impl AccountService {
         lease: &SessionLease,
         material: AccountMaterial,
     ) -> Result<(), AccountError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| AccountError::Busy)?;
         let owner = self.clone();
         let lease = lease.clone();
         // Own the short commit and RAM revision update even when the HTTP waiter disappears.
         tokio::spawn(async move {
+            let _maintenance = maintenance;
             let _barrier = owner.authority.credential_barrier.lock().await;
             owner.current(&lease).await?;
             let revision = lease.account_revision();

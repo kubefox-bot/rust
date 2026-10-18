@@ -1,0 +1,9 @@
+[Unit]
+Description=Prepare consistent Astra data before startup
+Before=hmail-center.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/astra-updater prepare-start --config %h/.config/astra-updater/config.json
+RemainAfterExit=yes
+UMask=0077

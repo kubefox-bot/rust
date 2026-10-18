@@ -58,6 +58,7 @@ impl CenterStore {
             "https-key.pem",
             "ca-cert.pem",
             "center.json",
+            "update-policy.json",
         ] {
             let source = self.lease.path.join(filename);
             match source.symlink_metadata() {
@@ -83,7 +84,14 @@ impl CenterStore {
         std::fs::write(destination.join("manifest.json"), bytes)
             .map_err(|_| StorageError::Backup)?;
         for entry in std::fs::read_dir(destination).map_err(|_| StorageError::Backup)? {
-            std::fs::File::open(entry.map_err(|_| StorageError::Backup)?.path())
+            let path = entry.map_err(|_| StorageError::Backup)?.path();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+                    .map_err(|_| StorageError::Backup)?;
+            }
+            std::fs::File::open(path)
                 .and_then(|file| file.sync_all())
                 .map_err(|_| StorageError::Backup)?;
         }

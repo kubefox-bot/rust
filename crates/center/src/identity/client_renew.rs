@@ -54,7 +54,12 @@ pub(crate) async fn ensure(
         .clone()
         .try_lock_owned()
         .map_err(|_| IdentityError)?;
+    let maintenance = store
+        .maintenance()
+        .continuation()
+        .map_err(|_| IdentityError)?;
     tokio::spawn(async move {
+        let _maintenance = maintenance;
         let _writer=writer;if !lease.is_live(){return Err(IdentityError);}
         let result=sqlx::query("UPDATE encrypted_records SET envelope=?,version=? WHERE id=? AND version=? AND kind='center_client_key'")
             .bind(bytes).bind(next).bind(id.to_string()).bind(previous).execute(&store.pool).await.map_err(|_|IdentityError)?;

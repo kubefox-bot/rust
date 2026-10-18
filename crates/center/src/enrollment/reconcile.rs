@@ -7,9 +7,15 @@ impl<C: Connector> EnrollmentService<C> {
         id: uuid::Uuid,
         lease: &SessionLease,
     ) -> Result<EnrollmentView, EnrollmentError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .continuation()
+            .map_err(|_| EnrollmentError::Busy)?;
         let service = self.clone();
         let lease = lease.clone();
         tokio::spawn(async move {
+            let _maintenance = maintenance;
             let mut view = service.get(id, &lease).await?;
             if view.slot_held
                 && matches!(

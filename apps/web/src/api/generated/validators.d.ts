@@ -35,3 +35,4 @@ export const ssh_target: ValidateFunction<BrowserContracts["ssh_target"]>;
 export const submit: ValidateFunction<BrowserContracts["submit"]>;
 export const summary: ValidateFunction<BrowserContracts["summary"]>;
 export const update: ValidateFunction<BrowserContracts["update"]>;
+export const update_policy: ValidateFunction<BrowserContracts["update_policy"]>;
