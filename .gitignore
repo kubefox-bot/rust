@@ -31,3 +31,6 @@ dist
 
 # Astro generated metadata
 /apps/web/.astro/
+
+# Per-installation FCOS inputs
+/iac/fcos/local/

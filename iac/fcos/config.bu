@@ -1,0 +1,61 @@
+variant: fcos
+version: 1.6.0
+
+passwd:
+  groups:
+    - name: hmail-center
+      gid: 2000
+  users:
+    - name: core
+      ssh_authorized_keys_local:
+        - admin.pub
+    - name: hmail-center
+      uid: 2000
+      primary_group: hmail-center
+      no_user_group: true
+      home_dir: /var/home/hmail-center
+      shell: /bin/bash
+
+storage:
+  directories:
+    - path: /var/home/hmail-center
+      mode: 0700
+      user:
+        name: hmail-center
+      group:
+        name: hmail-center
+    - path: /var/home/hmail-center/.config
+      mode: 0700
+      user:
+        name: hmail-center
+      group:
+        name: hmail-center
+    - path: /var/home/hmail-center/.config/containers
+      mode: 0700
+      user:
+        name: hmail-center
+      group:
+        name: hmail-center
+    - path: /var/home/hmail-center/.config/containers/systemd
+      mode: 0700
+      user:
+        name: hmail-center
+      group:
+        name: hmail-center
+  files:
+    - path: /etc/subuid
+      append:
+        - inline: |
+
+            hmail-center:200000:65536
+    - path: /etc/subgid
+      append:
+        - inline: |
+
+            hmail-center:200000:65536
+    - path: /var/lib/systemd/linger/hmail-center
+      mode: 0644
+    - path: /etc/zincati/config.d/50-hmail-center.toml
+      mode: 0644
+      contents:
+        local: zincati.toml
