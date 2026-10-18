@@ -13,8 +13,23 @@ export type AgentStats = Readonly<{
   cancels: number;
   subscriptions: number;
 }>;
+export type AgentReceiptObservation = Readonly<{
+  phase: BrowserContracts["phase"];
+  revision: BrowserContracts["counter"];
+  lookupHidden: boolean;
+  lookups: number;
+}>;
+export type JobEventObservation = Readonly<{
+  at: number;
+  event: "open" | "resync" | "snapshot" | "error" | "close";
+  jobId?: string;
+  phase?: string;
+  slotHeld?: boolean;
+  revision?: string;
+}>;
 declare global {
   interface Window {
     readonly __mailEventSources?: Readonly<{ active: number; created: number }>;
+    readonly __mailJobEvents?: ReadonlyArray<JobEventObservation>;
   }
 }

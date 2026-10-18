@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DEFAULT_RETENTION_DAYS, MAX_BATCH_SIZE, MAX_WORKERS } from "./conts";
+  import { displayCutoff, editedCutoff } from "./cutoff-input";
   import type { RunParameters } from "./types";
   let {
     parameters,
@@ -89,16 +90,17 @@
               ></select
             >{#if parameters.retention.kind === "before"}<input
                 aria-label="Граница по времени сервера"
+                aria-describedby="cutoff-hint"
                 type="datetime-local"
-                step="1"
+                step="any"
                 required
-                value={parameters.retention.local}
+                value={displayCutoff(parameters.retention.local)}
                 onchange={(event) =>
                   onparameters({
                     ...parameters,
                     retention: {
                       kind: "before",
-                      local: event.currentTarget.value,
+                      local: editedCutoff(event.currentTarget.value),
                     },
                   })}
               />{:else}<input
@@ -120,7 +122,12 @@
                 }}
               />{/if}
           </div>
-          <small>Время границы рассчитывается на почтовом сервере.</small>
+          {#if parameters.retention.kind === "before" && parameters.retention.local}
+            <small>Точная граница: {parameters.retention.local}</small>
+          {/if}
+          <small id="cutoff-hint"
+            >Время границы рассчитывается на почтовом сервере.</small
+          >
         </div>
       </div>
       <label class="manage"

@@ -35,6 +35,7 @@ struct Inner {
     released: tokio::sync::Semaphore,
     events: tokio::sync::broadcast::Sender<JobSnapshot>,
     subscriptions: AtomicUsize,
+    lookups: AtomicUsize,
 }
 impl Control {
     pub fn cancels(&self) -> usize {
@@ -115,6 +116,12 @@ impl Control {
     pub fn subscriptions(&self) -> usize {
         self.0.subscriptions.load(Ordering::SeqCst)
     }
+    pub fn lookups(&self) -> usize {
+        self.0.lookups.load(Ordering::SeqCst)
+    }
+    pub fn lookup_hidden(&self) -> bool {
+        self.0.hide_lookup.load(Ordering::SeqCst)
+    }
 }
 pub async fn start(center: &CenterFixture) -> (TlsAgent, Control) {
     let control = Control(Arc::new(Inner {
@@ -131,6 +138,7 @@ pub async fn start(center: &CenterFixture) -> (TlsAgent, Control) {
         released: tokio::sync::Semaphore::new(0),
         events: tokio::sync::broadcast::channel(16).0,
         subscriptions: AtomicUsize::new(0),
+        lookups: AtomicUsize::new(0),
     }));
     let agent_id = hmail_cleaner_protocol::AgentId::new();
     let app = Router::new()
@@ -204,7 +212,8 @@ async fn read(
     State(control): State<Control>,
     Path(id): Path<JobId>,
 ) -> Result<Json<JobSnapshot>, StatusCode> {
-    if control.0.hide_lookup.load(Ordering::SeqCst) {
+    control.0.lookups.fetch_add(1, Ordering::SeqCst);
+    if control.lookup_hidden() {
         return Err(StatusCode::NOT_FOUND);
     }
     control.receipt(id).map(Json).ok_or(StatusCode::NOT_FOUND)
@@ -262,6 +271,9 @@ async fn events(
 > {
     use axum::response::sse::{Event, Sse};
     use futures_util::StreamExt;
+    if control.lookup_hidden() {
+        return Err(StatusCode::NOT_FOUND);
+    }
     let receiver = control.0.events.subscribe();
     let snapshot = control.receipt(id).ok_or(StatusCode::NOT_FOUND)?;
     control.0.subscriptions.fetch_add(1, Ordering::SeqCst);

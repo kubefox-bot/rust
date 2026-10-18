@@ -41,3 +41,23 @@ mise run build:exe
 Отдельный ручной агент центра собирается через `mise run build:agent` в
 `dist/agent/windows-x64`. Установка, mTLS bootstrap, миграция и проверки:
 [инструкция агента](docs/agent-installation.md).
+
+## Центр управления
+
+MVP добавляет Rust-центр с SQLite и статическими Astro/Svelte-страницами:
+выбор почтового сервера, ручной предпросмотр/очистка, прогресс, журнал,
+история, профили, агенты и учётная запись суперадмина. Агент запускается
+нативно на каждой почтовой Windows-ВМ; центр предназначен для Linux-ВМ.
+
+```sh
+mise run web:check
+mise run build:center
+mise run release:local
+mise run test:mvp
+mise run measure:mvp
+```
+
+Локальная поставка через Podman/Quadlet, первоначальный вход и ручное
+обновление описаны в [инструкции центра](docs/center-deployment.md).
+Границы фактической проверки перечислены в [приёмке MVP](docs/mvp-acceptance.md).
+JavaScript runtime нужен для сборки; в образе работает Rust-процесс.

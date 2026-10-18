@@ -13,6 +13,7 @@
     "web:build": "bun run --cwd apps/web build"
   },
   "devDependencies": {
+    "playwright": "1.64.1",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "json-schema-to-typescript": "16.0.0",

@@ -1,5 +1,5 @@
 import { subscribe } from "../../api";
-import { EVENT_REFRESH_DELAY_MS } from "./conts";
+import { EVENT_REFRESH_DELAY_MS, TERMINAL_PHASES } from "./conts";
 
 export const observeHistory = (
   options: Readonly<{
@@ -42,8 +42,12 @@ export const observeHistory = (
       if (closed) return;
       const newJob = previous?.jobId !== job.job_id;
       const settled = !job.slot_held && previous?.slotHeld !== false;
+      const terminal =
+        job.snapshot !== null &&
+        job.snapshot !== undefined &&
+        TERMINAL_PHASES[job.snapshot.phase];
       previous = { jobId: job.job_id, slotHeld: job.slot_held };
-      if (newJob || settled) schedule();
+      if (newJob || terminal || settled) schedule();
     },
     onResync: schedule,
     onUnauthorized: () => {

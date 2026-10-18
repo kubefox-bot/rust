@@ -11,3 +11,5 @@ export const DEFAULT_PARAMETERS: RunParameters = {
 export const JOURNAL_FOLLOW_DISTANCE_PX = 32;
 export const MAX_BATCH_SIZE = 10000;
 export const MAX_WORKERS = 8;
+export const DATETIME_INPUT_FRACTION = /(\.\d{3})\d+$/;
+export const DATETIME_INPUT_MINUTES = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;

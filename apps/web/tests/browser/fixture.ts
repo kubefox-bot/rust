@@ -1,6 +1,12 @@
 import { chromium } from "playwright";
-import { acknowledged, readyMessage, statsMessage } from "./fixture-protocol";
+import {
+  acknowledged,
+  readyMessage,
+  receiptMessage,
+  statsMessage,
+} from "./fixture-protocol";
 import { lineReader } from "./line-reader";
+import type { BrowserContracts } from "../../src/api";
 import {
   FIXTURE_BINARY,
   FIXTURE_SHUTDOWN_MS,
@@ -102,6 +108,17 @@ export const startFixture = async (
             }),
           ),
         stats: async () => statsMessage(await command({ kind: "stats" })),
+        receipt: async (serverId: string) =>
+          receiptMessage(
+            await command({ kind: "receipt", server_id: serverId }),
+          ),
+        mailState: async (
+          serverId: string,
+          state: BrowserContracts["profile_validation"]["mail_state"],
+        ) =>
+          acknowledged(
+            await command({ kind: "mail_state", server_id: serverId, state }),
+          ),
         close: async () => {
           try {
             await browser.close();

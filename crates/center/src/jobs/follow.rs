@@ -9,7 +9,11 @@ impl JobService {
         let Ok(mut generation) = self.follower_generation.lock() else {
             return;
         };
-        if *generation == Some(lease.generation()) || !lease.is_live() {
+        if !lease.is_live() {
+            return;
+        }
+        if *generation == Some(lease.generation()) {
+            self.follower_wake.notify_one();
             return;
         }
         *generation = Some(lease.generation());
@@ -28,7 +32,7 @@ impl JobService {
                 if !lease.is_live() {
                     break;
                 }
-                tokio::select! {biased;_=revoked.changed()=>break,_=interval.tick()=>()}
+                tokio::select! {biased;_=revoked.changed()=>break,_=interval.tick()=>(),_=service.follower_wake.notified()=>()}
                 let id = sqlx::query_scalar::<_, Option<String>>(
                     "SELECT job_id FROM job_slot WHERE singleton=1",
                 )

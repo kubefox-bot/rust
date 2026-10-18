@@ -8,6 +8,7 @@ pub struct JobService {
     pub(crate) epoch: Uuid,
     pub(super) operation: Arc<tokio::sync::Mutex<()>>,
     pub(super) follower: Arc<tokio::sync::Mutex<()>>,
+    pub(super) follower_wake: Arc<tokio::sync::Notify>,
     pub(super) follower_generation: Arc<std::sync::Mutex<Option<u64>>>,
 }
 impl JobService {
@@ -20,6 +21,7 @@ impl JobService {
             epoch,
             operation: Arc::new(tokio::sync::Mutex::new(())),
             follower: Arc::new(tokio::sync::Mutex::new(())),
+            follower_wake: Arc::new(tokio::sync::Notify::new()),
             follower_generation: Arc::new(std::sync::Mutex::new(None)),
         }
     }

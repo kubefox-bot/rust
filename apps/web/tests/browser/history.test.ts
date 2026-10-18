@@ -221,6 +221,34 @@ test("open history follows job completion and releases its sole event source on 
       .click();
     await page.getByText("Выполняется", { exact: true }).waitFor();
     const historyRequests: string[] = [];
+    const reads: Array<
+      Readonly<{
+        at: number;
+        status: number;
+        phases: ReadonlyArray<string | null>;
+        slots: ReadonlyArray<boolean>;
+      }>
+    > = [];
+    const captures: Promise<void>[] = [];
+    page.on("response", (response) => {
+      if (!new URL(response.url()).pathname.endsWith("/history")) return;
+      const at = Date.now();
+      const capture = response
+        .json()
+        .then((input: unknown) => {
+          const data = decode("history", input);
+          reads.push({
+            at,
+            status: response.status(),
+            phases: data.jobs.map((job) => job.snapshot?.phase ?? null),
+            slots: data.jobs.map((job) => job.slot_held),
+          });
+        })
+        .catch(() => {
+          reads.push({ at, status: response.status(), phases: [], slots: [] });
+        });
+      captures.push(capture);
+    });
     page.on("request", (request) => {
       if (new URL(request.url()).pathname.endsWith("/history"))
         historyRequests.push(request.url());
@@ -236,11 +264,50 @@ test("open history follows job completion and releases its sole event source on 
     for (let iteration = 0; iteration < 6; iteration++) {
       await fixture.phase(fixture.servers[0].id, "running");
     }
+    const beforeFinish = { at: Date.now(), stats: await fixture.stats() };
     await fixture.finishLatest(fixture.servers[0].id);
-    await page
-      .locator("tbody tr")
-      .getByText("Завершено", { exact: true })
-      .waitFor({ timeout: 5000 });
+    try {
+      await page
+        .locator("tbody tr")
+        .getByText("Завершено", { exact: true })
+        .waitFor({ timeout: 5000 });
+    } catch (failure) {
+      await Promise.all(captures);
+      const current: unknown = await page.evaluate(async (serverId) => {
+        const response = await fetch(
+          `/api/v1/servers/${serverId}/history?limit=50`,
+        );
+        return response.json();
+      }, fixture.servers[0].id);
+      const data = decode("history", current);
+      console.error(
+        JSON.stringify({
+          boundary: "history-live-timeout",
+          beforeFinish,
+          at: Date.now(),
+          receipt: await fixture.receipt(fixture.servers[0].id),
+          stats: await fixture.stats(),
+          reads,
+          events: await page.evaluate(() => window.__mailJobEvents),
+          current: data.jobs.map((job) => ({
+            phase: job.snapshot?.phase,
+            slotHeld: job.slot_held,
+            revision: job.revision,
+          })),
+          rendered: await page.locator("tbody").innerText(),
+        }),
+      );
+      throw failure;
+    }
+    console.info(
+      JSON.stringify({
+        boundary: "history-live-completed",
+        beforeFinish,
+        at: Date.now(),
+        reads,
+        events: await page.evaluate(() => window.__mailJobEvents),
+      }),
+    );
     // Initial read/resync, first observed job, and terminal result stay bounded.
     expect(historyRequests.length).toBeLessThanOrEqual(4);
     expect((await sourceCounts(page))?.active).toBe(1);
@@ -333,6 +400,78 @@ test("footer maps each server's actual agent observation and clears expanded det
     for (const agent of agents)
       expect(await footer.textContent()).not.toContain(agent.name);
     expect(await footer.textContent()).not.toContain(hostileName);
+  } finally {
+    await fixture.close();
+  }
+}, 120000);
+
+test("history refreshes a terminal phase while service verification still holds the slot", async () => {
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await instrumentEvents(page);
+    await signIn(page, fixture.origin);
+    await page
+      .getByRole("button", { name: "Предпросмотр", exact: true })
+      .click();
+    await page.getByText("Выполняется", { exact: true }).waitFor();
+    await page.goto(
+      `${fixture.origin}/history/?server=${fixture.servers[0].id}`,
+    );
+    await page
+      .locator("tbody tr")
+      .getByText("Выполняется", { exact: true })
+      .waitFor();
+    const watchDeadline = Date.now() + 3000;
+    while (
+      !(await fixture.stats()).some(
+        (agent) =>
+          agent.id === fixture.servers[0].id && agent.subscriptions > 0,
+      )
+    ) {
+      if (Date.now() >= watchDeadline)
+        throw new Error("Submitted job has no agent watch");
+      await Bun.sleep(20);
+    }
+    const progressRead = page.waitForResponse(async (response) => {
+      if (
+        !new URL(response.url()).pathname.endsWith("/history") ||
+        !response.ok()
+      )
+        return false;
+      return decode("history", await response.json()).jobs.some(
+        (job) => job.snapshot?.revision === "2",
+      );
+    });
+    await fixture.phase(fixture.servers[0].id, "running");
+    await page.waitForFunction(() =>
+      window.__mailJobEvents?.some((event) => event.phase === "running"),
+    );
+    await progressRead;
+    await fixture.mailState(fixture.servers[0].id, "unknown");
+    await fixture.finishLatest(fixture.servers[0].id);
+    await page.waitForFunction(() =>
+      window.__mailJobEvents?.some(
+        (event) => event.phase === "completed" && event.slotHeld === true,
+      ),
+    );
+    const current: unknown = await page.evaluate(async (serverId) => {
+      const response = await fetch(
+        `/api/v1/servers/${serverId}/history?limit=50`,
+      );
+      return response.json();
+    }, fixture.servers[0].id);
+    const heldTerminal = decode("history", current).jobs[0];
+    expect(heldTerminal?.snapshot?.phase).toBe("completed");
+    expect(heldTerminal?.slot_held).toBe(true);
+    await page
+      .locator("tbody tr")
+      .getByText("Состояние службы не подтверждено", { exact: true })
+      .waitFor({ timeout: 3000 });
+    await page
+      .locator("tbody tr")
+      .getByText("Завершено", { exact: true })
+      .waitFor({ timeout: 3000 });
   } finally {
     await fixture.close();
   }

@@ -1,6 +1,165 @@
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
 
+test("reloaded fractional preview preserves the exact cutoff until the operator edits it", async () => {
+  const { signIn } = await import("./cleanup-steps");
+  const { decode } = await import("../../src/api");
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await signIn(page, fixture.origin);
+    const serverId = fixture.servers[0].id;
+    const context = decode(
+      "cleanup_context",
+      await page.evaluate(async (id) => {
+        const response = await fetch(`/api/v1/servers/${id}/cleanup-context`);
+        if (!response.ok) throw new Error("Cleanup context unavailable");
+        return response.json();
+      }, serverId),
+    );
+    const exactLocal = "2026-09-18T02:55:44.049364123";
+    const cutoff = decode(
+      "cutoff",
+      await page.evaluate(
+        async ({ id, local }) => {
+          const response = await fetch(`/api/v1/servers/${id}/resolve`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-HMail-Request": "1",
+            },
+            body: JSON.stringify({ kind: "before", local }),
+          });
+          if (!response.ok) throw new Error("Exact cutoff was rejected");
+          return response.json();
+        },
+        { id: serverId, local: exactLocal },
+      ),
+    );
+    expect(cutoff.local).toBe(exactLocal);
+    const intent = decode("submit", {
+      job_id: crypto.randomUUID(),
+      server_id: serverId,
+      profile_version: context.profile_version,
+      operation: "preview",
+      scan: "full",
+      resolved_cutoff: cutoff,
+      service_policy: "require_stopped",
+      limits: { batch_size: 1000, workers: 2 },
+      preview_job_id: null,
+      confirmed: false,
+    });
+    const original = decode(
+      "job",
+      await page.evaluate(async (body) => {
+        const response = await fetch(`/api/v1/servers/${body.server_id}/jobs`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-HMail-Request": "1",
+          },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) throw new Error("Exact preview was rejected");
+        return response.json();
+      }, intent),
+    );
+    await fixture.finishLatest(serverId);
+    await page.reload();
+    await page
+      .getByRole("heading", { name: "Завершено", exact: true })
+      .waitFor();
+    const field = page.getByLabel("Граница по времени сервера", {
+      exact: true,
+    });
+    expect(await field.inputValue()).toBe("2026-09-18T02:55:44.049");
+    expect(
+      await field.evaluate(
+        (input) =>
+          input instanceof HTMLInputElement && input.form?.checkValidity(),
+      ),
+    ).toBe(true);
+    await page
+      .getByText(`Точная граница: ${exactLocal}`, { exact: true })
+      .waitFor();
+    await page.setViewportSize({ width: 320, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await field.focus();
+    await field.blur();
+    await page
+      .getByLabel("Режим сканирования", { exact: true })
+      .selectOption("fast");
+    const nextResolution = page.waitForRequest(
+      (request) =>
+        new URL(request.url()).pathname ===
+          `/api/v1/servers/${serverId}/resolve` && request.method() === "POST",
+    );
+    const nextResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/servers/${serverId}/jobs` &&
+        response.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Предпросмотр", exact: true })
+      .click();
+    const next = decode("job", await (await nextResponse).json());
+    expect(decode("retention", (await nextResolution).postDataJSON())).toEqual({
+      kind: "before",
+      local: exactLocal,
+    });
+    expect(next.intent.resolved_cutoff.local).toBe(exactLocal);
+    expect(next.intent.resolved_cutoff.file_cutoff_utc).toBe(
+      "2026-09-17T23:55:44.049364123Z",
+    );
+    expect(next.job_id).not.toBe(original.job_id);
+    await page
+      .getByRole("heading", { name: "Выполняется", exact: true })
+      .waitFor();
+    await page
+      .getByRole("button", { name: "Отменить задание", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "Отменено", exact: true })
+      .waitFor();
+    const cancelled = await fixture.stats();
+    expect(cancelled.find((agent) => agent.id === serverId)?.puts).toBe(2);
+    expect(cancelled.find((agent) => agent.id === serverId)?.cancels).toBe(1);
+    expect(
+      cancelled.find((agent) => agent.id === fixture.servers[1].id)?.puts,
+    ).toBe(0);
+    await field.fill("2026-09-19T03:20");
+    await field.blur();
+    const editedResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/servers/${serverId}/jobs` &&
+        response.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Предпросмотр", exact: true })
+      .click();
+    const edited = decode("job", await (await editedResponse).json());
+    expect(edited.intent.resolved_cutoff.local).toBe("2026-09-19T03:20:00");
+    expect(edited.intent.resolved_cutoff.file_cutoff_utc).toBe(
+      "2026-09-19T00:20:00Z",
+    );
+    await page
+      .getByRole("button", { name: "Отменить задание", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "Отменено", exact: true })
+      .waitFor();
+  } finally {
+    await fixture.close();
+  }
+}, 60000);
+
 test("login, exact-target preview and confirmation work through Rust HTTPS", async () => {
   const fixture = await startFixture();
   try {
@@ -235,18 +394,71 @@ test("Back navigation after logout never restores an authorized screen or sends 
 
 test("unknown delivery offers reconciliation and cancellation without a blind second dispatch", async () => {
   const { signIn } = await import("./cleanup-steps");
+  const { instrumentEvents } = await import("./instrumentation");
+  const { decode } = await import("../../src/api");
   const fixture = await startFixture();
   try {
     const page = await fixture.context.newPage();
+    await instrumentEvents(page);
+    const replies: Array<
+      Readonly<{
+        at: number;
+        path: string;
+        status: number;
+        phase: string | null;
+        dispatch: string;
+        slotHeld: boolean;
+      }>
+    > = [];
+    const captures: Promise<void>[] = [];
+    page.on("response", (response) => {
+      const path = new URL(response.url()).pathname;
+      if (!/\/jobs(?:\/[^/]+\/(?:reconcile|cancel))?$/.test(path)) return;
+      const capture = response
+        .json()
+        .then((input: unknown) => {
+          const job = decode("job", input);
+          replies.push({
+            at: Date.now(),
+            path,
+            status: response.status(),
+            phase: job.snapshot?.phase ?? null,
+            dispatch: job.dispatch,
+            slotHeld: job.slot_held,
+          });
+        })
+        .catch(() => undefined);
+      captures.push(capture);
+    });
     await signIn(page, fixture.origin);
     await fixture.loseResponse(fixture.servers[0].id, true);
     await fixture.hideLookup(fixture.servers[0].id, true);
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
-    await page
-      .getByRole("heading", { name: "Проверка доставки задания", exact: true })
-      .waitFor();
+    try {
+      await page
+        .getByRole("heading", {
+          name: "Проверка доставки задания",
+          exact: true,
+        })
+        .waitFor();
+    } catch (failure) {
+      await Promise.all(captures);
+      console.error(
+        JSON.stringify({
+          boundary: "unknown-delivery-fault",
+          replies,
+          stats: await fixture.stats(),
+          receipt: await fixture.receipt(fixture.servers[0].id),
+          events: await page.evaluate(() => window.__mailJobEvents),
+          rendered: await page
+            .getByRole("region", { name: "Состояние задания" })
+            .innerText(),
+        }),
+      );
+      throw failure;
+    }
     expect(
       await page
         .getByRole("button", { name: "Очистить", exact: true })
@@ -257,9 +469,27 @@ test("unknown delivery offers reconciliation and cancellation without a blind se
         .getByRole("button", { name: "Предпросмотр", exact: true })
         .isDisabled(),
     ).toBe(true);
+    const reconcileResponse = page.waitForResponse((response) =>
+      new URL(response.url()).pathname.endsWith("/reconcile"),
+    );
     await page
       .getByRole("button", { name: "Проверить состояние", exact: true })
       .click();
+    const reconciled = decode("job", await (await reconcileResponse).json());
+    expect(reconciled.dispatch).toBe("unknown");
+    expect(reconciled.snapshot ?? null).toBeNull();
+    expect(reconciled.slot_held).toBe(true);
+    expect(
+      await page
+        .getByRole("heading", {
+          name: "Проверка доставки задания",
+          exact: true,
+        })
+        .isVisible(),
+    ).toBe(true);
+    const hidden = await fixture.receipt(fixture.servers[0].id);
+    expect(hidden?.lookupHidden).toBe(true);
+    expect(hidden?.lookups ?? 0).toBeGreaterThan(0);
     expect(
       (await fixture.stats()).find(
         (value) => value.id === fixture.servers[0].id,
@@ -276,6 +506,109 @@ test("unknown delivery offers reconciliation and cancellation without a blind se
         (value) => value.id === fixture.servers[0].id,
       )?.puts,
     ).toBe(1);
+    expect(
+      (await fixture.stats()).find(
+        (value) => value.id === fixture.servers[0].id,
+      )?.cancels,
+    ).toBe(1);
+    expect((await fixture.receipt(fixture.servers[0].id))?.lookupHidden).toBe(
+      true,
+    );
+    await fixture.hideLookup(fixture.servers[0].id, false);
+    expect((await fixture.receipt(fixture.servers[0].id))?.lookupHidden).toBe(
+      false,
+    );
+    await Promise.all(captures);
+    console.info(
+      JSON.stringify({
+        boundary: "unknown-delivery-cancelled",
+        replies,
+        stats: await fixture.stats(),
+        receipt: await fixture.receipt(fixture.servers[0].id),
+        events: await page.evaluate(() => window.__mailJobEvents),
+      }),
+    );
+  } finally {
+    await fixture.close();
+  }
+}, 120000);
+
+test("explicit receipt-fault release reconciles the accepted job without another dispatch", async () => {
+  const { signIn } = await import("./cleanup-steps");
+  const { decode } = await import("../../src/api");
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await signIn(page, fixture.origin);
+    await fixture.loseResponse(fixture.servers[0].id, true);
+    await fixture.hideLookup(fixture.servers[0].id, true);
+    const submissionResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/servers/${fixture.servers[0].id}/jobs` &&
+        response.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Предпросмотр", exact: true })
+      .click();
+    const submitted = decode("job", await (await submissionResponse).json());
+    expect(submitted.dispatch).toBe("unknown");
+    await page
+      .getByRole("heading", { name: "Проверка доставки задания", exact: true })
+      .waitFor();
+    expect((await fixture.receipt(fixture.servers[0].id))?.lookupHidden).toBe(
+      true,
+    );
+    await fixture.hideLookup(fixture.servers[0].id, false);
+    const reconciliationResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+        `/api/v1/jobs/${submitted.job_id}/reconcile`,
+    );
+    await page
+      .getByRole("button", { name: "Проверить состояние", exact: true })
+      .click();
+    const reconciled = decode(
+      "job",
+      await (await reconciliationResponse).json(),
+    );
+    expect(reconciled.job_id).toBe(submitted.job_id);
+    expect(reconciled.dispatch).toBe("acknowledged");
+    expect(reconciled.snapshot?.phase).toBe("running");
+    await page
+      .getByRole("heading", { name: "Выполняется", exact: true })
+      .waitFor();
+    expect(
+      (await fixture.stats()).find(
+        (agent) => agent.id === fixture.servers[0].id,
+      )?.puts,
+    ).toBe(1);
+    await page
+      .getByRole("button", { name: "Отменить задание", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "Отменено", exact: true })
+      .waitFor();
+    const stats = await fixture.stats();
+    expect(
+      stats.find((agent) => agent.id === fixture.servers[0].id)?.puts,
+    ).toBe(1);
+    expect(
+      stats.find((agent) => agent.id === fixture.servers[0].id)?.cancels,
+    ).toBe(1);
+    expect(
+      stats.find((agent) => agent.id === fixture.servers[1].id)?.puts,
+    ).toBe(0);
+    console.info(
+      JSON.stringify({
+        boundary: "unknown-delivery-released",
+        originalJobId: submitted.job_id,
+        reconciledJobId: reconciled.job_id,
+        phase: reconciled.snapshot?.phase,
+        stats,
+        receipt: await fixture.receipt(fixture.servers[0].id),
+      }),
+    );
   } finally {
     await fixture.close();
   }

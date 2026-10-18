@@ -162,7 +162,7 @@ expect(activeSseConnections).toBe(1);
 expect(request.server_id).toBe(selectedServer);
 expect(renderedHistoryRows).toBeLessThanOrEqual(50);
 // unchanged_password_uses_keep
-expect(profilePatch.password.action).toBe("keep");
+expect(profilePatch.password.kind).toBe("keep");
 // host_key_confirmation_precedes_credentials
 expect(credentialRequestsBeforeTrustConfirmation).toBe(0);
 // installed_is_not_ready_without_valid_mail_profile
@@ -181,7 +181,7 @@ expect(persistedBrowserValues).not.toContain(recoveryKey);
 
 **Files**
 
-- Create: deploy/Containerfile, deploy/quadlet/hmail-center.container, deploy/quadlet/hmail-center-data.volume, deploy/center.example.toml, .containerignore.
+- Create: deploy/Containerfile, deploy/quadlet/hmail-center.container, deploy/quadlet/hmail-center-data.volume, deploy/center.example.json, .containerignore.
 - Modify: crates/center/src/http/{static_files,health}.rs, crates/center/tests/static_files.rs.
 - Create: tools/release/{config,build,manifest,verify}.ts; tools/release/tests/delivery.test.ts.
 - Modify: crates/center/src/http/routes.rs, crates/cli/src/args.rs, mise.toml, docs/center-deployment.md.
@@ -197,7 +197,7 @@ expect(persistedBrowserValues).not.toContain(recoveryKey);
 - Produces: center backup и center health; health через HTTPS работает без login/DEK и не открывает DB вторым владельцем.
 - Produces: GET /healthz, статические /, /login, /history, /settings и hashed assets из того же Axum server.
 
-- [ ] **Step 1: Написать routing/delivery tests.**
+- [x] **Step 1: Написать routing/delivery tests.**
 
 ~~~ts
 // production_image_does_not_require_js_runtime
@@ -220,8 +220,8 @@ expect(deployment.autoUpdateEnabled).toBe(false);
 ~~~
 
   Rust static tests: direct /history refresh → HTML 200; API 404 не возвращает HTML; traversal не открывает /data; correct MIME/cache/security headers. Init на пустом named volume, health до login, bind-mounted ownership failure дают различимые исходы.
-- [ ] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test static_files; bun test tools/release/tests/delivery.test.ts. Контейнерные проверки запускать только после готовности Linux fixture с rootless Podman, systemd и cgroup v2; генерацию/запуск Quadlet проверять именно в ней.
-- [ ] **Step 3: Реализовать поставку.** Multi-stage Bun frontend build → Rust 1.99.1 build → минимальный Linux runtime. На этапе выполнения проверить и закрепить digest базовых образов; final stage не копирует Bun/Node/compiler. Статика — read-only файлы внутри образа, не отдельный процесс; StaticDir задаёт configuration owner. Пользователь контейнера non-root, порт 8443; data volume /data с SQLite/bootstrap/config; graceful shutdown.
+- [x] **Step 2: Проверить RED.** cargo test -p hmail-cleaner-center --test static_files; bun test tools/release/tests/delivery.test.ts. Контейнерные проверки запускать только после готовности Linux fixture с rootless Podman, systemd и cgroup v2; генерацию/запуск Quadlet проверять именно в ней.
+- [x] **Step 3: Реализовать поставку.** Multi-stage Bun frontend build → Rust 1.99.1 build → минимальный Linux runtime. На этапе выполнения проверить и закрепить digest базовых образов; final stage не копирует Bun/Node/compiler. Статика — read-only файлы внутри образа, не отдельный процесс; StaticDir задаёт configuration owner. Пользователь контейнера non-root, порт 8443; data volume /data с SQLite/bootstrap/config; graceful shutdown.
 
   Подготовка Linux-ВМ: служебный пользователь, rootless Podman, cgroup v2,
   корректные subuid/subgid и пользовательский systemd manager с linger.
@@ -262,8 +262,10 @@ expect(deployment.autoUpdateEnabled).toBe(false);
   отдельно от OCI-сборки. Образ центра собирать Podman из deploy/Containerfile;
   существующий EXE build helper переиспользовать без попутной миграции его
   контейнерного инструментария. Feature isolation проверяется по артефактам.
-- [ ] **Step 4: Проверить GREEN.** mise run check; mise run web:check; mise run web:build; mise run release:local; mise run test:delivery. Проверить rootless Quadlet startup после logout/reboot, генерацию systemd unit, recreate/backup/restore/upgrade с active fixture job, Linux amd64 и прямые маршруты из Rust. Отдельно подтвердить health до разблокировки, сохранность named volume, старый digest + matching DB backup при rollback и отсутствие второго запуска clean. Ожидается PASS; ни push, ни изменение рабочих ВМ не выполнять.
-- [ ] **Step 5: Локальный коммит.** git commit -m "build: deliver the Rust center with Podman and Quadlet".
+- [x] **Step 4: Проверить GREEN.** mise run check; mise run web:check; mise run web:build; mise run release:local; mise run test:delivery. Проверить rootless Quadlet startup после logout/reboot, генерацию systemd unit, recreate/backup/restore/upgrade с active fixture job, Linux amd64 и прямые маршруты из Rust. Отдельно подтвердить health до разблокировки, сохранность named volume, старый digest + matching DB backup при rollback и отсутствие второго запуска clean. Ожидается PASS; ни push, ни изменение рабочих ВМ не выполнять.
+- [x] **Step 5: Локальный коммит.** git commit -m "build: deliver the Rust center with Podman and Quadlet".
+
+Доступная проверка: immutable Linux amd64 release и Docker/Colima lifecycle пройдены. Native rootless Podman/Quadlet, logout/reboot и работа отдельного Windows-агента остаются NOT RUN; см. итоговую приёмку.
 
 ## C5. Полная приёмка, сбои и ресурсный отчёт
 
@@ -279,7 +281,7 @@ expect(deployment.autoUpdateEnabled).toBe(false);
 - Produces: mise run test:mvp — две fixture identities/agent targets; execution report PASS/FAIL/NOT RUN по каждой среде.
 - Produces: mise run measure:mvp — release RSS/CPU/container/JS/DOM показатели с описанием машины, версий, нагрузки и времени измерения.
 
-- [ ] **Step 1: Закрепить сценарии приёмки.** Harness должен отвергать target без fixture marker, имя рабочей почтовой службы и пути вне выделенного synthetic root. Для каждого сценария зафиксировать assertions:
+- [x] **Step 1: Закрепить сценарии приёмки.** Harness должен отвергать target без fixture marker, имя рабочей почтовой службы и пути вне выделенного synthetic root. Для каждого сценария зафиксировать assertions:
 
 ~~~ts
 // two_servers_and_two_tabs
@@ -296,8 +298,8 @@ expect(cleanRequestsAfterIdleOrProcessRestart).toBe(0);
 ~~~
 
   Отдельные scenarios: full preview/fast preview, unmanaged/managed clean, restore failure, cancel, invalid/expired/revoked cert, credential races/recover, container upgrade/rollback. Верифицировать фактические файлы/SQL и состояние SCM, а не только UI text.
-- [ ] **Step 2: Проверить RED harness.** bun test tools/acceptance/tests/scenarios.test.ts проверяет отказ для non-fixture target и detection намеренно подставленного duplicate execution/oversized queue. Не запускать разрушительные кейсы против доступных по умолчанию серверов.
-- [ ] **Step 3: Подготовить и выполнить изолированную приёмку.** Linux с rootless Podman + Quadlet/systemd + два synthetic Windows Server 2016 targets с реальными FS attributes/SCM и MySQL fixture. Если среды нет, завершить доступные проверки, а native test оставить NOT RUN с точной причиной; не выдавать windows-2022/cross-build за Server 2016. Отдельно проверять фактическую совместимость заранее установленного OpenSSH.
+- [x] **Step 2: Проверить RED harness.** bun test tools/acceptance/tests/scenarios.test.ts проверяет отказ для non-fixture target и detection намеренно подставленного duplicate execution/oversized queue. Не запускать разрушительные кейсы против доступных по умолчанию серверов.
+- [x] **Step 3: Подготовить и выполнить изолированную приёмку.** Linux с rootless Podman + Quadlet/systemd + два synthetic Windows Server 2016 targets с реальными FS attributes/SCM и MySQL fixture. Если среды нет, завершить доступные проверки, а native test оставить NOT RUN с точной причиной; не выдавать windows-2022/cross-build за Server 2016. Отдельно проверять фактическую совместимость заранее установленного OpenSSH.
 - [ ] **Step 4: Снять измерения и проверить GREEN.** mise run test:mvp; mise run measure:mvp. Измерить отдельно центр idle, login peak, два connected agents, открытый UI, fast/full/cancel, длительный slow SSE; агент idle/cleanup; image/EXE size; initial JS, lazy chunks, DOM и browser memory. Хранить воспроизводимые исходные значения и вывод, без выдуманного бюджета RSS или обещанного выигрыша над Bun. Все доступные сценарии PASS; недоступные не скрываются.
 - [ ] **Step 5: Локальный коммит.** git commit -m "test: verify MVP delivery recovery and resource limits".
 

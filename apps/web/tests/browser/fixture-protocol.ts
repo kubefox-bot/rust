@@ -1,5 +1,9 @@
 import { decode } from "../../src/api";
-import type { AgentStats, FixtureReady } from "./types";
+import type {
+  AgentStats,
+  AgentReceiptObservation,
+  FixtureReady,
+} from "./types";
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const count = (value: unknown): value is number =>
@@ -48,4 +52,23 @@ export const statsMessage = (value: unknown): ReadonlyArray<AgentStats> => {
 export const acknowledged = (value: unknown): void => {
   if (!record(value) || value.ok !== true)
     throw new Error("Fixture command failed");
+};
+export const receiptMessage = (
+  value: unknown,
+): AgentReceiptObservation | null => {
+  if (!record(value)) throw new Error("Invalid fixture receipt observation");
+  if (value.receipt === null) return null;
+  if (!record(value.receipt))
+    throw new Error("Invalid fixture receipt observation");
+  if (
+    typeof value.receipt.lookup_hidden !== "boolean" ||
+    !count(value.receipt.lookups)
+  )
+    throw new Error("Invalid fixture lookup observation");
+  return {
+    phase: decode("phase", value.receipt.phase),
+    revision: decode("counter", value.receipt.revision),
+    lookupHidden: value.receipt.lookup_hidden,
+    lookups: value.receipt.lookups,
+  };
 };

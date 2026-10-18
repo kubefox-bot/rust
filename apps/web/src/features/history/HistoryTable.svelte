@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { BrowserContracts } from "../../api";
   import { formatBytes, formatCount, screenStatus } from "../../jobs/display";
-  import { OPERATION_LABELS, SCAN_LABELS } from "./conts";
+  import { OPERATION_LABELS, SCAN_LABELS, TERMINAL_PHASES } from "./conts";
 
   let { jobs }: { jobs: ReadonlyArray<BrowserContracts["job"]> } = $props();
 </script>
@@ -46,6 +46,11 @@
           </td>
           <td>
             <strong>{screenStatus(job)}</strong>
+            {#if job.slot_held && job.snapshot && TERMINAL_PHASES[job.snapshot.phase]}
+              <small class="attention" role="status"
+                >Состояние службы не подтверждено</small
+              >
+            {/if}
             <small>Ошибок: {formatCount(job.snapshot?.summary.failed)}</small>
             <small
               >Осталось старых: {formatCount(
@@ -99,5 +104,9 @@
   }
   .failed {
     color: var(--danger);
+  }
+  .attention {
+    color: var(--ink);
+    font-weight: 550;
   }
 </style>

@@ -1,11 +1,18 @@
 use crate::fixtures::job_agent::Control;
-use hmail_cleaner_protocol::{JobPhase, ServerId};
+use hmail_cleaner_protocol::{JobPhase, ObservedMailState, ServerId};
 use serde::Deserialize;
 const MAX_COMMAND_BYTES: usize = 4096;
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 enum Command {
     Stats,
+    Receipt {
+        server_id: ServerId,
+    },
+    MailState {
+        server_id: ServerId,
+        state: ObservedMailState,
+    },
     FinishLatest {
         server_id: ServerId,
     },
@@ -26,6 +33,7 @@ enum Action {
     Phase(JobPhase),
     LoseResponse(bool),
     HideLookup(bool),
+    MailState(ObservedMailState),
 }
 pub fn execute(agents: &[(ServerId, Control)], line: &str) -> serde_json::Value {
     if line.len() > MAX_COMMAND_BYTES {
@@ -37,10 +45,19 @@ pub fn execute(agents: &[(ServerId, Control)], line: &str) -> serde_json::Value 
     };
     let (id, action) = match command {
         Command::Stats => {
-            return serde_json::json!({"stats":agents.iter().map(|(id,control)|serde_json::json!({"id":id,"puts":control.puts(),"cancels":control.cancels(),"subscriptions":control.subscriptions()})).collect::<Vec<_>>() })
+            return serde_json::json!({"stats":agents.iter().map(|(id,control)|serde_json::json!({"id":id,"puts":control.puts(),"cancels":control.cancels(),"subscriptions":control.subscriptions()})).collect::<Vec<_>>() });
+        }
+        Command::Receipt { server_id } => {
+            return match agents.iter().find(|(server, _)| *server == server_id) {
+                Some((_, control)) => {
+                    serde_json::json!({"receipt":control.latest().map(|snapshot|serde_json::json!({"phase":snapshot.phase,"revision":snapshot.revision,"lookup_hidden":control.lookup_hidden(),"lookups":control.lookups()}))})
+                }
+                None => serde_json::json!({"error":"unknown server"}),
+            };
         }
         Command::FinishLatest { server_id } => (server_id, Action::Phase(JobPhase::Completed)),
         Command::Phase { server_id, phase } => (server_id, Action::Phase(phase)),
+        Command::MailState { server_id, state } => (server_id, Action::MailState(state)),
         Command::LoseResponse { server_id, enabled } => (server_id, Action::LoseResponse(enabled)),
         Command::HideLookup { server_id, enabled } => (server_id, Action::HideLookup(enabled)),
     };
@@ -56,6 +73,7 @@ pub fn execute(agents: &[(ServerId, Control)], line: &str) -> serde_json::Value 
         }
         Action::LoseResponse(enabled) => control.lose_response(enabled),
         Action::HideLookup(enabled) => control.hide_lookup(enabled),
+        Action::MailState(state) => control.mail(state),
     }
     serde_json::json!({"ok":true})
 }

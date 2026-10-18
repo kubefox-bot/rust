@@ -101,3 +101,11 @@ run = "bun tools/release/build.ts"
 [tasks."test:delivery"]
 description = "Verify local OCI release bytes and disposable center lifecycle"
 run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/release/tsconfig.json", "bun test ./tools/release/tests tools/release/agent-manifest.test.ts", "bun tools/release/verify.ts"]
+
+[tasks."test:mvp"]
+description = "Run isolated MVP checks and emit separate PASS, FAIL and NOT RUN receipts"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/acceptance/tsconfig.json", "bun tools/acceptance/run.ts"]
+
+[tasks."measure:mvp"]
+description = "Build and measure a separate release center with static web and two TLS fixtures"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/acceptance/tsconfig.json", "bun tools/acceptance/prepare-measurement.ts"]
