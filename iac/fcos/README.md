@@ -31,11 +31,14 @@ Bun/Node, MySQL или новые пакетные слои, не меняет �
 под именем `admin.pub`. Пример назначения файлов:
 [local.example](local.example/README.md). Приватный ключ остаётся у вас.
 Пароль суперадмина, recovery key, MySQL и приватные TLS-ключи сюда не входят.
+Принимаются обычные строки публичных ключей OpenSSH без authorized_keys options;
+проверяется формат каждой непустой строки и тип ключа из `ssh -Q key`.
+Одна проверка `ssh-keygen -l` недостаточна: она принимает и приватные ключи.
 Не используйте ключи из тестовых отчётов: они одноразовые и не дают вам доступ.
 
 ## Подготовка на Linux с установленными инструментами
 
-Нужны Git, OpenSSH `ssh-keygen`, `butane`, `ignition-validate` и `sha256sum`.
+Нужны Git, OpenSSH `ssh` и `ssh-keygen`, `butane`, `ignition-validate` и `sha256sum`.
 Установите официальные инструменты поддерживаемым для вашей Linux способом.
 Проверьте `butane --version` и `ignition-validate --version`; валидатор должен
 поддерживать Ignition 3.5.0, в который Butane преобразует schema 1.6.0.
@@ -57,6 +60,16 @@ Bun/Node, MySQL или новые пакетные слои, не меняет �
   trap 'rm -rf -- "$stage"' EXIT
 
   test -s "$public_key"
+  awk -v key_types="$(ssh -Q key | tr '\n' ' ')" '
+    BEGIN {
+      size = split(key_types, types, " ")
+      for (i = 1; i <= size; i++) allowed[types[i]] = 1
+    }
+    /^[[:space:]]*($|#)/ { next }
+    NF < 2 || !($1 in allowed) || $2 !~ /^[A-Za-z0-9+\/=]+$/ { bad = 1 }
+    { count++ }
+    END { exit (bad || count == 0) }
+  ' "$public_key"
   ssh-keygen -l -f "$public_key" >/dev/null
   cp -- "$public_key" "$stage/admin.pub"
   cp -- "$repo_root/iac/fcos/files/zincati.toml" "$stage/zincati.toml"
@@ -103,6 +116,16 @@ Butane **2.28.0**, Ignition validator **2.28.0**, Linux arm64. Для друго
   trap 'rm -rf -- "$stage"' EXIT
 
   test -s "$public_key"
+  awk -v key_types="$(ssh -Q key | tr '\n' ' ')" '
+    BEGIN {
+      size = split(key_types, types, " ")
+      for (i = 1; i <= size; i++) allowed[types[i]] = 1
+    }
+    /^[[:space:]]*($|#)/ { next }
+    NF < 2 || !($1 in allowed) || $2 !~ /^[A-Za-z0-9+\/=]+$/ { bad = 1 }
+    { count++ }
+    END { exit (bad || count == 0) }
+  ' "$public_key"
   ssh-keygen -l -f "$public_key" >/dev/null
   cp -- "$public_key" "$stage/admin.pub"
   cp -- "$repo_root/iac/fcos/files/zincati.toml" "$stage/zincati.toml"
@@ -242,7 +265,7 @@ Bare `sudo -u` недостаточно: у процесса могут оста
 ## Установка приложения и дальнейшее обслуживание
 
 Оставаясь в корректном shell `hmail-center`, продолжайте по
-[инструкции центра](../../docs/center-deployment.md#первоначальная-настройка-и-запуск):
+[инструкции центра](../../docs/center-deployment.md#подготовка-linux-вм-для-rootless-podman):
 проверьте и загрузите локальную поставку через `podman load`, создайте named
 volume, интерактивно выполните `center init`, сохраните recovery key отдельно,
 установите **сгенерированные из этой поставки** Quadlet и проверьте HTTPS health.
