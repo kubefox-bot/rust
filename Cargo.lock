@@ -179,6 +179,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "astra-updater"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "hmail-cleaner-protocol",
+ "libc",
+ "reqwest",
+ "ring",
+ "rustls 0.23.46",
+ "rustls-native-certs",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "atoi"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1466,6 +1488,7 @@ dependencies = [
  "hmail-cleaner-protocol",
  "hyper",
  "hyper-util",
+ "libc",
  "rand 0.10.3",
  "rcgen",
  "reqwest",

@@ -2,7 +2,7 @@
 import {formats} from '../formats';
 "use strict";
 export const agents = validate75;
-const schema152 = {"type":"array","items":{"$ref":"#/$defs/AgentView"}};
+const schema153 = {"type":"array","items":{"$ref":"#/$defs/AgentView"}};
 const schema32 = {"type":"object","properties":{"agent_id":{"$ref":"#/$defs/AgentId"},"certificate_expired":{"type":"boolean"},"certificate_expires_at":{"type":["string","null"],"format":"date-time"},"certificate_expiring":{"type":"boolean"},"health":{"$ref":"#/$defs/HealthView"},"name":{"type":"string"},"revoked":{"type":"boolean"},"server_id":{"$ref":"#/$defs/ServerId"}},"additionalProperties":false,"required":["agent_id","server_id","name","revoked","health","certificate_expiring","certificate_expired"]};
 const schema33 = {"type":"string","format":"canonical-uuid"};
 const schema36 = {"type":"string","format":"canonical-uuid"};
@@ -3861,7 +3861,7 @@ return errors === 0;
 validate84.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const enrollments = validate85;
-const schema164 = {"type":"array","items":{"$ref":"#/$defs/EnrollmentView"}};
+const schema165 = {"type":"array","items":{"$ref":"#/$defs/EnrollmentView"}};
 
 function validate41(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -5712,7 +5712,7 @@ return errors === 0;
 validate98.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const packages = validate99;
-const schema187 = {"type":"array","items":{"$ref":"#/$defs/AgentPackageView"}};
+const schema188 = {"type":"array","items":{"$ref":"#/$defs/AgentPackageView"}};
 const schema123 = {"type":"object","properties":{"build":{"type":"string"},"sha256":{"type":"string"}},"additionalProperties":false,"required":["build","sha256"]};
 
 function validate99(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
@@ -7435,7 +7435,7 @@ return errors === 0;
 validate109.evaluated = {"dynamicProps":false,"dynamicItems":false};
 
 export const servers = validate110;
-const schema206 = {"type":"array","items":{"$ref":"#/$defs/ServerView"}};
+const schema207 = {"type":"array","items":{"$ref":"#/$defs/ServerView"}};
 
 function validate110(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -9723,4 +9723,101 @@ validate117.errors = vErrors;
 return errors === 0;
 }
 validate117.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+
+export const update_policy = validate118;
+const schema152 = {"type":"object","properties":{"check_interval_seconds":{"type":"integer","format":"uint32","maximum":86400,"minimum":30},"graceful_timeout_minutes":{"type":"integer","format":"uint32","maximum":1440,"minimum":1}},"additionalProperties":false,"required":["check_interval_seconds","graceful_timeout_minutes"]};
+
+function validate118(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
+let vErrors = null;
+let errors = 0;
+const evaluated0 = validate118.evaluated;
+if(evaluated0.dynamicProps){
+evaluated0.props = undefined;
+}
+if(evaluated0.dynamicItems){
+evaluated0.items = undefined;
+}
+if(errors === 0){
+if(data && typeof data == "object" && !Array.isArray(data)){
+let missing0;
+if(((data.check_interval_seconds === undefined) && (missing0 = "check_interval_seconds")) || ((data.graceful_timeout_minutes === undefined) && (missing0 = "graceful_timeout_minutes"))){
+validate118.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+return false;
+}
+else {
+const _errs1 = errors;
+for(const key0 in data){
+if(!((key0 === "check_interval_seconds") || (key0 === "graceful_timeout_minutes"))){
+validate118.errors = [{instancePath,schemaPath:"#/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key0},message:"must NOT have additional properties"}];
+return false;
+break;
+}
+}
+if(_errs1 === errors){
+if(data.check_interval_seconds !== undefined){
+let data0 = data.check_interval_seconds;
+const _errs2 = errors;
+if(!(((typeof data0 == "number") && (!(data0 % 1) && !isNaN(data0))) && (isFinite(data0)))){
+validate118.errors = [{instancePath:instancePath+"/check_interval_seconds",schemaPath:"#/properties/check_interval_seconds/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
+return false;
+}
+if(errors === _errs2){
+if((typeof data0 == "number") && (isFinite(data0))){
+if(data0 > 86400 || isNaN(data0)){
+validate118.errors = [{instancePath:instancePath+"/check_interval_seconds",schemaPath:"#/properties/check_interval_seconds/maximum",keyword:"maximum",params:{comparison: "<=", limit: 86400},message:"must be <= 86400"}];
+return false;
+}
+else {
+if(data0 < 30 || isNaN(data0)){
+validate118.errors = [{instancePath:instancePath+"/check_interval_seconds",schemaPath:"#/properties/check_interval_seconds/minimum",keyword:"minimum",params:{comparison: ">=", limit: 30},message:"must be >= 30"}];
+return false;
+}
+}
+}
+}
+var valid0 = _errs2 === errors;
+}
+else {
+var valid0 = true;
+}
+if(valid0){
+if(data.graceful_timeout_minutes !== undefined){
+let data1 = data.graceful_timeout_minutes;
+const _errs4 = errors;
+if(!(((typeof data1 == "number") && (!(data1 % 1) && !isNaN(data1))) && (isFinite(data1)))){
+validate118.errors = [{instancePath:instancePath+"/graceful_timeout_minutes",schemaPath:"#/properties/graceful_timeout_minutes/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
+return false;
+}
+if(errors === _errs4){
+if((typeof data1 == "number") && (isFinite(data1))){
+if(data1 > 1440 || isNaN(data1)){
+validate118.errors = [{instancePath:instancePath+"/graceful_timeout_minutes",schemaPath:"#/properties/graceful_timeout_minutes/maximum",keyword:"maximum",params:{comparison: "<=", limit: 1440},message:"must be <= 1440"}];
+return false;
+}
+else {
+if(data1 < 1 || isNaN(data1)){
+validate118.errors = [{instancePath:instancePath+"/graceful_timeout_minutes",schemaPath:"#/properties/graceful_timeout_minutes/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
+return false;
+}
+}
+}
+}
+var valid0 = _errs4 === errors;
+}
+else {
+var valid0 = true;
+}
+}
+}
+}
+}
+else {
+validate118.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+validate118.errors = vErrors;
+return errors === 0;
+}
+validate118.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 

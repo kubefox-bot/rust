@@ -122,6 +122,7 @@ export interface BrowserContracts {
   submit: SubmitRequest;
   summary: SummaryDto;
   update: UpdateRequest;
+  update_policy: UpdatePolicy;
 }
 export interface AgentView {
   agent_id: AgentId;
@@ -365,4 +366,8 @@ export interface UpdateRequest {
   operation_id: string;
   package_version: string;
   target: SshTarget;
+}
+export interface UpdatePolicy {
+  check_interval_seconds: number;
+  graceful_timeout_minutes: number;
 }

@@ -17,6 +17,11 @@ impl<C: Connector> EnrollmentService<C> {
         lease: &SessionLease,
         input: InstallRequest,
     ) -> Result<EnrollmentView, EnrollmentError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| EnrollmentError::Busy)?;
         super::validation::authorize(lease)?;
         let (host, listen_port) = super::validation::install(&input)?;
         let package = self.catalog.open(&input.package_version).await?;
@@ -27,6 +32,7 @@ impl<C: Connector> EnrollmentService<C> {
             service.reserve(&view, &lease, Kind::Install).await?;
             let response = view.clone();
             tokio::spawn(async move {
+                let _maintenance = maintenance;
                 let mut view = view;
                 let result = service
                     .install_owned(&lease, input, package, &mut view, host, listen_port)
@@ -66,11 +72,11 @@ impl<C: Connector> EnrollmentService<C> {
                 return Err(EnrollmentError::Remote);
             }
             let issued = IdentityService::new(self.store.clone())
-                .issue_agent(input.agent_id, &host, &csr.csr_pem, lease)
+                .issue_agent_continuing(input.agent_id, &host, &csr.csr_pem, lease)
                 .await
                 .map_err(|_| EnrollmentError::Remote)?;
             ProfileService::new(self.store.clone())
-                .register(
+                .register_continuing(
                     ServerRegistration {
                         server_id: input.server_id,
                         profile_id: input.profile_id,

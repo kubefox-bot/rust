@@ -46,3 +46,26 @@ test("summary retains exact removed bytes and unknown counts", async () => {
   expect(summary.total_scan_files).toBeNull();
   expect(summary.remaining_old_files).toBeNull();
 });
+
+test("update policy rejects unsupported timing, missing fields and operational switches", () => {
+  expect(
+    decode("update_policy", {
+      check_interval_seconds: 30,
+      graceful_timeout_minutes: 1440,
+    }),
+  ).toEqual({ check_interval_seconds: 30, graceful_timeout_minutes: 1440 });
+  for (const value of [
+    { check_interval_seconds: 29, graceful_timeout_minutes: 15 },
+    { check_interval_seconds: 86401, graceful_timeout_minutes: 15 },
+    { check_interval_seconds: 60, graceful_timeout_minutes: 0 },
+    { check_interval_seconds: 60, graceful_timeout_minutes: 1441 },
+    { check_interval_seconds: 60.5, graceful_timeout_minutes: 15 },
+    { check_interval_seconds: 60 },
+    {
+      check_interval_seconds: 60,
+      graceful_timeout_minutes: 15,
+      disable_auto: true,
+    },
+  ])
+    expect(() => decode("update_policy", value)).toThrow();
+});

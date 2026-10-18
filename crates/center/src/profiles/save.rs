@@ -12,6 +12,27 @@ impl ProfileService {
         patch: ProfilePatch,
         lease: &SessionLease,
     ) -> Result<ProfileVersion, ProfileError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| ProfileError::Conflict)?;
+        let owner = self.clone();
+        let lease = lease.clone();
+        tokio::spawn(async move {
+            let _maintenance = maintenance;
+            owner.save_owned(id, expected_version, patch, &lease).await
+        })
+        .await
+        .map_err(|_| ProfileError::Storage)?
+    }
+    async fn save_owned(
+        &self,
+        id: ProfileId,
+        expected_version: u64,
+        patch: ProfilePatch,
+        lease: &SessionLease,
+    ) -> Result<ProfileVersion, ProfileError> {
         let stored = self.load(id, None, lease).await?;
         if stored.technical.version != expected_version {
             return Err(ProfileError::Conflict);

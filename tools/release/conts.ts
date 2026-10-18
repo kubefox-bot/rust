@@ -38,6 +38,13 @@ export const BASE_IMAGE_ARGUMENTS = {
 >;
 
 export const AGENT_EXECUTABLE = "hmail-cleaner-agent.exe";
+export const AGENT_PACKAGE_FILES = [
+  AGENT_EXECUTABLE,
+  `${AGENT_EXECUTABLE}.sha256`,
+  "manifest.json",
+] as const;
+export const PE_HEADER_POINTER = 0x3c;
+export const PE_AMD64_MACHINE = 0x8664;
 export const AGENT_PRODUCT = "hmail-cleaner-agent";
 export const AGENT_TARGET = "x86_64-pc-windows-msvc";
 export const PROTOCOL_MIN = 1;
@@ -68,6 +75,7 @@ export const IMAGE_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 export const IMAGE_REPOSITORY_PATTERN =
   /^(?:[a-z0-9]+(?:[.-][a-z0-9]+)*(?::[0-9]+)?\/)?[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\/[a-z0-9]+(?:[._-][a-z0-9]+)*)*$/;
 export const SOURCE_INPUTS = [
+  ".github/workflows",
   "Cargo.toml",
   "Cargo.lock",
   "package.json",

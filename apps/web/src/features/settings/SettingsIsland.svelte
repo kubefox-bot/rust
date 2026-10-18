@@ -12,6 +12,7 @@
   import Profile from "./Profile.svelte";
   import Agents from "./Agents.svelte";
   import Account from "./Account.svelte";
+  import Updates from "./updates/Updates.svelte";
   let status = $state<"loading" | "authenticated" | "anonymous" | "failed">(
     "loading",
   );
@@ -169,6 +170,7 @@
     {#if section === "account"}<Account
         oncommitted={() => window.location.replace("/login/")}
       />
+    {:else if section === "updates"}<Updates />
     {:else if section === "agents"}{#key selected}<Agents
           servers={available}
           {selected}

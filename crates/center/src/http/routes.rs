@@ -29,6 +29,11 @@ pub fn router(state: AppState) -> Router {
         .merge(crate::jobs::http::routes())
         .merge(crate::history::http::routes())
         .merge(crate::enrollment::http::routes())
+        .merge(crate::update_settings::routes())
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::maintenance::admission,
+        ))
         .layer(DefaultBodyLimit::max(LOGIN_BODY_BYTES))
         .layer(CookieManagerLayer::new())
         .layer(CsrfLayer::new())

@@ -10,6 +10,45 @@ impl ProfileService {
         input: ServerRegistration,
         lease: &SessionLease,
     ) -> Result<ProfileVersion, ProfileError> {
+        let permit = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| ProfileError::Conflict)?;
+        self.register_with_permit(input, lease, permit).await
+    }
+    pub(crate) async fn register_continuing(
+        &self,
+        input: ServerRegistration,
+        lease: &SessionLease,
+    ) -> Result<ProfileVersion, ProfileError> {
+        let permit = self
+            .store
+            .maintenance()
+            .continuation()
+            .map_err(|_| ProfileError::Conflict)?;
+        self.register_with_permit(input, lease, permit).await
+    }
+    async fn register_with_permit(
+        &self,
+        input: ServerRegistration,
+        lease: &SessionLease,
+        permit: crate::maintenance::WritePermit,
+    ) -> Result<ProfileVersion, ProfileError> {
+        let owner = self.clone();
+        let lease = lease.clone();
+        tokio::spawn(async move {
+            let _maintenance = permit;
+            owner.register_owned(input, &lease).await
+        })
+        .await
+        .map_err(|_| ProfileError::Storage)?
+    }
+    async fn register_owned(
+        &self,
+        input: ServerRegistration,
+        lease: &SessionLease,
+    ) -> Result<ProfileVersion, ProfileError> {
         if input.name.trim().is_empty()
             || input.name.len() > 128
             || input.name.chars().any(char::is_control)

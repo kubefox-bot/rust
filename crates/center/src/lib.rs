@@ -17,3 +17,6 @@ pub mod jobs;
 pub mod profiles;
 
 mod diagnostics;
+
+pub mod maintenance;
+pub mod update_settings;

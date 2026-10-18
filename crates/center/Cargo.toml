@@ -64,3 +64,6 @@ tower = { version = "0.5", features = ["util"] }
 tempfile = "3"
 
 uuid = { workspace = true, features = ["v4"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

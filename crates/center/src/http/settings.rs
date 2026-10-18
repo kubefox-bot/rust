@@ -23,19 +23,29 @@ pub(super) async fn update(
     if !matches!(input.idle_minutes, 15 | 30 | 60 | 1440) {
         return Err(StatusCode::BAD_REQUEST);
     }
-    let current = lease(&state, &cookies)?;
-    let _barrier = state.authority.credential_barrier.lock().await;
-    if !current.is_live() {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-    sqlx::query("UPDATE settings SET idle_minutes=? WHERE singleton=1")
-        .bind(i64::from(input.idle_minutes))
-        .execute(&state.store.pool)
-        .await
+    let maintenance = state
+        .store
+        .maintenance()
+        .admit()
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-    state
-        .authority
-        .set_idle_with_activity(current.generation(), input.idle_minutes)
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
-    Ok(Json(input))
+    let current = lease(&state, &cookies)?;
+    tokio::spawn(async move {
+        let _maintenance = maintenance;
+        let _barrier = state.authority.credential_barrier.lock().await;
+        if !current.is_live() {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+        sqlx::query("UPDATE settings SET idle_minutes=? WHERE singleton=1")
+            .bind(i64::from(input.idle_minutes))
+            .execute(&state.store.pool)
+            .await
+            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+        state
+            .authority
+            .set_idle_with_activity(current.generation(), input.idle_minutes)
+            .map_err(|_| StatusCode::UNAUTHORIZED)?;
+        Ok(Json(input))
+    })
+    .await
+    .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
 }

@@ -111,6 +111,8 @@ test("init and Quadlet run select the same immutable image, named volume and non
   expect(result.container).toContain("User=10001\nGroup=10001\n");
   expect(result.container).toContain("UserNS=keep-id:uid=10001,gid=10001\n");
   expect(result.container).toContain("ReadOnly=true\n");
+  expect(result.container).toContain("Volume=%t/astra-maintenance:/run/astra-maintenance:Z\n");
+  expect(result.container).toContain("RuntimeDirectory=astra-maintenance\nRuntimeDirectoryMode=0700\n");
   expect(result.container).toContain("WantedBy=default.target\n");
   expect(result.container).not.toContain("AutoUpdate=");
   expect(result.container).not.toContain("podman.sock");

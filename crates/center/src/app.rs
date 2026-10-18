@@ -77,6 +77,13 @@ async fn run_owned(
         .recover_interrupted()
         .await
         .map_err(|_| CenterError::Runtime)?;
+    #[cfg(unix)]
+    let _maintenance = crate::maintenance::ControlServer::start(
+        std::path::Path::new(crate::maintenance::SOCKET_DIRECTORY),
+        state.store.clone(),
+    )
+    .await
+    .map_err(|_| CenterError::Runtime)?;
     let listener = std::net::TcpListener::bind(config.listen).map_err(|_| CenterError::Runtime)?;
     serve(listener, &config, state, cancel).await
 }

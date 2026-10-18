@@ -8,16 +8,22 @@ pub(crate) const SCHEMA_VERSION: i64 = 1;
 #[derive(Clone)]
 pub struct CenterStore {
     pub(crate) pool: SqlitePool,
+    maintenance: crate::maintenance::MaintenanceGate,
     pub(super) lease: Arc<Lease>,
     pub(crate) kdf: Arc<crate::vault::KdfGate>,
     pub(crate) catalog_writer: Arc<tokio::sync::Mutex<()>>,
     pub(crate) revoked: hmail_cleaner_adapters::mtls::RevokedSerials,
 }
 impl CenterStore {
+    pub fn maintenance(&self) -> &crate::maintenance::MaintenanceGate {
+        &self.maintenance
+    }
     pub(crate) fn directory(&self) -> &std::path::Path {
         &self.lease.path
     }
     pub async fn open(directory: &DataDirectoryLease) -> Result<Self, StorageError> {
+        let maintenance = crate::maintenance::MaintenanceGate::open(directory.path())
+            .map_err(|_| StorageError::Directory)?;
         let database = directory.path().join("center.sqlite");
         if database.exists() {
             let metadata =
@@ -76,6 +82,7 @@ impl CenterStore {
         }
         Ok(Self {
             pool,
+            maintenance,
             lease: directory.0.clone(),
             kdf: Arc::new(crate::vault::KdfGate::new()),
             catalog_writer: Arc::new(tokio::sync::Mutex::new(())),

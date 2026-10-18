@@ -53,7 +53,12 @@ pub(super) async fn prepare(
     if bytes.len() > MAX_PENDING_BYTES {
         return Err(IdentityError);
     }
+    let maintenance = store
+        .maintenance()
+        .continuation()
+        .map_err(|_| IdentityError)?;
     tokio::spawn(async move {
+        let _maintenance = maintenance;
         let _writer=writer;if !lease.is_live(){return Err(IdentityError);}
         let mut transaction=store.pool.begin().await.map_err(|_|IdentityError)?;
         let row:Option<Option<String>>=sqlx::query_scalar("SELECT CASE WHEN length(serial)<=24 THEN serial ELSE NULL END FROM trust WHERE agent_id=? AND revoked=0").bind(agent.to_string()).fetch_optional(&mut *transaction).await.map_err(|_|IdentityError)?;

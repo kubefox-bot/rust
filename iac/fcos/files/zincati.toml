@@ -1,10 +1,8 @@
+[identity]
+group = "astra"
+
 [updates]
-strategy = "periodic"
+strategy = "fleet_lock"
 
-[updates.periodic]
-time_zone = "UTC"
-
-[[updates.periodic.window]]
-days = ["Sun"]
-start_time = "03:00"
-length_minutes = 60
+[updates.fleet_lock]
+base_url = "http://127.0.0.1:35355/"

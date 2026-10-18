@@ -38,6 +38,8 @@ export const buildImage = async (
     `HMAIL_BUILD_VERSION=${config.build}`,
     "--build-arg",
     `HMAIL_SOURCE_REVISION=${config.source.revision}`,
+    "--build-arg",
+    `HMAIL_SOURCE_SHA=${config.environment.HMAIL_SOURCE_SHA ?? config.source.revision}`,
   ];
   switch (config.options.engine) {
     case "podman":

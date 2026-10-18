@@ -7,6 +7,7 @@ import {
   IMAGE_TAG_BUILD_LENGTH,
   IMAGE_TAG_FINGERPRINT_LENGTH,
 } from "./conts";
+import { run } from "../lib/process";
 import { sourceIdentity } from "./source-identity";
 import type {
   BaseImages,
@@ -65,6 +66,12 @@ export const parseReleaseOptions = (
     (engine !== "docker" || !/^[A-Za-z0-9_.-]+$/.test(context))
   )
     throw new Error("A Docker context is valid only for the Docker engine");
+  const agentPackageDirectory = environment.HMAIL_RELEASE_AGENT_PACKAGE;
+  if (
+    agentPackageDirectory !== undefined &&
+    (!agentPackageDirectory || /[\u0000-\u001f]/.test(agentPackageDirectory))
+  )
+    throw new Error("Invalid HMAIL_RELEASE_AGENT_PACKAGE directory");
   const output = environment.HMAIL_RELEASE_OUTPUT ?? "target/releases";
   if (!output || /[\u0000-\u001f]/.test(output))
     throw new Error("Invalid HMAIL_RELEASE_OUTPUT directory");
@@ -75,6 +82,10 @@ export const parseReleaseOptions = (
     imageRepository,
     output,
     allowDirty: allowDirty === "1",
+    agentPackageDirectory:
+      agentPackageDirectory === undefined
+        ? undefined
+        : resolve(agentPackageDirectory),
     build: configuredBuildVersion(environment),
   };
 };
@@ -124,6 +135,11 @@ export const readReleaseConfig = async (): Promise<ReleaseConfig> => {
   const root = resolve(import.meta.dir, "../..");
   const options = parseReleaseOptions(environment);
   const source = await sourceIdentity(root);
+  const fullSha = (
+    await run({ argv: ["git", "rev-parse", "HEAD"], cwd: root })
+  ).trim();
+  if (!/^[0-9a-f]{40}$/.test(fullSha))
+    throw new Error("Cannot resolve full source SHA");
   if (source.dirty && !options.allowDirty)
     throw new Error(
       "Release source is dirty; commit it or explicitly set HMAIL_RELEASE_ALLOW_DIRTY=1 for a local fingerprinted build",
@@ -147,6 +163,7 @@ export const readReleaseConfig = async (): Promise<ReleaseConfig> => {
       ...environment,
       HMAIL_BUILD_VERSION: build,
       HMAIL_SOURCE_REVISION: source.revision,
+      HMAIL_SOURCE_SHA: fullSha,
       PUBLIC_BUILD_VERSION: build,
       ...(options.engine === "docker" && options.context
         ? { HMAIL_BUILD_DOCKER_CONTEXT: options.context }

@@ -17,6 +17,25 @@ impl IdentityService {
         credentials: AgentCredentials,
         lease: &SessionLease,
     ) -> Result<IssuedAgent, RenewError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| IdentityError)?;
+        let owner = self.clone();
+        let lease = lease.clone();
+        tokio::spawn(async move {
+            let _maintenance = maintenance;
+            owner.renew_owned(credentials, &lease).await
+        })
+        .await
+        .map_err(|_| IdentityError)?
+    }
+    async fn renew_owned(
+        &self,
+        credentials: AgentCredentials,
+        lease: &SessionLease,
+    ) -> Result<IssuedAgent, RenewError> {
         let agent = credentials.agent_id;
         let current = pending::current(&self.store, agent).await?;
         super::client_renew::ensure(&self.store, lease).await?;

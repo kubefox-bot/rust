@@ -109,3 +109,15 @@ run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/acceptance/
 [tasks."measure:mvp"]
 description = "Build and measure a separate release center with static web and two TLS fixtures"
 run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/acceptance/tsconfig.json", "bun tools/acceptance/prepare-measurement.ts"]
+
+[tasks."release:test"]
+description = "Check release tooling and signed publication contracts"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/release/tsconfig.json", "bun test ./tools/release/tests tools/release/agent-manifest.test.ts"]
+
+[tasks."delivery:test"]
+description = "Verify updater and graceful replacement behavior"
+run = "cargo test -p astra-updater --locked"
+
+[tasks."test:updates"]
+description = "Record local delivery verification; native target acceptance stays separate"
+run = "bun tools/acceptance/delivery/run.ts"

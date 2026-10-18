@@ -10,6 +10,11 @@ impl JobService {
         lease: &SessionLease,
         input: SubmitRequest,
     ) -> Result<JobView, SubmitError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| SubmitError::Busy)?;
         if !lease.is_live() {
             return Err(SubmitError::Unauthorized);
         }
@@ -32,6 +37,7 @@ impl JobService {
         let service = self.clone();
         let lease = lease.clone();
         tokio::spawn(async move {
+            let _maintenance = maintenance;
             let _permit = permit;
             service.submit_owned(&lease, input).await
         })

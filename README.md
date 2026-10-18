@@ -64,3 +64,6 @@ mise run measure:mvp
 Методика и результаты замеров — в [ресурсном отчёте](docs/mvp-resource-report.md),
 принятые при реализации решения — в [журнале решений](docs/mvp-implementation-decisions.md).
 JavaScript runtime нужен для сборки; в образе работает Rust-процесс.
+
+Автоматическая доставка контейнерных образов: [установка и обслуживание](docs/center-cicd.md),
+[фактические проверки и границы](docs/center-cicd-acceptance.md).

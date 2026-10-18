@@ -1,0 +1,13 @@
+{
+  "repository": "kubefox-bot/rust",
+  "image_repository": "ghcr.io/kubefox-bot/astra-center",
+  "state_dir": "/var/home/hmail-center/.local/state/astra-updater",
+  "staging_dir": "/var/home/hmail-center/.local/share/astra-updater/staging",
+  "backup_dir": "/var/home/hmail-center/.local/share/astra-updater/backups",
+  "unit_path": "/var/home/hmail-center/.config/containers/systemd/hmail-center.container",
+  "socket_path": "/run/user/2000/astra-maintenance/control.sock",
+  "cosign": "/var/home/hmail-center/.local/lib/astra-updater/cosign",
+  "trust_root": "/var/home/hmail-center/.local/lib/astra-updater/sigstore-trusted-root.json",
+  "credentials_file": "/var/home/hmail-center/.config/astra-updater/credentials.json",
+  "registry_authfile": "/var/home/hmail-center/.config/astra-updater/registry-auth.json"
+}

@@ -15,6 +15,11 @@ impl<C: Connector> EnrollmentService<C> {
         id: AgentId,
         input: UpdateRequest,
     ) -> Result<EnrollmentView, EnrollmentError> {
+        let maintenance = self
+            .store
+            .maintenance()
+            .admit()
+            .map_err(|_| EnrollmentError::Busy)?;
         super::validation::authorize(lease)?;
         if input.operation_id.is_nil() {
             return Err(EnrollmentError::Invalid);
@@ -67,6 +72,7 @@ impl<C: Connector> EnrollmentService<C> {
             service.reserve(&view, &lease, Kind::Update).await?;
             let response = view.clone();
             tokio::spawn(async move {
+                let _maintenance = maintenance;
                 let mut view = view;
                 let result = service
                     .update_owned(&lease, input, package, &mut view)

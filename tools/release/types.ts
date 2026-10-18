@@ -12,6 +12,7 @@ export type ReleaseOptions = Readonly<{
   imageRepository: string;
   output: string;
   allowDirty: boolean;
+  agentPackageDirectory?: string;
   build?: string;
 }>;
 export type SourceIdentity = Readonly<{
