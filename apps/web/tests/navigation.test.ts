@@ -33,3 +33,13 @@ test("server URLs resolve stable slugs and existing UUID bookmarks to internal I
     resolveServerReference({ servers: [first, second], reference: "unknown" }),
   ).toThrow();
 });
+
+test("header settings destinations keep the server and select their own section", async () => {
+  const { settingsUrl } = await import("../src/shell/navigation");
+  expect(settingsUrl({ server: second, section: "profile" })).toBe(
+    "/settings/?server=%D0%BF%D0%BE%D1%87%D1%82%D0%B0-2#profile",
+  );
+  expect(settingsUrl({ server: second, section: "account" })).toBe(
+    "/settings/?server=%D0%BF%D0%BE%D1%87%D1%82%D0%B0-2#account",
+  );
+});

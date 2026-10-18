@@ -5,6 +5,15 @@ type ServerReference = Readonly<{ id: string; slug?: string | null }>;
 export const serverUrlValue = (server: ServerReference): string =>
   server.slug || server.id;
 
+export const settingsUrl = ({
+  server,
+  section,
+}: Readonly<{
+  server: ServerReference;
+  section: "profile" | "account";
+}>): string =>
+  `/settings/?server=${encodeURIComponent(serverUrlValue(server))}#${section}`;
+
 export const agentUpdateUrl = (server: ServerReference): string =>
   `/settings/?server=${encodeURIComponent(serverUrlValue(server))}&action=update-agent#agents`;
 
@@ -41,12 +50,16 @@ export const selectServer = ({
   const url = new URL(window.location.href);
   url.searchParams.set("server", reference);
   window.history.replaceState(null, "", url);
-  for (const [selector, path] of [
-    ["[data-history-link]", "/history/"],
-    ["[data-settings-link]", "/settings/"],
-    ["[data-cleanup-link]", "/"],
+  for (const [selector, href] of [
+    [
+      "[data-history-link]",
+      `/history/?server=${encodeURIComponent(reference)}`,
+    ],
+    ["[data-settings-link]", settingsUrl({ server, section: "profile" })],
+    ["[data-account-link]", settingsUrl({ server, section: "account" })],
+    ["[data-cleanup-link]", `/?server=${encodeURIComponent(reference)}`],
   ] as const) {
     const link = document.querySelector<HTMLAnchorElement>(selector);
-    if (link) link.href = `${path}?server=${encodeURIComponent(reference)}`;
+    if (link) link.href = href;
   }
 };

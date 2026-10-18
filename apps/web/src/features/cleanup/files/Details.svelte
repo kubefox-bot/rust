@@ -229,12 +229,7 @@
             )}{:else}0 файлов{/if}</span
         >
         <div class="actions">
-          <Select
-            label="Файлов на странице"
-            options={PAGE_SIZE_OPTIONS}
-            value={query.limit}
-            onchange={(limit) => (query = { ...query, limit, offset: 0n })}
-          /><Button
+          <Button
             disabled={loading || query.offset === 0n}
             onclick={() =>
               (query = {
@@ -251,6 +246,14 @@
               })}>Далее</Button
           >
         </div>
+        <div class="page-size">
+          <Select
+            label="Файлов на странице"
+            options={PAGE_SIZE_OPTIONS}
+            value={query.limit}
+            onchange={(limit) => (query = { ...query, limit, offset: 0n })}
+          />
+        </div>
       </footer>
     {/if}
   {/if}
@@ -263,8 +266,7 @@
     max-height: calc(100dvh - 32px);
     padding: 24px;
   }
-  header,
-  footer {
+  header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -288,17 +290,23 @@
     min-height: 18px;
   }
   footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 16px;
     margin-top: 16px;
-    flex-wrap: wrap;
     align-items: flex-end;
   }
   .actions {
     margin: 0;
     align-items: flex-end;
   }
-  .actions :global(.button),
-  .actions :global(.select-trigger) {
+  footer :global(.button),
+  footer :global(.select-trigger) {
     height: 40px;
+  }
+  .page-size {
+    justify-self: end;
+    min-width: 120px;
   }
   @media (max-width: 540px) {
     dialog {
@@ -306,6 +314,18 @@
     }
     header {
       align-items: start;
+    }
+    footer {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .actions {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: center;
+    }
+    .page-size {
+      grid-column: 2;
+      grid-row: 1;
     }
   }
 </style>
