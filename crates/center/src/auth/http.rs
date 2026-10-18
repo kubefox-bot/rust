@@ -21,7 +21,7 @@ pub(crate) async fn login(
     cookies: Cookies,
     Json(input): Json<LoginRequest>,
 ) -> Result<Json<SessionView>, StatusCode> {
-    if input.login.is_empty() || input.login.len() > 64 || input.password.len() > 4096 {
+    if !crate::account::valid_login(&input.login) || input.password.len() > 4096 {
         return Err(StatusCode::BAD_REQUEST);
     }
     if !state.limiter.admit() {

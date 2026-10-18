@@ -1,5 +1,6 @@
 <script lang="ts">
   import { login } from "./api";
+  import { LOGIN_MAX_UTF16_UNITS } from "./conts";
   let username = $state("");
   let password = $state("");
   let pending = $state(false);
@@ -33,7 +34,7 @@
           name="username"
           autocomplete="username"
           required
-          maxlength="64"
+          maxlength={LOGIN_MAX_UTF16_UNITS}
           bind:value={username}
           disabled={pending}
         /></label

@@ -613,3 +613,129 @@ test("explicit receipt-fault release reconciles the accepted job without another
     await fixture.close();
   }
 }, 120000);
+
+for (const operation of ["preview", "clean"] as const) {
+  test(`same-server tabs adopt ${operation}, dismiss stale confirmation and cancel the exact job`, async () => {
+    const { signIn, completedPreview } = await import("./cleanup-steps");
+    const { instrumentEvents, sourceCounts } =
+      await import("./instrumentation");
+    const { decode } = await import("../../src/api");
+    const fixture = await startFixture();
+    try {
+      const page = await fixture.context.newPage();
+      await instrumentEvents(page);
+      await signIn(page, fixture.origin);
+      await page
+        .getByLabel("Останавливать службу на время очистки", { exact: false })
+        .check();
+      const serverId = fixture.servers[0].id;
+      await completedPreview(page, fixture, serverId);
+      const other = await fixture.context.newPage();
+      await instrumentEvents(other);
+      await other.goto(`${fixture.origin}/?server=${serverId}`);
+      await other
+        .getByRole("heading", { name: "Завершено", exact: true })
+        .waitFor();
+      await other
+        .getByRole("button", { name: "Очистить", exact: true })
+        .click();
+      await other.getByRole("dialog").waitFor();
+      const submitted = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname ===
+            `/api/v1/servers/${serverId}/jobs` &&
+          response.request().method() === "POST",
+      );
+      if (operation === "preview") {
+        await page
+          .getByRole("button", { name: "Предпросмотр", exact: true })
+          .click();
+      } else {
+        await page
+          .getByRole("button", { name: "Очистить", exact: true })
+          .click();
+        await page
+          .getByLabel(
+            "Подтверждаю удаление и временную остановку почтовой службы.",
+            { exact: true },
+          )
+          .check();
+        await page
+          .getByRole("button", { name: "Подтвердить очистку", exact: true })
+          .click();
+      }
+      const next = decode("job", await (await submitted).json());
+      await other
+        .getByRole("heading", { name: "Выполняется", exact: true })
+        .waitFor({ timeout: 10000 });
+      expect(await other.getByRole("dialog").count()).toBe(0);
+      expect(
+        await other
+          .getByRole("region", { name: "Состояние задания" })
+          .locator("code")
+          .textContent(),
+      ).toBe(next.job_id);
+      expect(
+        await other
+          .getByRole("button", { name: "Очистить", exact: true })
+          .isDisabled(),
+      ).toBe(true);
+      const cancellation = other.waitForRequest(
+        (request) =>
+          new URL(request.url()).pathname ===
+          `/api/v1/jobs/${next.job_id}/cancel`,
+      );
+      await other
+        .getByRole("button", { name: "Отменить задание", exact: true })
+        .click();
+      await cancellation;
+      if (operation === "clean") {
+        await other
+          .getByRole("heading", { name: "Восстановление службы", exact: true })
+          .waitFor();
+        await fixture.phase(serverId, "cancelled");
+      }
+      await other
+        .getByRole("heading", { name: "Отменено", exact: true })
+        .waitFor();
+      await page
+        .getByRole("heading", { name: "Отменено", exact: true })
+        .waitFor();
+      expect(await sourceCounts(page)).toEqual({ active: 1, created: 1 });
+      expect(await sourceCounts(other)).toEqual({ active: 1, created: 1 });
+      const stats = await fixture.stats();
+      expect(stats.find((agent) => agent.id === serverId)?.puts).toBe(2);
+      expect(stats.find((agent) => agent.id === serverId)?.cancels).toBe(1);
+      expect(
+        stats.find((agent) => agent.id === fixture.servers[1].id)?.puts,
+      ).toBe(0);
+    } finally {
+      await fixture.close();
+    }
+  }, 60000);
+}
+
+test("Unicode login form submits all 64 supplementary scalars", async () => {
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await page.goto(`${fixture.origin}/login/`);
+    const login = page.getByLabel("Логин", { exact: true });
+    await login.fill("𐐀".repeat(63));
+    await login.press("End");
+    await page.keyboard.insertText("𐐀");
+    expect(await login.inputValue()).toBe("𐐀".repeat(64));
+    await page
+      .getByLabel("Пароль", { exact: true })
+      .fill("fixture-center-password");
+    const submitted = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === "/api/v1/auth/login",
+    );
+    await page
+      .getByRole("button", { name: "Войти в центр", exact: true })
+      .click();
+    expect((await submitted).postDataJSON().login).toBe("𐐀".repeat(64));
+  } finally {
+    await fixture.close();
+  }
+}, 60000);

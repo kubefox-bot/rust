@@ -139,9 +139,24 @@ export const transition = (
         previewCandidateId: changed ? null : state.previewCandidateId,
         confirmation: changed ? null : state.confirmation,
       };
-      return latest && (!state.job || latest.job_id === state.job.job_id)
-        ? observe(next, latest)
-        : next;
+      if (!latest || latest.intent.server_id !== context.server.id) return next;
+      if (latest.job_id !== state.job?.job_id) {
+        if (state.dispatch.kind !== "settled" || state.job?.slot_held)
+          return next;
+        return observe(
+          {
+            ...next,
+            job: null,
+            parameters: parametersFromJob(latest),
+            preview: null,
+            previewCandidateId:
+              latest.intent.operation === "preview" ? latest.job_id : null,
+            confirmation: null,
+          },
+          latest,
+        );
+      }
+      return observe(next, latest);
     }
     case "confirm": {
       const preview = state.preview;

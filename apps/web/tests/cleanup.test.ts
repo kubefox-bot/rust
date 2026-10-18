@@ -137,3 +137,78 @@ test("journal stays bounded during a long operation", () => {
   expect(state.journal).toHaveLength(1000);
   expect(state.journal.at(-1)?.key).toEndWith(":1102");
 });
+
+test("authoritative latest replaces a settled run and invalidates its captured confirmation", () => {
+  const confirmed = transition(initialState(context), { type: "confirm" });
+  const target = confirmed.confirmation;
+  const latest = {
+    ...preview,
+    job_id: "50209868-1236-4d7b-b65c-9b56d70dcfe7",
+    slot_held: true,
+    snapshot: { ...snapshot, phase: "running" as const },
+  };
+  const adopted = transition(confirmed, {
+    type: "context",
+    context: { ...context, latest, busy: true },
+  });
+  expect(adopted.job?.job_id).toBe(latest.job_id);
+  expect(adopted.preview).toBeNull();
+  expect(adopted.confirmation).toBeNull();
+  expect(target?.previewJobId).toBe(preview.job_id);
+  expect(Object.isFrozen(target)).toBe(true);
+  const completed = transition(adopted, {
+    type: "job",
+    job: { ...latest, slot_held: false, revision: "3", snapshot },
+  });
+  expect(completed.preview?.job_id).toBe(latest.job_id);
+});
+
+test("authoritative resync preserves an active or uncertain exact-job binding", () => {
+  const unrelated = {
+    ...preview,
+    job_id: "50209868-1236-4d7b-b65c-9b56d70dcfe7",
+  };
+  const active = initialState({
+    ...context,
+    latest: { ...preview, slot_held: true },
+  });
+  expect(
+    transition(active, {
+      type: "context",
+      context: { ...context, latest: unrelated },
+    }).job?.job_id,
+  ).toBe(preview.job_id);
+  const sending = transition(initialState(context), {
+    type: "dispatch",
+    intent: preview.intent,
+  });
+  const unknown = transition(sending, { type: "uncertain" });
+  const resynced = transition(unknown, {
+    type: "context",
+    context: { ...context, latest: unrelated },
+  });
+  expect(resynced.dispatch.kind).toBe("unknown");
+  expect(resynced.job).toBeNull();
+  expect(transition(resynced, { type: "job", job: unrelated })).toBe(resynced);
+});
+
+test("authoritative context cannot adopt a latest job belonging to another server", () => {
+  const confirmed = transition(initialState(context), { type: "confirm" });
+  const next = transition(confirmed, {
+    type: "context",
+    context: {
+      ...context,
+      latest: {
+        ...preview,
+        job_id: "50209868-1236-4d7b-b65c-9b56d70dcfe7",
+        intent: {
+          ...preview.intent,
+          server_id: "c68482e9-cdaa-4dfb-8fc8-18a4d935a307",
+        },
+      },
+    },
+  });
+  expect(next.job).toEqual(confirmed.job);
+  expect(next.preview).toEqual(confirmed.preview);
+  expect(next.confirmation).toEqual(confirmed.confirmation);
+});

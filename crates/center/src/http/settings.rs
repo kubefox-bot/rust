@@ -35,7 +35,7 @@ pub(super) async fn update(
         .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
     state
         .authority
-        .set_idle(current.generation(), input.idle_minutes)
+        .set_idle_with_activity(current.generation(), input.idle_minutes)
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     Ok(Json(input))
 }

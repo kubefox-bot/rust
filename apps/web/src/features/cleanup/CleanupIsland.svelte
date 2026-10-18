@@ -77,8 +77,12 @@
       serverId: id,
       onEvent: (event) => {
         if (active(id, current) && view) {
+          const needsLatest =
+            view.dispatch.kind === "settled" &&
+            !view.job?.slot_held &&
+            view.job?.job_id !== event.job.job_id;
           view = transition(view, { type: "job", job: event.job });
-          if (!event.job.slot_held) refresh().catch(failure);
+          if (needsLatest || !event.job.slot_held) refresh().catch(failure);
         }
       },
       onResync: () => {

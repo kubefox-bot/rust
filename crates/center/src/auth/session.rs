@@ -273,6 +273,25 @@ impl SessionAuthority {
         expire(&mut state, self.clock.now());
         Ok(())
     }
+    /// Apply a persisted setting and record its activity as one generation-checked change.
+    pub(crate) fn set_idle_with_activity(
+        &self,
+        generation: u64,
+        minutes: u16,
+    ) -> Result<(), AuthError> {
+        let duration = idle(minutes)?;
+        let mut state = self.state.lock().map_err(|_| AuthError)?;
+        let now = self.clock.now();
+        expire(&mut state, now);
+        let session = state
+            .current
+            .as_mut()
+            .filter(|session| session.generation == generation)
+            .ok_or(AuthError)?;
+        session.last_activity = now;
+        state.idle = duration;
+        Ok(())
+    }
     pub fn idle_minutes(&self) -> Result<u16, AuthError> {
         Ok((self.state.lock().map_err(|_| AuthError)?.idle.as_secs() / SECONDS_PER_MINUTE) as u16)
     }
@@ -309,5 +328,68 @@ mod tests {
         let _ = authority.advance_revision(1, 2);
         assert!(authority.begin_login().is_err());
         assert!(authority.admit(2, Dek::new([3; 32])).is_err());
+    }
+}
+
+#[cfg(test)]
+mod settings_activity_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    struct TestClock(AtomicU64);
+    impl Clock for TestClock {
+        fn now(&self) -> Duration {
+            Duration::from_secs(self.0.load(Ordering::SeqCst))
+        }
+    }
+
+    #[test]
+    fn settings_activity_is_not_coalesced_with_a_recent_touch() {
+        let clock = Arc::new(TestClock(AtomicU64::new(0)));
+        let authority = SessionAuthority::new(1, 60, clock.clone()).unwrap();
+        let grant = authority.admit(1, Dek::new([1; 32])).unwrap();
+        clock.0.store(1000, Ordering::SeqCst);
+        authority.touch(grant.generation).unwrap();
+        clock.0.store(1010, Ordering::SeqCst);
+        authority
+            .set_idle_with_activity(grant.generation, 15)
+            .unwrap();
+        clock.0.store(1909, Ordering::SeqCst);
+        assert!(authority.authenticate(&grant.token).is_ok());
+        clock.0.store(1910, Ordering::SeqCst);
+        assert!(authority.authenticate(&grant.token).is_err());
+    }
+
+    #[test]
+    fn stale_settings_completion_cannot_change_or_touch_a_new_generation() {
+        let clock = Arc::new(TestClock(AtomicU64::new(0)));
+        let authority = SessionAuthority::new(1, 60, clock.clone()).unwrap();
+        let old = authority.admit(1, Dek::new([1; 32])).unwrap();
+        clock.0.store(1000, Ordering::SeqCst);
+        let current = authority.admit(1, Dek::new([2; 32])).unwrap();
+        clock.0.store(1010, Ordering::SeqCst);
+        assert!(authority
+            .set_idle_with_activity(old.generation, 15)
+            .is_err());
+        assert_eq!(authority.idle_minutes().unwrap(), 60);
+        clock.0.store(4599, Ordering::SeqCst);
+        assert!(authority.authenticate(&current.token).is_ok());
+        clock.0.store(4600, Ordering::SeqCst);
+        assert!(authority.authenticate(&current.token).is_err());
+    }
+
+    #[test]
+    fn expired_settings_completion_never_revives_a_session() {
+        let clock = Arc::new(TestClock(AtomicU64::new(0)));
+        let authority = SessionAuthority::new(1, 60, clock.clone()).unwrap();
+        let grant = authority.admit(1, Dek::new([1; 32])).unwrap();
+        let lease = authority.authenticate(&grant.token).unwrap();
+        clock.0.store(3600, Ordering::SeqCst);
+        assert!(authority
+            .set_idle_with_activity(grant.generation, 1440)
+            .is_err());
+        assert!(!lease.is_live());
+        assert!(authority.authenticate(&grant.token).is_err());
+        assert_eq!(authority.idle_minutes().unwrap(), 60);
     }
 }

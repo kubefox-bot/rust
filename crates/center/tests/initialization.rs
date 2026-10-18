@@ -55,3 +55,22 @@ async fn concurrent_init_creates_exactly_one_account() {
     assert_ne!(a.is_ok(), b.is_ok());
     assert!(store.account().await.unwrap().is_some());
 }
+
+#[tokio::test]
+async fn unicode_login_accepts_scalar_and_utf8_boundaries_without_normalization() {
+    for login in ["я".repeat(40), "𐐀".repeat(64), "a\u{301}".repeat(32)] {
+        let root = tempfile::tempdir().unwrap();
+        let directory = DataDirectory::acquire(root.path()).unwrap();
+        let store = CenterStore::open(&directory).await.unwrap();
+        initialize(
+            &store,
+            &InitInput {
+                login: login.clone(),
+            },
+            &mut Prompt { confirmed: true },
+        )
+        .await
+        .unwrap();
+        assert_eq!(store.account().await.unwrap().unwrap().login, login);
+    }
+}

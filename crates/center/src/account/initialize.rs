@@ -20,11 +20,7 @@ pub async fn initialize(
     input: &InitInput,
     prompt: &mut impl SecretPrompt,
 ) -> Result<InitReceipt, InitError> {
-    if input.login.is_empty()
-        || input.login.len() > 64
-        || input.login.trim() != input.login
-        || input.login.chars().any(char::is_control)
-    {
+    if !super::login::valid(&input.login) {
         return Err(InitError);
     }
     if store.account().await.map_err(|_| InitError)?.is_some() {

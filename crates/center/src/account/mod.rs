@@ -1,6 +1,8 @@
 mod change_password;
 pub(crate) mod http;
 mod initialize;
+mod login;
+pub(crate) use login::valid as valid_login;
 mod recovery;
 mod repository;
 mod restore;
