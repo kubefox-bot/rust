@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatDateTime } from "../../lib/time";
   import { Button, ButtonLink } from "../../ui/button";
   import { onMount } from "svelte";
   import { ApiError } from "../../api";
@@ -234,7 +235,7 @@
         {#if loaded}<p class="muted freshness">
             Показаны последние полученные данные от <time
               datetime={loaded.receivedAt}
-              >{loaded.receivedAt.replace("T", " ")}</time
+              >{formatDateTime(loaded.receivedAt)}</time
             >.
           </p>{/if}
         <Button

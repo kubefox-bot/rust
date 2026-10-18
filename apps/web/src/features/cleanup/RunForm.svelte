@@ -2,6 +2,7 @@
   import { Button } from "../../ui/button";
   import { Input } from "../../ui/input";
   import { Select } from "../../ui/select";
+  import { Checkbox } from "../../ui/checkbox";
   import {
     DEFAULT_RETENTION_DAYS,
     MAX_BATCH_SIZE,
@@ -10,20 +11,20 @@
     RETENTION_OPTIONS,
   } from "./conts";
   import { displayCutoff, editedCutoff } from "./cutoff-input";
-  import type { RunParameters } from "./types";
+  import { formatServerDateTime } from "../../lib/time";
+  import type { Job, RunParameters } from "./types";
+  import PreviewResult from "./PreviewResult.svelte";
   let {
     parameters,
     disabled,
-    canClean,
-    cutoff,
+    preview,
     onparameters,
     onpreview,
     onclean,
   }: {
     parameters: RunParameters;
     disabled: boolean;
-    canClean: boolean;
-    cutoff: string | null;
+    preview: Job | null;
     onparameters: (value: RunParameters) => void;
     onpreview: () => void;
     onclean: () => void;
@@ -65,8 +66,9 @@
       onpreview();
     }}
   >
+    {#if preview}<PreviewResult {preview} />{/if}
     <fieldset {disabled}>
-      <div class="field-grid">
+      <div class="field-grid run-fields">
         <div class="field">
           <Select
             label="Режим сканирования"
@@ -85,7 +87,10 @@
         </div>
         <div class="field">
           <label for="retention-kind">Период хранения</label>
-          <div class="retention">
+          <div
+            class="retention"
+            class:exact-date={parameters.retention.kind === "before"}
+          >
             <Select
               id="retention-kind"
               aria-label="Период хранения"
@@ -128,32 +133,51 @@
               />{/if}
           </div>
           {#if parameters.retention.kind === "before" && parameters.retention.local}
-            <small>Точная граница: {parameters.retention.local}</small>
+            <small
+              >Граница: <time datetime={parameters.retention.local}
+                >{formatServerDateTime(parameters.retention.local)}</time
+              ></small
+            >
           {/if}
           <small id="cutoff-hint"
             >Время границы рассчитывается на почтовом сервере.</small
           >
         </div>
       </div>
-      <label class="manage"
-        ><input
-          type="checkbox"
-          checked={parameters.servicePolicy === "manage"}
-          onchange={(event) =>
-            onparameters({
-              ...parameters,
-              servicePolicy: event.currentTarget.checked
-                ? "manage"
-                : "require_stopped",
-            })}
-        /><span
-          >Останавливать службу на время очистки<small
-            >После выполнения агент восстановит исходное состояние службы.</small
-          ></span
-        ></label
-      >
       <details>
-        <summary>Дополнительные параметры</summary>
+        <summary>
+          <svg
+            class="chevron"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="m9 6 6 6-6 6"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Дополнительные параметры
+        </summary>
+        <div class="service-policy">
+          <Checkbox
+            label="Останавливать службу на время очистки"
+            description="После выполнения агент восстановит исходное состояние службы."
+            checked={parameters.servicePolicy === "manage"}
+            onchange={(event) =>
+              onparameters({
+                ...parameters,
+                servicePolicy: event.currentTarget.checked
+                  ? "manage"
+                  : "require_stopped",
+              })}
+          />
+        </div>
         <div class="field-grid advanced">
           <label class="field"
             >Размер пакета<Input
@@ -191,16 +215,20 @@
         </div>
       </details>
     </fieldset>
-    {#if cutoff}<div class="cutoff">
-        Граница последнего предпросмотра: <strong>{cutoff}</strong> · время сервера
-      </div>{/if}
     <div class="form-bottom">
-      <span class="muted">Сначала проверьте объём в предпросмотре.</span>
+      {#if !preview}
+        <span class="muted">Предпросмотр покажет объём почты без удаления.</span
+        >
+      {/if}
       <div class="actions">
-        <Button type="submit" {disabled}>Предпросмотр</Button><Button
-          variant="primary"
+        <Button
+          type="submit"
+          variant={preview ? "secondary" : "primary"}
+          {disabled}>Предпросмотр</Button
+        ><Button
+          variant="danger"
           type="button"
-          disabled={disabled || !canClean}
+          disabled={disabled || !preview}
           onclick={onclean}>Очистить</Button
         >
       </div>
@@ -209,6 +237,12 @@
 </section>
 
 <style>
+  .run-config {
+    padding: 18px;
+  }
+  form > :global(.preview-result) {
+    margin-bottom: 14px;
+  }
   fieldset {
     border: 0;
     padding: 0;
@@ -219,7 +253,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
   }
   .card-heading h2 {
     margin: 0;
@@ -229,62 +263,70 @@
     grid-template-columns: minmax(0, 43fr) minmax(0, 57fr);
     gap: 8px;
   }
-  .manage {
-    display: flex;
-    align-items: start;
-    gap: 10px;
-    margin-top: 22px;
-    font-size: 12px;
-    line-height: 1.5;
+  .retention.exact-date {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .manage input {
-    accent-color: var(--accent);
-    margin-top: 3px;
+  .run-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
-  .manage small {
-    display: block;
-    color: var(--muted);
-    font-size: 10px;
-    margin-top: 4px;
+  .service-policy {
+    margin-top: 12px;
   }
   .form-bottom {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: center;
-    margin-top: 24px;
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
     border-top: 1px solid var(--line);
-    padding-top: 20px;
+    padding-top: 14px;
   }
   .form-bottom > .muted {
     font-size: 11px;
   }
   .form-bottom .actions {
     margin: 0;
-  }
-  .cutoff {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 18px;
-    line-height: 1.7;
+    justify-content: flex-end;
   }
   details {
-    margin-top: 18px;
+    margin-top: 12px;
     font-size: 10px;
     color: var(--muted);
   }
   summary {
     cursor: pointer;
-    display: inline-flex;
+    display: flex;
+    align-items: center;
     gap: 8px;
+    padding: 8px 0;
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 550;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .chevron {
+    flex-shrink: 0;
+    transition: transform 150ms ease;
+  }
+  details[open] .chevron {
+    transform: rotate(90deg);
   }
   .advanced {
-    margin-top: 16px;
+    margin-top: 12px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chevron {
+      transition: none;
+    }
   }
   @media (max-width: 600px) {
-    .form-bottom {
-      flex-wrap: wrap;
-    }
     .form-bottom .actions {
       width: 100%;
       display: grid;

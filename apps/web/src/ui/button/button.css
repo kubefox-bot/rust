@@ -48,6 +48,26 @@ a.button[data-variant="primary"]:hover {
   border-color: var(--danger);
   color: #fff;
 }
+.button[data-variant="success"] {
+  background: var(--success-soft);
+  border-color: var(--success-line);
+  color: var(--success-ink);
+}
+.button[data-variant="success"]:hover:enabled,
+a.button[data-variant="success"]:hover {
+  background: var(--success-hover);
+  border-color: var(--success-ink);
+}
+.button[data-variant="warning"] {
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
+  color: var(--warning);
+}
+.button[data-variant="warning"]:hover:enabled,
+a.button[data-variant="warning"]:hover {
+  background: var(--warning-hover);
+  border-color: var(--warning);
+}
 .button[data-variant="danger"]:hover:enabled,
 a.button[data-variant="danger"]:hover {
   background: var(--danger-hover);

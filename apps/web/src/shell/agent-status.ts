@@ -1,4 +1,5 @@
 import type { BrowserContracts } from "../api";
+import { formatDateTime } from "../lib/time";
 import type { AGENT_STATUS_LABELS } from "./conts";
 type Agent = BrowserContracts["agents"][number];
 export const agentStatus = (agent: Agent): keyof typeof AGENT_STATUS_LABELS => {
@@ -24,5 +25,5 @@ export const footerText = (agents: BrowserContracts["agents"]): string => {
     )
     .sort()
     .at(-1);
-  return `Агенты · ${counts.online} на связи · ${counts.stale} устарело · ${counts.offline} недоступен · ${counts.pending} ожидает проверки · ${versions.join(", ") || "версия неизвестна"} · ${observed ? "проверка " + new Date(observed).toLocaleString("ru-RU") : "ещё не проверены"}`;
+  return `Агенты · ${counts.online} на связи · ${counts.stale} устарело · ${counts.offline} недоступен · ${counts.pending} ожидает проверки · ${versions.join(", ") || "версия неизвестна"} · ${observed ? "проверка " + formatDateTime(observed) : "ещё не проверены"}`;
 };

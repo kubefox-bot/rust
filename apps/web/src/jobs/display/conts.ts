@@ -1,8 +1,20 @@
 import type { BrowserContracts } from "../../api";
+export const TERMINAL_PHASES = {
+  accepted: false,
+  running: false,
+  cancelling: false,
+  restoring: false,
+  completed: true,
+  partial: true,
+  failed: true,
+  cancelled: true,
+  interrupted: true,
+} as const satisfies Record<BrowserContracts["phase"], boolean>;
 export const BYTE_UNITS = [
-  ["ГиБ", 1073741824n],
-  ["МиБ", 1048576n],
-  ["КиБ", 1024n],
+  ["Тб", 1099511627776n],
+  ["Гб", 1073741824n],
+  ["Мб", 1048576n],
+  ["Кб", 1024n],
 ] as const;
 export const PHASE_LABELS = {
   accepted: "Задание принято",

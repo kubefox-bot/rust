@@ -1,6 +1,13 @@
 ---
 import "../styles/global.css";
+import "../shell/footer/footer.css";
 import { Button } from "../ui/button";
+import {
+  PROFILE_COOKIE_NAME,
+  PROFILE_ISSUER,
+  PROFILE_AUDIENCE,
+} from "../shell/header/conts";
+import profileBootstrap from "../shell/header/bootstrap.js?raw";
 import { publicBuild } from "../config/build";
 interface Props {
   title: string;
@@ -11,9 +18,16 @@ const build = publicBuild();
 ---
 
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-header-profile="guest">
   <head>
     <meta charset="UTF-8" />
+    <script
+      is:inline
+      data-cookie-name={PROFILE_COOKIE_NAME}
+      data-issuer={PROFILE_ISSUER}
+      data-audience={PROFILE_AUDIENCE}
+      set:html={profileBootstrap}
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
     <title>{title} · Sochi Center</title>
@@ -93,13 +107,19 @@ const build = publicBuild();
             >
               Настройки
             </a>
-            <a class="account-link" href="/login/" data-account-link>
+            <a class="account-link" href="/login/" data-account-guest>
               <span class="avatar" aria-hidden="true">
                 ··
               </span>
-              <span data-account-label>Вход</span>
+              <span>Вход</span>
             </a>
-            <Button variant="link" type="button" data-logout hidden>
+            <a class="account-link" href="/settings/#account" data-account-link>
+              <span class="avatar" aria-hidden="true">
+                SA
+              </span>
+              <span data-account-label>Суперадмин</span>
+            </a>
+            <Button variant="link" type="button" data-logout>
               Выйти
             </Button>
           </nav>

@@ -73,6 +73,7 @@ pub(crate) async fn login(
         .same_site(SameSite::Strict)
         .path("/")
         .build();
+    state.profile_tokens.issue(&cookies, grant.generation)?;
     cookies.add(cookie);
     if let Ok(current) = state.authority.authenticate(&grant.token) {
         state.jobs.resume(&current);
@@ -82,12 +83,18 @@ pub(crate) async fn login(
         generation: Some(grant.generation.into()),
     }))
 }
-pub(crate) async fn session(State(state): State<AppState>, cookies: Cookies) -> Json<SessionView> {
+pub(crate) async fn session(
+    State(state): State<AppState>,
+    cookies: Cookies,
+) -> Result<Json<SessionView>, StatusCode> {
     let current = lease(&state, &cookies).ok();
-    Json(SessionView {
+    if let Some(ref lease) = current {
+        state.profile_tokens.issue(&cookies, lease.generation())?;
+    }
+    Ok(Json(SessionView {
         authenticated: current.is_some(),
         generation: current.map(|s| s.generation().into()),
-    })
+    }))
 }
 pub(crate) async fn logout(
     State(state): State<AppState>,
@@ -96,7 +103,8 @@ pub(crate) async fn logout(
 ) -> Result<StatusCode, StatusCode> {
     let current = lease(&state, &cookies)?;
     state.authority.revoke(current.generation());
-    // No Set-Cookie deletion: a late response must not erase a newer generation's browser cookie.
+    super::profile::remove(&cookies);
+    // No session-cookie deletion: a late response must not erase a newer generation's browser cookie.
     Ok(StatusCode::NO_CONTENT)
 }
 pub(crate) async fn activity(

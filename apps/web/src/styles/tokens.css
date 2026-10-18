@@ -23,6 +23,14 @@
   --danger: #c63845;
   --danger-hover: #ac2f3a;
   --success: #16805c;
+  --success-ink: #146548;
+  --success-soft: #eaf6ef;
+  --success-line: #bbddc8;
+  --success-hover: #def0e5;
+  --warning: #8a5b0a;
+  --warning-soft: #fff7e6;
+  --warning-line: #e7cc94;
+  --warning-hover: #ffedc8;
   --radius: 14px;
   --sidebar: 224px;
   --shadow: 0 3px 18px #17223b04;

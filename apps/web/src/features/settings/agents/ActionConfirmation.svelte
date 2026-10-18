@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from "../../../ui/button";
+  import { Checkbox } from "../../../ui/checkbox";
   import { onMount } from "svelte";
   import type { AgentAction } from "./types";
   let {
@@ -45,13 +46,11 @@
       ? "Центр проверит действующий канал к этому агенту и обновит сертификат. Если доверие утрачено, используйте восстановление по SSH."
       : "Центр перестанет доверять этому агенту. Восстановление сертификата по SSH не возвращает отозванный доступ."}
   </p>
-  <label class="check"
-    ><input
-      type="checkbox"
-      bind:checked={acknowledged}
-      disabled={pending}
-    />Подтверждаю действие для этого сервера</label
-  >
+  <Checkbox
+    label="Подтверждаю действие для этого сервера"
+    bind:checked={acknowledged}
+    disabled={pending}
+  />
   <div class="actions">
     <Button
       type="button"
@@ -70,12 +69,6 @@
 
 <style>
   p {
-    font-size: 12px;
-  }
-  .check {
-    display: flex;
-    gap: 9px;
-    align-items: center;
     font-size: 12px;
   }
   code {

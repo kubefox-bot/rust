@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from "../../ui/button";
   import { Input } from "../../ui/input";
+  import { showHeaderProfile } from "../../shell/header";
   import { login } from "./api";
   import { LOGIN_MAX_UTF16_UNITS } from "./conts";
   let username = $state("");
@@ -14,6 +15,7 @@
     error = "";
     try {
       await login({ login: username, password });
+      showHeaderProfile();
       password = "";
       window.location.replace("/");
     } catch (failure) {

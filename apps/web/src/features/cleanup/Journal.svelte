@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from "../../ui/button";
   import { tick } from "svelte";
+  import { formatUtcTime } from "../../lib/time";
   import type { JournalEntry } from "./types";
   import { JOURNAL_FOLLOW_DISTANCE_PX, JOURNAL_LIMIT } from "./conts";
   let {
@@ -81,7 +82,7 @@
           class="log-entry"
           class:failed={entry.failed}
         >
-          <time datetime={entry.at}>{entry.at.slice(11, 19)}</time><span
+          <time datetime={entry.at}>{formatUtcTime(entry.at)}</time><span
             >{entry.text}</span
           >
         </div>{/each}{/if}

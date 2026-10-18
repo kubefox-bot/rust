@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Button } from "../../ui/button";
+  import { Checkbox } from "../../ui/checkbox";
   import { onMount } from "svelte";
   import type { ConfirmedRun } from "./types";
+  import { formatServerDateTime } from "../../lib/time";
   let {
     target,
     onconfirm,
@@ -32,7 +34,11 @@
   <dl>
     <div>
       <dt>Граница</dt>
-      <dd>{target.resolvedCutoff.local.replace("T", " ")} · время сервера</dd>
+      <dd>
+        <time datetime={target.resolvedCutoff.local}
+          >{formatServerDateTime(target.resolvedCutoff.local)}</time
+        > · время сервера
+      </dd>
     </div>
     <div>
       <dt>Режим</dt>
@@ -48,13 +54,13 @@
       ? "Агент остановит почтовую службу на время очистки и восстановит её исходное состояние."
       : "Очистка начнётся только при остановленной почтовой службе."}
   </div>
-  <label class="confirm-check"
-    ><input type="checkbox" bind:checked={acknowledged} /><span
-      >{target.servicePolicy === "manage"
-        ? "Подтверждаю удаление и временную остановку почтовой службы."
-        : "Подтверждаю удаление выбранной старой почты."}</span
-    ></label
-  >
+  <Checkbox
+    tone="danger"
+    bind:checked={acknowledged}
+    label={target.servicePolicy === "manage"
+      ? "Подтверждаю удаление и временную остановку почтовой службы."
+      : "Подтверждаю удаление выбранной старой почты."}
+  />
   <p class="muted fine">
     Удалённые письма нельзя восстановить из этой панели. Цель и параметры
     зафиксированы по предпросмотру.
@@ -97,17 +103,6 @@
   dd {
     margin: 0;
     overflow-wrap: anywhere;
-  }
-  .confirm-check {
-    display: flex;
-    align-items: start;
-    gap: 10px;
-    line-height: 1.7;
-    font-size: 12px;
-  }
-  .confirm-check input {
-    margin-top: 5px;
-    accent-color: var(--danger);
   }
   .fine {
     font-size: 10px;

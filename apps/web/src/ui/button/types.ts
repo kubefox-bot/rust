@@ -4,7 +4,7 @@ import type {
 } from "svelte/elements";
 
 export type ButtonVariant =
-  "primary" | "secondary" | "danger" | "quiet" | "link";
+  "primary" | "secondary" | "success" | "warning" | "danger" | "quiet" | "link";
 export type ButtonSize = "regular" | "small";
 type Appearance = Readonly<{ variant?: ButtonVariant; size?: ButtonSize }>;
 

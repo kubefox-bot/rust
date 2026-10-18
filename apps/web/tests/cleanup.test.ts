@@ -7,6 +7,18 @@ import {
 } from "../src/features/cleanup/model";
 import { eventFixture } from "./fixtures/event";
 import { summaryFixture } from "./fixtures/summary";
+import { progressStatus } from "../src/features/cleanup/progress-status";
+import { formatBytes } from "../src/jobs/display";
+
+test("byte display crosses binary unit boundaries up to terabytes with exact counters", () => {
+  expect(formatBytes("1023")).toBe("1 023 Б");
+  expect(formatBytes("1024")).toBe("1,0 Кб");
+  expect(formatBytes("1048576")).toBe("1,0 Мб");
+  expect(formatBytes("1073741824")).toBe("1,0 Гб");
+  expect(formatBytes("1099511627776")).toBe("1,0 Тб");
+  expect(formatBytes("9007199254740993")).toBe("8 192,0 Тб");
+});
+
 const epoch = "7a96d933-25ae-4eca-b840-d573a62dc778";
 const event = eventFixture(epoch, "2");
 const snapshot = {
@@ -35,6 +47,30 @@ const context = {
   latest: preview,
   busy: false,
 };
+
+test("terminal progress still reports the unconfirmed service while its slot is held", () => {
+  expect(progressStatus({ ...preview, slot_held: true })).toBe(
+    "Состояние службы не подтверждено",
+  );
+  expect(progressStatus(preview)).toBe("Завершено");
+  expect(
+    progressStatus({
+      ...preview,
+      slot_held: true,
+      snapshot: { ...snapshot, phase: "restoring" },
+    }),
+  ).toBe("Восстановление службы");
+});
+
+test("a held failed job keeps its failure outcome alongside the service warning", () => {
+  expect(
+    progressStatus({
+      ...preview,
+      slot_held: true,
+      snapshot: { ...snapshot, phase: "failed" },
+    }),
+  ).toBe("Ошибка выполнения — состояние службы не подтверждено");
+});
 
 test("changed parameters invalidate preview and confirmation", () => {
   const initial = initialState(context);

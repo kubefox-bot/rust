@@ -42,7 +42,6 @@
     >
   </div>
   <Button
-    size="small"
     variant="quiet"
     type="button"
     onclick={onrefresh}
@@ -68,7 +67,7 @@
     min-width: 230px;
   }
   .badge {
-    height: 35px;
+    height: 40px;
     color: var(--muted);
     background: #fff;
   }

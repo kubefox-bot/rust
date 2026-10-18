@@ -80,9 +80,11 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
           input instanceof HTMLInputElement && input.form?.checkValidity(),
       ),
     ).toBe(true);
-    await page
-      .getByText(`Точная граница: ${exactLocal}`, { exact: true })
-      .waitFor();
+    const cutoffDisplay = page
+      .getByText("Граница:", { exact: false })
+      .locator("time");
+    await cutoffDisplay.waitFor();
+    expect(await cutoffDisplay.getAttribute("datetime")).toBe(exactLocal);
     await page.setViewportSize({ width: 320, height: 900 });
     expect(
       await page.evaluate(
@@ -202,6 +204,7 @@ test("two tabs keep confirmation target; managed cancellation restores before fi
   try {
     const page = await fixture.context.newPage();
     await signIn(page, fixture.origin);
+    await page.getByText("Дополнительные параметры", { exact: true }).click();
     await page
       .getByLabel("Останавливать службу на время очистки", { exact: false })
       .check();
@@ -618,6 +621,7 @@ for (const operation of ["preview", "clean"] as const) {
       const page = await fixture.context.newPage();
       await instrumentEvents(page);
       await signIn(page, fixture.origin);
+      await page.getByText("Дополнительные параметры", { exact: true }).click();
       await page
         .getByLabel("Останавливать службу на время очистки", { exact: false })
         .check();
@@ -882,6 +886,7 @@ test("delayed cleanup context cannot revive a preview after owned dispatch witho
       };
     });
     await signIn(page, fixture.origin);
+    await page.getByText("Дополнительные параметры", { exact: true }).click();
     await page
       .getByLabel("Останавливать службу на время очистки", { exact: false })
       .check();

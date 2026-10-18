@@ -5,4 +5,5 @@ export {
   STAGE_LABELS,
   MAIL_LABELS,
   PUBLIC_ERROR_LABELS,
+  TERMINAL_PHASES,
 } from "./conts";

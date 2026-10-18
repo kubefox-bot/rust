@@ -350,37 +350,38 @@
             >Настройте MySQL и пути</a
           >, чтобы выполнить предпросмотр.
         </div>{/if}
-      <RunForm
-        parameters={view.parameters}
-        disabled={busy ||
-          view.context.busy ||
-          Boolean(view.job?.slot_held) ||
-          view.dispatch.kind !== "settled" ||
-          !view.context.configured}
-        canClean={view.preview !== null}
-        cutoff={view.preview?.intent.resolved_cutoff.local.replace("T", " ") ??
-          null}
-        onparameters={(parameters) => {
-          if (view) view = transition(view, { type: "parameters", parameters });
-        }}
-        onpreview={() => {
-          preview().catch(failure);
-        }}
-        onclean={() => {
-          if (view) view = transition(view, { type: "confirm" });
-        }}
-      />
-      <ProgressPanel
-        job={view.job}
-        dispatch={view.dispatch}
-        {busy}
-        oncancel={() => {
-          jobAction("cancel").catch(failure);
-        }}
-        onreconcile={() => {
-          jobAction("reconcile").catch(failure);
-        }}
-      />
+      <div class="cleanup-workspace">
+        <ProgressPanel
+          job={view.job}
+          dispatch={view.dispatch}
+          {busy}
+          oncancel={() => {
+            jobAction("cancel").catch(failure);
+          }}
+          onreconcile={() => {
+            jobAction("reconcile").catch(failure);
+          }}
+        />
+        <RunForm
+          parameters={view.parameters}
+          disabled={busy ||
+            view.context.busy ||
+            Boolean(view.job?.slot_held) ||
+            view.dispatch.kind !== "settled" ||
+            !view.context.configured}
+          preview={view.preview}
+          onparameters={(parameters) => {
+            if (view)
+              view = transition(view, { type: "parameters", parameters });
+          }}
+          onpreview={() => {
+            preview().catch(failure);
+          }}
+          onclean={() => {
+            if (view) view = transition(view, { type: "confirm" });
+          }}
+        />
+      </div>
       <Journal
         entries={view.journal}
         expanded={view.expanded}
@@ -410,8 +411,31 @@
     flex-direction: column;
     min-width: 0;
   }
-  .cleanup-root > .card + .card {
-    margin-top: 20px;
+  .cleanup-workspace {
+    display: grid;
+    gap: 16px;
+    align-items: start;
+    min-width: 0;
+  }
+  .cleanup-workspace > :global(.card) {
+    margin: 0;
+    min-width: 0;
+  }
+  .cleanup-root > :global(.journal) {
+    margin-top: 16px;
+  }
+  @media (min-width: 1180px) {
+    .cleanup-workspace {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .cleanup-workspace > :global(.run-config) {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .cleanup-workspace > :global(.progress-panel) {
+      grid-column: 2;
+      grid-row: 1;
+    }
   }
   :global(body.journal-expanded .sidebar),
   :global(body.journal-expanded .topbar),
@@ -439,6 +463,10 @@
   .cleanup-root.expanded {
     flex: 1;
     min-height: 0;
+  }
+  .cleanup-root.expanded .cleanup-workspace {
+    display: block;
+    flex-shrink: 0;
   }
   :global(body.journal-expanded .progress-panel) {
     padding: 16px;

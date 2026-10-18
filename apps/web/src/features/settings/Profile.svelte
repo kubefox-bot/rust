@@ -2,6 +2,7 @@
   import { Button } from "../../ui/button";
   import { Input } from "../../ui/input";
   import { Select } from "../../ui/select";
+  import { Checkbox } from "../../ui/checkbox";
   import { onMount } from "svelte";
   import type { Profile } from "./types";
   import { MYSQL_PORT_MAX, MYSQL_TLS_OPTIONS } from "./conts";
@@ -163,13 +164,11 @@
             disabled={busy}
           />
           <div class="password">
-            {#if current.password_set}<label class="toggle"
-                ><input
-                  type="checkbox"
-                  bind:checked={replace}
-                  onchange={() => (password = "")}
-                />Заменить пароль MySQL</label
-              >{/if}
+            {#if current.password_set}<Checkbox
+                label="Заменить пароль MySQL"
+                bind:checked={replace}
+                onchange={() => (password = "")}
+              />{/if}
             <label class="field"
               >Пароль MySQL<Input
                 aria-label="Пароль MySQL"
@@ -231,11 +230,7 @@
     margin: 22px 0 0;
     min-width: 0;
   }
-  .toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
+  .password > :global(.checkbox-field) {
     margin-bottom: 10px;
   }
   .password {

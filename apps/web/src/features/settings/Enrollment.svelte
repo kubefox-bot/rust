@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from "../../ui/button";
+  import { Checkbox } from "../../ui/checkbox";
   import { Input } from "../../ui/input";
   import { onDestroy } from "svelte";
   import {
@@ -303,10 +304,7 @@
         >
       </p>
       <p class="fingerprint"><code>{wizard.challenge.fingerprint}</code></p>
-      <label class="check"
-        ><input type="checkbox" bind:checked={acknowledged} />Я сверил SSH-ключ
-        сервера</label
-      >
+      <Checkbox label="Я сверил SSH-ключ сервера" bind:checked={acknowledged} />
       <div class="actions">
         <Button type="button" onclick={reset}>Изменить SSH-сервер</Button
         ><Button
@@ -338,12 +336,6 @@
   }
   .details {
     margin: 20px 0;
-  }
-  .check {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    font-size: 12px;
   }
   .fingerprint {
     padding: 12px;

@@ -189,7 +189,14 @@ async fn real_https_login_cookie_failed_login_replacement_and_restart() {
         .await
         .unwrap();
     assert!(login.status().is_success(), "{}", login.status());
-    let cookie = login.headers()["set-cookie"].to_str().unwrap().to_owned();
+    let cookie = login
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .find(|value| value.starts_with("__Host-hmail-session="))
+        .unwrap()
+        .to_owned();
     for attribute in ["Secure", "HttpOnly", "SameSite=Strict", "Path=/"] {
         assert!(cookie.contains(attribute));
     }
@@ -231,8 +238,12 @@ async fn real_https_login_cookie_failed_login_replacement_and_restart() {
     let restarted = AppState::new(store, BrowserOrigin::parse(&origin).unwrap())
         .await
         .unwrap();
-    let second_cookie = second.headers()["set-cookie"]
-        .to_str()
+    let second_cookie = second
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .find(|value| value.starts_with("__Host-hmail-session="))
         .unwrap()
         .split(';')
         .next()
@@ -286,4 +297,117 @@ async fn slow_body_times_out_before_login_work() {
     assert_eq!(response.status().as_u16(), 408);
     assert_eq!(response.headers()["connection"], "close");
     assert_eq!(response.headers()["cache-control"], "no-store");
+}
+
+#[tokio::test]
+async fn profile_cookie_is_readable_but_cannot_authorize_requests() {
+    let root = tempfile::tempdir().unwrap();
+    let directory = DataDirectory::acquire(root.path()).unwrap();
+    let store = CenterStore::open(&directory).await.unwrap();
+    initialize(
+        &store,
+        &InitInput {
+            login: "admin".into(),
+        },
+        &mut Prompt,
+    )
+    .await
+    .unwrap();
+    let state = AppState::new(
+        store,
+        BrowserOrigin::parse("https://localhost:8443").unwrap(),
+    )
+    .await
+    .unwrap();
+    let app = router(state);
+    let response = app
+        .clone()
+        .oneshot(
+            Request::post("/api/v1/auth/login")
+                .header("host", "localhost:8443")
+                .header("content-type", "application/json")
+                .header("x-hmail-request", "1")
+                .body(Body::from(
+                    r#"{"login":"admin","password":"test-session-password"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), axum::http::StatusCode::OK);
+    let cookies: Vec<_> = response
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .map(|v| v.to_str().unwrap().to_owned())
+        .collect();
+    let profile = cookies
+        .iter()
+        .find(|v| v.starts_with("__Host-sochi-profile="))
+        .expect("login must issue display JWT");
+    assert!(profile.contains("Secure"));
+    assert!(profile.contains("SameSite=Strict"));
+    assert!(profile.contains("Path=/"));
+    assert!(!profile.contains("HttpOnly"));
+    let session = cookies
+        .iter()
+        .find(|v| v.starts_with("__Host-hmail-session="))
+        .unwrap();
+    assert!(session.contains("HttpOnly"));
+    let profile_pair = profile.split(';').next().unwrap();
+    let denied = app
+        .clone()
+        .oneshot(
+            Request::get("/api/v1/servers")
+                .header("host", "localhost:8443")
+                .header("cookie", profile_pair)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(denied.status(), axum::http::StatusCode::UNAUTHORIZED);
+    let authenticated = app
+        .clone()
+        .oneshot(
+            Request::get("/api/v1/auth/session")
+                .header("host", "localhost:8443")
+                .header("cookie", session.split(';').next().unwrap())
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(authenticated
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .any(|v| v.to_str().unwrap().starts_with("__Host-sochi-profile=")));
+    let body: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(authenticated.into_body(), 4096)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(body["authenticated"], true);
+    let logout = app
+        .oneshot(
+            Request::post("/api/v1/auth/logout")
+                .header("host", "localhost:8443")
+                .header("content-type", "application/json")
+                .header("x-hmail-request", "1")
+                .header(
+                    "cookie",
+                    format!("{}; {}", session.split(';').next().unwrap(), profile_pair),
+                )
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(logout.status(), axum::http::StatusCode::NO_CONTENT);
+    assert!(logout.headers().get_all("set-cookie").iter().any(|value| {
+        let cookie = value.to_str().unwrap();
+        cookie.starts_with("__Host-sochi-profile=") && cookie.contains("Max-Age=0")
+    }));
 }

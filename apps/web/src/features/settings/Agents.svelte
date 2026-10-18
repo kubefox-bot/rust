@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from "../../ui/button";
   import { onMount } from "svelte";
+  import { formatDateTime } from "../../lib/time";
   import type { BrowserContracts } from "../../api";
   import Enrollment from "./Enrollment.svelte";
   import OperationStatus from "./agents/OperationStatus.svelte";
@@ -204,10 +205,14 @@
       </div>
       <p class="muted">
         Версия агента: {agent.health.version ?? "неизвестна"} · Состояние получено:
-        {agent.health.observed_at ?? "ещё нет данных"}
+        {#if agent.health.observed_at}<time datetime={agent.health.observed_at}
+            >{formatDateTime(agent.health.observed_at)}</time
+          >{:else}ещё нет данных{/if}
       </p>
       {#if agent.certificate_expires_at}<p class="muted">
-          Сертификат действует до {agent.certificate_expires_at}
+          Сертификат действует до <time datetime={agent.certificate_expires_at}
+            >{formatDateTime(agent.certificate_expires_at)}</time
+          >
         </p>{/if}
       <div class="actions">
         <Button
@@ -217,13 +222,13 @@
             agent.revoked ||
             agent.certificate_expired}
           onclick={() => chooseMode({ kind: "binary", server })}
-          >Обновить агента</Button
+          variant="primary">Обновить агента</Button
         >
         <Button
           type="button"
           disabled={locked || actionPending || agent.revoked}
           onclick={() => chooseMode({ kind: "recover_identity", server })}
-          >Восстановить доверие</Button
+          variant="warning">Восстановить доверие</Button
         >
         <Button
           type="button"
@@ -233,14 +238,16 @@
             agent.certificate_expired}
           onclick={() => {
             action = { kind: "renew", server };
-          }}>Обновить сертификат</Button
+          }}
+          variant="success">Обновить сертификат</Button
         >
         <Button
           type="button"
           disabled={locked || actionPending || agent.revoked}
           onclick={() => {
             action = { kind: "revoke", server };
-          }}>Отозвать доступ</Button
+          }}
+          variant="danger">Отозвать доступ</Button
         >
       </div>
     {:else if agents === null}<p class="notice">

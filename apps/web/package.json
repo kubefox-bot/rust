@@ -8,7 +8,7 @@
     "dev": "bun run --bun astro dev --host 127.0.0.1",
     "test": "bun run test:unit",
     "browser:install": "PLAYWRIGHT_SKIP_BROWSER_GC=1 bun run --bun playwright install chromium",
-    "test:unit": "bun test tests/contracts.test.ts tests/events.test.ts tests/request.test.ts tests/cleanup.test.ts tests/shell.test.ts tests/select.test.ts",
+    "test:unit": "bun test tests/contracts.test.ts tests/events.test.ts tests/request.test.ts tests/cleanup.test.ts tests/shell.test.ts tests/select.test.ts tests/time.test.ts tests/header-hint.test.ts",
     "test:browser": "bun ../../tools/web/browser-tests.ts",
     "format": "bun run --bun prettier --plugin prettier-plugin-svelte --plugin prettier-plugin-astro --write src tests"
   },

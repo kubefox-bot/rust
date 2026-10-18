@@ -1,6 +1,7 @@
 import type { BrowserContracts } from "../../api";
 import { agentStatus, footerText } from "../agent-status";
 import { AGENT_STATUS_LABELS } from "../conts";
+import { formatDateTime } from "../../lib/time";
 
 export const footerView = () => {
   const summary = document.querySelector("[data-agents-footer]");
@@ -47,9 +48,7 @@ export const footerView = () => {
       if (agent.health.observed_at) {
         const time = document.createElement("time");
         time.dateTime = agent.health.observed_at;
-        time.textContent = new Date(agent.health.observed_at).toLocaleString(
-          "ru-RU",
-        );
+        time.textContent = formatDateTime(agent.health.observed_at);
         contact.append("Последний контакт: ", time);
       } else contact.textContent = "Контакт ещё не получен";
       row.append(name, status, version, contact);

@@ -1,5 +1,6 @@
 import { subscribe } from "../../api";
-import { EVENT_REFRESH_DELAY_MS, TERMINAL_PHASES } from "./conts";
+import { EVENT_REFRESH_DELAY_MS } from "./conts";
+import { TERMINAL_PHASES } from "../../jobs/display";
 
 export const observeHistory = (
   options: Readonly<{

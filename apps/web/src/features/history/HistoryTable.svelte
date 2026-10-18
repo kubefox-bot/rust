@@ -1,7 +1,13 @@
 <script lang="ts">
   import type { BrowserContracts } from "../../api";
-  import { formatBytes, formatCount, screenStatus } from "../../jobs/display";
-  import { OPERATION_LABELS, SCAN_LABELS, TERMINAL_PHASES } from "./conts";
+  import {
+    formatBytes,
+    formatCount,
+    screenStatus,
+    TERMINAL_PHASES,
+  } from "../../jobs/display";
+  import { OPERATION_LABELS, SCAN_LABELS } from "./conts";
+  import { formatDateTime, formatServerDateTime } from "../../lib/time";
 
   let { jobs }: { jobs: ReadonlyArray<BrowserContracts["job"]> } = $props();
 </script>
@@ -24,7 +30,7 @@
           <td>
             {#if job.snapshot}
               <time datetime={job.snapshot.observed_at}
-                >{job.snapshot.observed_at.replace("T", " ")}</time
+                >{formatDateTime(job.snapshot.observed_at)}</time
               >
             {:else}<span class="muted">Снимок ещё не получен</span>{/if}
             <code>{job.job_id}</code>
@@ -33,7 +39,8 @@
             <strong>{OPERATION_LABELS[job.intent.operation]}</strong>
             <small>{SCAN_LABELS[job.intent.scan]}</small>
             <small
-              >До {job.intent.resolved_cutoff.local.replace("T", " ")} · время сервера</small
+              >До {formatServerDateTime(job.intent.resolved_cutoff.local)} · время
+              сервера</small
             >
           </td>
           <td>

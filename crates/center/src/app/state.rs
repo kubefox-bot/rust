@@ -11,6 +11,7 @@ pub struct AppState {
     pub store: CenterStore,
     pub(crate) authority: Arc<SessionAuthority>,
     pub origin: BrowserOrigin,
+    pub(crate) profile_tokens: crate::auth::profile::ProfileTokens,
     pub(crate) limiter: Arc<LoginLimiter>,
     pub(crate) monitor: crate::agents::HealthMonitor,
     pub jobs: crate::jobs::JobService,
@@ -75,6 +76,7 @@ impl AppState {
             crate::enrollment::NativeSsh,
         );
         Ok(Self {
+            profile_tokens: crate::auth::profile::ProfileTokens::new(account.login)?,
             journal: None,
             build_version: env!("CARGO_PKG_VERSION"),
             static_dir: None,

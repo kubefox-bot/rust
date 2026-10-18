@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { forgetHeaderProfile } from "../../shell/header";
   import { Button, ButtonLink } from "../../ui/button";
   import { onMount } from "svelte";
   import type { BrowserContracts } from "../../api";
@@ -166,7 +167,10 @@
     </nav>
     {#if error}<div class="error" role="alert">{error}</div>{/if}
     {#if section === "account"}<Account
-        oncommitted={() => window.location.replace("/login/")}
+        oncommitted={() => {
+          forgetHeaderProfile();
+          window.location.replace("/login/");
+        }}
       />
     {:else if section === "agents"}{#key selected}<Agents
           servers={available}

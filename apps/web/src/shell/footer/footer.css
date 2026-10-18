@@ -1,0 +1,116 @@
+.footer {
+  position: relative;
+}
+.agents-summary {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+.agents-summary > summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  border-radius: 4px;
+}
+.agents-summary > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+.agents-summary[open] > summary {
+  color: var(--accent);
+}
+.agents-list {
+  position: absolute;
+  inset: auto 0 100%;
+  z-index: 20;
+  margin: 0;
+  padding: 12px 36px;
+  list-style: none;
+  max-height: min(320px, 45dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  text-align: left;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -12px 32px #2432380d;
+}
+.agents-list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.8fr) minmax(
+      0,
+      1fr
+    ) minmax(0, 1.5fr);
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.agents-list > li + li {
+  border-top: 1px solid var(--line);
+}
+.agents-list strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.agents-list [data-status] {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid var(--control-line);
+  border-radius: 999px;
+  background: #f4f6f7;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 550;
+}
+.agents-list [data-status]::before {
+  content: "";
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.agents-list [data-status="online"] {
+  color: var(--success-ink);
+  background: var(--success-soft);
+  border-color: var(--success-line);
+}
+.agents-list [data-status="stale"] {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
+}
+.agents-list [data-status="offline"] {
+  color: var(--danger);
+  background: #fff1f2;
+  border-color: #f5c9ce;
+}
+@media (max-width: 1100px) {
+  .agents-list {
+    padding-inline: 24px;
+  }
+}
+@media (max-width: 720px) {
+  .agents-summary {
+    flex-basis: 100%;
+    text-align: left;
+  }
+  .agents-list {
+    padding: 8px 16px;
+  }
+  .agents-list > li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+  }
+  .agents-list [data-status] {
+    justify-self: end;
+  }
+  .agents-list > li > span:last-child {
+    grid-column: 1 / -1;
+  }
+}
