@@ -739,3 +739,378 @@ test("Unicode login form submits all 64 supplementary scalars", async () => {
     await fixture.close();
   }
 }, 60000);
+
+test("delayed cleanup context cannot replace a newer terminal run or its confirmation", async () => {
+  const { signIn, completedPreview } = await import("./cleanup-steps");
+  const { decode } = await import("../../src/api");
+  const fixture = await startFixture();
+  const held = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const finished = Promise.withResolvers<void>();
+  try {
+    const operator = await fixture.context.newPage();
+    await signIn(operator, fixture.origin);
+    const serverId = fixture.servers[0].id;
+    await completedPreview(operator, fixture, serverId);
+    const page = await fixture.context.newPage();
+    await page.goto(`${fixture.origin}/?server=${serverId}`);
+    await page
+      .getByRole("heading", { name: "Завершено", exact: true })
+      .waitFor();
+    const old = decode(
+      "cleanup_context",
+      await page.evaluate(
+        async (id) =>
+          (await fetch(`/api/v1/servers/${id}/cleanup-context`)).json(),
+        serverId,
+      ),
+    );
+    let first = true;
+    await page.route(
+      `**/api/v1/servers/${serverId}/cleanup-context`,
+      async (route) => {
+        if (!first) {
+          await route.continue();
+          return;
+        }
+        first = false;
+        held.resolve();
+        await release.promise;
+        try {
+          await route.fulfill({ json: old });
+        } finally {
+          finished.resolve();
+        }
+      },
+    );
+    await page
+      .getByRole("button", { name: "Обновить состояние", exact: true })
+      .click();
+    await held.promise;
+    await operator
+      .getByText("Дополнительные параметры", { exact: true })
+      .click();
+    await operator
+      .getByLabel("Параллельные операции", { exact: true })
+      .fill("3");
+    await operator.getByLabel("Параллельные операции", { exact: true }).blur();
+    const submitted = operator.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/servers/${serverId}/jobs` &&
+        response.request().method() === "POST",
+    );
+    await operator
+      .getByRole("button", { name: "Предпросмотр", exact: true })
+      .click();
+    const next = decode("job", await (await submitted).json());
+    await fixture.finishLatest(serverId);
+    await operator
+      .getByRole("heading", { name: "Завершено", exact: true })
+      .waitFor();
+    await page
+      .getByRole("button", { name: "Обновить состояние", exact: true })
+      .click();
+    await page
+      .getByRole("region", { name: "Состояние задания" })
+      .locator("code")
+      .filter({ hasText: next.job_id })
+      .waitFor();
+    await page
+      .getByRole("heading", { name: "Завершено", exact: true })
+      .waitFor();
+    expect(
+      await page
+        .getByLabel("Параллельные операции", { exact: true })
+        .inputValue(),
+    ).toBe("3");
+    await page.getByRole("button", { name: "Очистить", exact: true }).click();
+    await page.getByRole("dialog").waitFor();
+    const staleResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/servers/${serverId}/cleanup-context` &&
+        response.status() === 200,
+    );
+    release.resolve();
+    await finished.promise;
+    await (await staleResponse).finished();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    expect(
+      await page
+        .getByRole("region", { name: "Состояние задания" })
+        .locator("code")
+        .textContent(),
+    ).toBe(next.job_id);
+    expect(
+      await page
+        .getByLabel("Параллельные операции", { exact: true })
+        .inputValue(),
+    ).toBe("3");
+    expect(await page.getByRole("dialog").count()).toBe(1);
+    await page.getByRole("button", { name: "Отмена", exact: true }).click();
+    expect(
+      await page
+        .getByRole("button", { name: "Очистить", exact: true })
+        .isEnabled(),
+    ).toBe(true);
+    const stats = await fixture.stats();
+    expect(stats.find((agent) => agent.id === serverId)?.puts).toBe(2);
+    expect(stats.every((agent) => agent.cancels === 0)).toBe(true);
+  } finally {
+    release.resolve();
+    await fixture.close();
+  }
+}, 60000);
+
+test("delayed cleanup context cannot revive a preview after owned dispatch without a newer context request", async () => {
+  const { signIn } = await import("./cleanup-steps");
+  const { decode } = await import("../../src/api");
+  const fixture = await startFixture();
+  const held = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const finished = Promise.withResolvers<void>();
+  try {
+    const page = await fixture.context.newPage();
+    // Transport fault: retain the one SSE connection, but drop snapshots so the
+    // completed POST receipt is the sole advancement and cannot start a new GET.
+    await page.addInitScript(() => {
+      const Original = window.EventSource;
+      window.EventSource = class extends Original {
+        constructor(url: string | URL, options?: EventSourceInit) {
+          super(url, options);
+          this.addEventListener("snapshot", (event) =>
+            event.stopImmediatePropagation(),
+          );
+        }
+      };
+    });
+    await signIn(page, fixture.origin);
+    await page
+      .getByLabel("Останавливать службу на время очистки", { exact: false })
+      .check();
+    const serverId = fixture.servers[0].id;
+    // Establish P via ordinary fixture-backed UI, then explicit authoritative GET.
+    const previewResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/servers/${serverId}/jobs` &&
+        response.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Предпросмотр", exact: true })
+      .click();
+    const preview = decode("job", await (await previewResponse).json());
+    await fixture.finishLatest(serverId);
+    const operator = await fixture.context.newPage();
+    await operator.goto(`${fixture.origin}/?server=${serverId}`);
+    await operator
+      .getByRole("heading", { name: "Завершено", exact: true })
+      .waitFor();
+    await page
+      .getByRole("button", { name: "Обновить состояние", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "Завершено", exact: true })
+      .waitFor();
+    const old = decode(
+      "cleanup_context",
+      await page.evaluate(
+        async (id) =>
+          (await fetch(`/api/v1/servers/${id}/cleanup-context`)).json(),
+        serverId,
+      ),
+    );
+    expect(old.latest?.job_id).toBe(preview.job_id);
+    let contextRequests = 0;
+    await page.route(
+      `**/api/v1/servers/${serverId}/cleanup-context`,
+      async (route) => {
+        contextRequests++;
+        held.resolve();
+        await release.promise;
+        try {
+          await route.fulfill({ json: old });
+        } finally {
+          finished.resolve();
+        }
+      },
+    );
+    await page
+      .getByRole("button", { name: "Обновить состояние", exact: true })
+      .click();
+    await held.promise;
+    await page.route(`**/api/v1/servers/${serverId}/jobs`, async (route) => {
+      const input = decode("submit", route.request().postDataJSON());
+      // Real browser fetch preserves fixture TLS and the exact original command;
+      // delay its successful receipt until this short run has already settled.
+      await operator.evaluate(async (intent) => {
+        const response = await fetch(
+          `/api/v1/servers/${intent.server_id}/jobs`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-HMail-Request": "1",
+            },
+            body: JSON.stringify(intent),
+          },
+        );
+        if (!response.ok) throw new Error("Fixture clean was rejected");
+        return response.json();
+      }, input);
+      await fixture.finishLatest(serverId);
+      await operator
+        .getByRole("region", { name: "Состояние задания" })
+        .locator("code")
+        .filter({ hasText: input.job_id })
+        .waitFor();
+      await operator
+        .getByRole("heading", { name: "Завершено", exact: true })
+        .waitFor();
+      const latest = decode(
+        "cleanup_context",
+        await operator.evaluate(
+          async (id) =>
+            (await fetch(`/api/v1/servers/${id}/cleanup-context`)).json(),
+          serverId,
+        ),
+      );
+      if (
+        !latest.latest ||
+        latest.latest.job_id !== input.job_id ||
+        latest.latest.slot_held
+      )
+        throw new Error("Completed command receipt unavailable");
+      await route.fulfill({ json: latest.latest });
+    });
+    await page.getByRole("button", { name: "Очистить", exact: true }).click();
+    await page
+      .getByLabel(
+        "Подтверждаю удаление и временную остановку почтовой службы.",
+        { exact: true },
+      )
+      .check();
+    const cleanResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          `/api/v1/servers/${serverId}/jobs` &&
+        response.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Подтвердить очистку", exact: true })
+      .click();
+    const clean = decode("job", await (await cleanResponse).json());
+    await page
+      .getByRole("region", { name: "Состояние задания" })
+      .locator("code")
+      .filter({ hasText: clean.job_id })
+      .waitFor();
+    await page
+      .getByRole("heading", { name: "Завершено", exact: true })
+      .waitFor();
+    expect(contextRequests).toBe(1);
+    release.resolve();
+    await finished.promise;
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    expect(
+      await page
+        .getByRole("region", { name: "Состояние задания" })
+        .locator("code")
+        .textContent(),
+    ).toBe(clean.job_id);
+    expect(
+      await page
+        .getByRole("button", { name: "Очистить", exact: true })
+        .isDisabled(),
+    ).toBe(true);
+    expect(await page.getByRole("dialog").count()).toBe(0);
+    expect(contextRequests).toBe(1);
+    const stats = await fixture.stats();
+    expect(stats.find((agent) => agent.id === serverId)?.puts).toBe(2);
+    expect(stats.every((agent) => agent.cancels === 0)).toBe(true);
+  } finally {
+    release.resolve();
+    await fixture.close();
+  }
+}, 60000);
+
+test("passive SSE resync cannot silently consume an owned preview preflight", async () => {
+  const { signIn } = await import("./cleanup-steps");
+  const fixture = await startFixture();
+  const held = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  try {
+    const page = await fixture.context.newPage();
+    await page.addInitScript(() => {
+      const Original = window.EventSource;
+      window.EventSource = class extends Original {
+        constructor(url: string | URL, options?: EventSourceInit) {
+          super(url, options);
+          document.addEventListener("fixture-context-resync", () =>
+            this.dispatchEvent(new Event("resync")),
+          );
+        }
+      };
+    });
+    await signIn(page, fixture.origin);
+    const serverId = fixture.servers[0].id;
+    const captured: unknown = await page.evaluate(
+      async (id) =>
+        (await fetch(`/api/v1/servers/${id}/cleanup-context`)).json(),
+      serverId,
+    );
+    let requests = 0;
+    await page.route(
+      `**/api/v1/servers/${serverId}/cleanup-context`,
+      async (route) => {
+        requests++;
+        if (requests === 1) {
+          held.resolve();
+          await release.promise;
+        }
+        await route.fulfill({ json: captured });
+      },
+    );
+    await page
+      .getByRole("button", { name: "Предпросмотр", exact: true })
+      .click();
+    await held.promise;
+    const submitted = page
+      .waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname ===
+            `/api/v1/servers/${serverId}/jobs` &&
+          response.request().method() === "POST",
+        { timeout: 5000 },
+      )
+      .then(
+        (response) => response.json(),
+        () => null,
+      );
+    await page.evaluate(() =>
+      document.dispatchEvent(new Event("fixture-context-resync")),
+    );
+    release.resolve();
+    expect(await submitted).not.toBeNull();
+    await page
+      .getByRole("heading", { name: "Выполняется", exact: true })
+      .waitFor();
+    expect(requests).toBe(1);
+    expect(
+      (await fixture.stats()).find((agent) => agent.id === serverId)?.puts,
+    ).toBe(1);
+    expect((await fixture.stats()).every((agent) => agent.cancels === 0)).toBe(
+      true,
+    );
+  } finally {
+    release.resolve();
+    await fixture.close();
+  }
+}, 60000);

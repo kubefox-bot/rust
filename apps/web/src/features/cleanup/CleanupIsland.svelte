@@ -7,8 +7,9 @@
   import { selectedServer, selectServer } from "../../shell/navigation";
   import * as api from "./api";
   import { initialState, transition } from "./model";
+  import { createContextLoader } from "./context-loader";
   import { REFRESH_INTERVAL_MS } from "./conts";
-  import type { CleanupState, ConfirmedRun } from "./types";
+  import type { CleanupState, ConfirmedRun, Job } from "./types";
   import ServerHeader from "../../shell/ServerHeader.svelte";
   import RunForm from "./RunForm.svelte";
   import ProgressPanel from "./ProgressPanel.svelte";
@@ -27,6 +28,7 @@
   let scope = new AbortController();
   let operation: AbortController | null = null;
   let operationId = 0;
+  const contexts = createContextLoader(api.context);
   let subscription: (() => void) | undefined = undefined;
   let footer: ReturnType<typeof mountFooter> | undefined = undefined;
   let auth: ReturnType<typeof mountAuth> | undefined = undefined;
@@ -45,19 +47,42 @@
         status = "failed";
       });
   };
-  const refresh = async () => {
-    if (!selected || !generation || status !== "authenticated") return;
+  const observeJob = (job: Job): boolean => {
+    if (!view) return false;
+    const previous = view;
+    const next = transition(previous, { type: "job", job });
+    const advanced = Boolean(
+      next.job &&
+      (next.job.job_id !== previous.job?.job_id ||
+        next.job.stream_epoch !== previous.job?.stream_epoch ||
+        next.job.revision !== previous.job?.revision ||
+        next.job.slot_held !== previous.job?.slot_held),
+    );
+    if (advanced) contexts.invalidate();
+    view = next;
+    return advanced;
+  };
+  const refresh = async (options?: Readonly<{ owner: AbortController }>) => {
+    if (
+      (busy && options?.owner !== operation) ||
+      !view ||
+      !selected ||
+      !generation ||
+      status !== "authenticated"
+    )
+      return;
     const id = selected;
     const current = generation;
-    const signal = scope.signal;
-    const context = await api.context(id, signal);
-    if (active(id, current))
+    const signal = options?.owner.signal ?? scope.signal;
+    const loaded = await contexts.load({ serverId: id, signal });
+    if (loaded?.current() && active(id, current))
       view = view
-        ? transition(view, { type: "context", context })
-        : initialState(context);
+        ? transition(view, { type: "context", context: loaded.context })
+        : initialState(loaded.context);
   };
   const choose = async (id: string) => {
     if (selected === id && view?.context.server.id === id) return;
+    contexts.invalidate();
     subscription?.();
     subscription = undefined;
     operation?.abort();
@@ -70,9 +95,9 @@
     error = "";
     selectServer(id);
     const current = generation;
-    const context = await api.context(id, scope.signal);
-    if (!active(id, current)) return;
-    view = initialState(context);
+    const loaded = await contexts.load({ serverId: id, signal: scope.signal });
+    if (!loaded?.current() || !active(id, current)) return;
+    view = initialState(loaded.context);
     subscription = subscribe({
       serverId: id,
       onEvent: (event) => {
@@ -81,8 +106,9 @@
             view.dispatch.kind === "settled" &&
             !view.job?.slot_held &&
             view.job?.job_id !== event.job.job_id;
-          view = transition(view, { type: "job", job: event.job });
-          if (needsLatest || !event.job.slot_held) refresh().catch(failure);
+          const advanced = observeJob(event.job);
+          if (needsLatest || (advanced && !event.job.slot_held))
+            refresh().catch(failure);
         }
       },
       onResync: () => {
@@ -94,6 +120,7 @@
     });
   };
   const beginOperation = () => {
+    contexts.invalidate();
     operation?.abort();
     const controller = new AbortController();
     operation = controller;
@@ -108,11 +135,11 @@
   ) => {
     const current = generation;
     if (!view || !active(input.server_id, current)) return;
+    contexts.invalidate();
     view = transition(view, { type: "dispatch", intent: input });
     try {
       const job = await api.submit(input, signal);
-      if (active(input.server_id, current) && view)
-        view = transition(view, { type: "job", job });
+      if (active(input.server_id, current) && view) observeJob(job);
     } catch (cause) {
       if (active(input.server_id, current) && view)
         view = transition(view, { type: "uncertain" });
@@ -126,8 +153,16 @@
     const current = generation;
     const task = beginOperation();
     try {
-      const context = await api.context(id, task.controller.signal);
-      if (!active(id, current)) return;
+      const loaded = await contexts.load({
+        serverId: id,
+        signal: task.controller.signal,
+      });
+      if (!active(id, current) || task.controller.signal.aborted) return;
+      if (!loaded?.current())
+        throw new Error(
+          "Состояние сервера изменилось. Проверьте его и повторите предпросмотр.",
+        );
+      const context = loaded.context;
       view = transition(view ?? state, { type: "context", context });
       if (context.busy)
         throw new Error(
@@ -203,15 +238,15 @@
     const task = beginOperation();
     try {
       const job = await api[kind](id, task.controller.signal);
-      if (active(server, current) && view)
-        view = transition(view, { type: "job", job });
-      await refresh();
+      if (active(server, current) && view) observeJob(job);
+      await refresh({ owner: task.controller });
     } finally {
       if (task.id === operationId) busy = false;
     }
   };
   onMount(() => {
     const clear = () => {
+      contexts.invalidate();
       generation = null;
       subscription?.();
       subscription = undefined;
