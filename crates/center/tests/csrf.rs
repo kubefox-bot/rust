@@ -300,7 +300,7 @@ async fn slow_body_times_out_before_login_work() {
 }
 
 #[tokio::test]
-async fn profile_cookie_is_readable_but_cannot_authorize_requests() {
+async fn encrypted_httponly_profile_cookie_cannot_authorize_requests() {
     let root = tempfile::tempdir().unwrap();
     let directory = DataDirectory::acquire(root.path()).unwrap();
     let store = CenterStore::open(&directory).await.unwrap();
@@ -344,11 +344,12 @@ async fn profile_cookie_is_readable_but_cannot_authorize_requests() {
     let profile = cookies
         .iter()
         .find(|v| v.starts_with("__Host-sochi-profile="))
-        .expect("login must issue display JWT");
+        .expect("login must issue encrypted display profile");
     assert!(profile.contains("Secure"));
     assert!(profile.contains("SameSite=Strict"));
     assert!(profile.contains("Path=/"));
-    assert!(!profile.contains("HttpOnly"));
+    assert!(profile.contains("HttpOnly"));
+    assert!(profile.starts_with("__Host-sochi-profile=v1."));
     let session = cookies
         .iter()
         .find(|v| v.starts_with("__Host-hmail-session="))

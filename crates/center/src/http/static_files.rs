@@ -1,3 +1,4 @@
+mod page;
 use axum::{
     extract::{Path, Request},
     http::{header, HeaderValue, StatusCode},
@@ -24,6 +25,9 @@ const PAGES: [(&str, &str); 7] = [
     ("/settings", "settings/index.html"),
     ("/settings/", "settings/index.html"),
 ];
+pub(crate) fn is_page(path: &str) -> bool {
+    PAGES.iter().any(|(route, _)| *route == path)
+}
 #[derive(Clone)]
 pub struct StaticDir(Arc<FilePath>);
 #[derive(Debug, thiserror::Error)]
@@ -107,12 +111,7 @@ pub fn routes<S: Clone + Send + Sync + 'static>(directory: StaticDir) -> Router<
             route,
             get(move |request: Request| {
                 let path = path.clone();
-                async move {
-                    match ServeFile::new(path).oneshot(request).await {
-                        Ok(response) => cache(response.into_response(), HTML_CACHE),
-                        Err(error) => match error {},
-                    }
-                }
+                async move { page::serve(&path, request).await }
             }),
         );
     }

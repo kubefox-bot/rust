@@ -1,70 +1,85 @@
-//! Signed display metadata. This JWT is never an authentication credential.
+//! Encrypted display metadata. The profile cookie never authenticates a session.
+mod cipher;
+#[cfg(test)]
+mod tests;
 use axum::http::StatusCode;
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
-use ring::rand::{SecureRandom, SystemRandom};
-use serde::Serialize;
+use cipher::ProfileCipher;
+use serde::{Deserialize, Serialize};
 use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
 use tower_cookies::{cookie::SameSite, Cookie, Cookies};
+use zeroize::Zeroizing;
 
-pub(super) const PROFILE_COOKIE: &str = "__Host-sochi-profile";
+pub(crate) const PROFILE_COOKIE: &str = "__Host-sochi-profile";
 const PROFILE_TTL_SECONDS: u64 = 300;
-const SIGNING_KEY_BYTES: usize = 32;
-
 #[derive(Clone)]
 pub(crate) struct ProfileTokens {
-    key: Arc<EncodingKey>,
+    cipher: ProfileCipher,
     login: Arc<str>,
 }
-#[derive(Clone, Serialize)]
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ProfileClaims {
-    sub: &'static str,
-    name: &'static str,
+    sub: String,
+    name: String,
     login: String,
-    role: &'static str,
-    iss: &'static str,
-    aud: &'static str,
-    sid: String,
+    role: String,
+    sid: u64,
     iat: u64,
     exp: u64,
 }
 impl ProfileTokens {
     pub(crate) fn new(login: String) -> Result<Self, StatusCode> {
-        let mut secret = zeroize::Zeroizing::new([0; SIGNING_KEY_BYTES]);
-        SystemRandom::new()
-            .fill(&mut *secret)
-            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
         Ok(Self {
-            key: Arc::new(EncodingKey::from_secret(&*secret)),
+            cipher: ProfileCipher::new().map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?,
             login: login.into(),
         })
     }
-    fn token(&self, generation: u64) -> Result<String, StatusCode> {
-        let issued = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?
-            .as_secs();
+    fn token_at(&self, generation: u64, issued: u64) -> Result<String, StatusCode> {
         let claims = ProfileClaims {
-            sub: "1", // The MVP account is the singleton account row, not a session ID.
-            name: "Суперадмин",
+            sub: "1".into(),
+            name: "Суперадмин".into(),
             login: self.login.to_string(),
-            role: "superadmin",
-            iss: "sochi-center",
-            aud: "header-display",
-            sid: generation.to_string(),
+            role: "superadmin".into(),
+            sid: generation,
             iat: issued,
-            exp: issued + PROFILE_TTL_SECONDS,
+            exp: issued
+                .checked_add(PROFILE_TTL_SECONDS)
+                .ok_or(StatusCode::SERVICE_UNAVAILABLE)?,
         };
-        encode(&Header::new(Algorithm::HS256), &claims, &self.key)
+        let plaintext = Zeroizing::new(
+            serde_json::to_vec(&claims).map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?,
+        );
+        self.cipher
+            .seal(&plaintext)
             .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)
+    }
+    fn accepts_at(&self, token: &str, generation: u64, now: u64) -> bool {
+        let Ok(plaintext) = self.cipher.open(token) else {
+            return false;
+        };
+        let Ok(claims) = serde_json::from_slice::<ProfileClaims>(&plaintext) else {
+            return false;
+        };
+        claims.sub == "1"
+            && claims.name == "Суперадмин"
+            && claims.login == self.login.as_ref()
+            && claims.role == "superadmin"
+            && claims.sid == generation
+            && claims.iat <= now
+            && claims.exp > now
+            && claims.exp.checked_sub(claims.iat) == Some(PROFILE_TTL_SECONDS)
+    }
+    pub(crate) fn accepts(&self, token: &str, generation: u64) -> bool {
+        now().is_ok_and(|now| self.accepts_at(token, generation, now))
     }
     pub(crate) fn issue(&self, cookies: &Cookies, generation: u64) -> Result<(), StatusCode> {
         cookies.add(
-            Cookie::build((PROFILE_COOKIE, self.token(generation)?))
+            Cookie::build((PROFILE_COOKIE, self.token_at(generation, now()?)?))
                 .secure(true)
-                .http_only(false)
+                .http_only(true)
                 .same_site(SameSite::Strict)
                 .path("/")
                 .build(),
@@ -72,50 +87,19 @@ impl ProfileTokens {
         Ok(())
     }
 }
-
+fn now() -> Result<u64, StatusCode> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|now| now.as_secs())
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)
+}
 pub(super) fn remove(cookies: &Cookies) {
     cookies.remove(
         Cookie::build((PROFILE_COOKIE, ""))
             .secure(true)
+            .http_only(true)
             .same_site(SameSite::Strict)
             .path("/")
             .build(),
     );
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use jsonwebtoken::{decode, DecodingKey, Validation};
-
-    #[test]
-    fn display_token_is_signed_scoped_and_contains_no_session_credential() {
-        let secret = [7u8; SIGNING_KEY_BYTES];
-        let tokens = ProfileTokens {
-            key: Arc::new(EncodingKey::from_secret(&secret)),
-            login: "operator".into(),
-        };
-        let token = tokens.token(42).unwrap();
-        let mut validation = Validation::new(Algorithm::HS256);
-        validation.set_issuer(&["sochi-center"]);
-        validation.set_audience(&["header-display"]);
-        let verified =
-            decode::<serde_json::Value>(&token, &DecodingKey::from_secret(&secret), &validation)
-                .unwrap();
-        assert_eq!(verified.claims["sub"], "1");
-        assert_eq!(verified.claims["login"], "operator");
-        assert_eq!(verified.claims["role"], "superadmin");
-        assert_eq!(verified.claims["sid"], "42");
-        assert_eq!(
-            verified.claims["exp"].as_u64().unwrap() - verified.claims["iat"].as_u64().unwrap(),
-            PROFILE_TTL_SECONDS
-        );
-        assert!(verified.claims.get("token").is_none());
-        assert!(decode::<serde_json::Value>(
-            &token,
-            &DecodingKey::from_secret(&[8u8; SIGNING_KEY_BYTES]),
-            &validation
-        )
-        .is_err());
-    }
 }

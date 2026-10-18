@@ -2,12 +2,6 @@
 import "../styles/global.css";
 import "../shell/footer/footer.css";
 import { Button } from "../ui/button";
-import {
-  PROFILE_COOKIE_NAME,
-  PROFILE_ISSUER,
-  PROFILE_AUDIENCE,
-} from "../shell/header/conts";
-import profileBootstrap from "../shell/header/bootstrap.js?raw";
 import { publicBuild } from "../config/build";
 interface Props {
   title: string;
@@ -21,13 +15,6 @@ const build = publicBuild();
 <html lang="ru" data-header-profile="guest">
   <head>
     <meta charset="UTF-8" />
-    <script
-      is:inline
-      data-cookie-name={PROFILE_COOKIE_NAME}
-      data-issuer={PROFILE_ISSUER}
-      data-audience={PROFILE_AUDIENCE}
-      set:html={profileBootstrap}
-    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
     <title>{title} · Sochi Center</title>
@@ -101,7 +88,7 @@ const build = publicBuild();
             </a>
             <span class="header-separator"></span>
             <a
-              href="/settings/"
+              href="/settings/#profile"
               data-settings-link
               aria-current={section === "settings" ? "page" : undefined}
             >

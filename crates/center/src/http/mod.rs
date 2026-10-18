@@ -1,4 +1,5 @@
 mod csrf;
+mod header_profile;
 mod routes;
 pub use crate::app::AppState;
 pub use routes::router;

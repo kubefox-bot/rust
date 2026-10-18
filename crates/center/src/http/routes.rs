@@ -12,7 +12,14 @@ pub fn router(state: AppState) -> Router {
     let static_routes = state
         .static_dir
         .clone()
-        .map(super::static_files::routes)
+        .map(|directory| {
+            super::static_files::routes(directory)
+                .layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    super::header_profile::populate,
+                ))
+                .layer(CookieManagerLayer::new())
+        })
         .unwrap_or_default();
     let api = Router::new()
         .route("/auth/login", post(crate::auth::http::login))
