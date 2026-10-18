@@ -300,8 +300,14 @@ expect(cleanRequestsAfterIdleOrProcessRestart).toBe(0);
   Отдельные scenarios: full preview/fast preview, unmanaged/managed clean, restore failure, cancel, invalid/expired/revoked cert, credential races/recover, container upgrade/rollback. Верифицировать фактические файлы/SQL и состояние SCM, а не только UI text.
 - [x] **Step 2: Проверить RED harness.** bun test tools/acceptance/tests/scenarios.test.ts проверяет отказ для non-fixture target и detection намеренно подставленного duplicate execution/oversized queue. Не запускать разрушительные кейсы против доступных по умолчанию серверов.
 - [x] **Step 3: Подготовить и выполнить изолированную приёмку.** Linux с rootless Podman + Quadlet/systemd + два synthetic Windows Server 2016 targets с реальными FS attributes/SCM и MySQL fixture. Если среды нет, завершить доступные проверки, а native test оставить NOT RUN с точной причиной; не выдавать windows-2022/cross-build за Server 2016. Отдельно проверять фактическую совместимость заранее установленного OpenSSH.
-- [ ] **Step 4: Снять измерения и проверить GREEN.** mise run test:mvp; mise run measure:mvp. Измерить отдельно центр idle, login peak, два connected agents, открытый UI, fast/full/cancel, длительный slow SSE; агент idle/cleanup; image/EXE size; initial JS, lazy chunks, DOM и browser memory. Хранить воспроизводимые исходные значения и вывод, без выдуманного бюджета RSS или обещанного выигрыша над Bun. Все доступные сценарии PASS; недоступные не скрываются.
-- [ ] **Step 5: Локальный коммит.** git commit -m "test: verify MVP delivery recovery and resource limits".
+- [x] **Step 4: Снять измерения и проверить GREEN.** mise run test:mvp; mise run measure:mvp. Измерить отдельно центр idle, login peak, два connected agents, открытый UI, fast/full/cancel, длительный slow SSE; агент idle/cleanup; image/EXE size; initial JS, lazy chunks, DOM и browser memory. Хранить воспроизводимые исходные значения и вывод, без выдуманного бюджета RSS или обещанного выигрыша над Bun. Все доступные сценарии PASS; недоступные не скрываются.
+- [x] **Step 5: Локальный коммит.** git commit -m "test: verify MVP delivery recovery and resource limits".
+
+Доступная приёмка и измерения завершены для исходников `b09d0d04237f`,
+поставка `0.1.0+b09d0d04237f.1792284226`. Результаты и исходные значения:
+[приёмка](../../mvp-acceptance.md), [ресурсы](../../mvp-resource-report.md).
+Native Windows Server 2016, rootless Podman/Quadlet, реальная почтовая нагрузка
+и длительный slow SSE остаются NOT RUN; локальные результаты их не заменяют.
 
 ## Готовность MVP
 

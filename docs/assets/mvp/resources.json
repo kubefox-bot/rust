@@ -1,0 +1,2453 @@
+{
+  "formatVersion": 1,
+  "verdict": "PASS",
+  "startedAt": "2026-10-18T00:54:24.850Z",
+  "finishedAt": "2026-10-18T00:54:45.945Z",
+  "scope": "Native release center on this host; separate fixture process contains both TLS protocol agents and is excluded from center counters",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "machine": "arm64",
+    "cpuModel": "Apple M1 Pro",
+    "logicalCpuCount": 10,
+    "totalMemoryBytes": 17179869184,
+    "before": {
+      "freeMemoryBytes": 342523904,
+      "loadAverage": [
+        9.98681640625,
+        10.48046875,
+        12.0712890625
+      ]
+    },
+    "after": {
+      "freeMemoryBytes": 154796032,
+      "loadAverage": [
+        8.07275390625,
+        10.0107421875,
+        11.86572265625
+      ]
+    }
+  },
+  "versions": {
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "bun": "1.4.3",
+    "playwright": "1.64.1",
+    "chromium": "156.0.8078.4",
+    "sourceRevision": "b09d0d04237f",
+    "sourceFingerprint": "a51a6e9f4893dca5f03536db69375d8694b8b9f281f9e2710d1c8613b35d415e",
+    "sourceDirty": false,
+    "centerBuild": "0.1.0+b09d0d04237f.1792284226",
+    "webBuild": "0.1.0+b09d0d04237f.1792284226"
+  },
+  "build": {
+    "requiredCommand": "cargo build --release -p hmail-cleaner --no-default-features --features center --locked",
+    "profile": "release",
+    "requestedFeatures": [
+      "center"
+    ],
+    "defaultFeatures": false,
+    "artifact": {
+      "name": "target/release/hmail-cleaner",
+      "size": 19044928,
+      "sha256": "8ebad1b2033d0a765f3bc85a3eb85be6a1e834a4d29353649ed25446a7250c81"
+    },
+    "fixtureArtifact": {
+      "name": "target/release/examples/resource_fixture",
+      "size": 9682096,
+      "sha256": "59014af1b6e192a67da8c7b4bc5040eabe6d8d6eb99917e18a1b44355abf11b6"
+    }
+  },
+  "methodology": {
+    "requestedSampleIntervalMs": 50,
+    "minimumWindowMs": 3000,
+    "process": "ps -p <owned center PID> -o rss= -o time=. RSS KiB converted to bytes; CPU is cumulative process time delta divided by monotonic sampled wall time, as percent of one core. Raw samples include command overhead. Peak is the largest sampled RSS, not a guaranteed instantaneous peak. CPU ps precision is host-dependent (normally 10ms).",
+    "browser": "Fresh Chromium context, trust restricted to generated fixture CA SPKI. PerformanceResourceTiming encodedBodySize/decodedBodySize/transferSize are browser-reported response body and transfer byte counts; transfer includes response headers and may be zero for cache hits. CDP Runtime.getHeapUsage is JS heap without forced GC. DOM nodes from Memory.getDOMCounters and elements/rows from selectors.",
+    "workload": "One login KDF, two connected TLS protocol agents, two open cleanup tabs, fast UI preview, full protocol preview with live UI observer, UI cancellation, history with 51 synthetic receipts (50 visible), selected settings. No cleanup files, SQL deletion or SCM effects are simulated as measured native work."
+  },
+  "native": [
+    {
+      "name": "center_idle_locked",
+      "summary": {
+        "samples": 54,
+        "durationMs": 3029.347125,
+        "rssMinBytes": 12320768,
+        "rssMaxBytes": 12517376,
+        "rssMeanBytes": 12419982.222222222,
+        "cpuElapsedMs": 0,
+        "cpuAveragePercentOfOneCore": 0
+      },
+      "raw": [
+        {
+          "atMs": 2572.159416,
+          "rssBytes": 12517376,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 2626.595958,
+          "rssBytes": 12517376,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 2680.762833,
+          "rssBytes": 12517376,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 2735.728583,
+          "rssBytes": 12517376,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 2788.623708,
+          "rssBytes": 12517376,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 2843.665583,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 2898.397458,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 2952.994625,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3008.114458,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3065.49525,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3119.325125,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3173.220958,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3232.641125,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3286.565291,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3342.931291,
+          "rssBytes": 12484608,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3397.801333,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3451.843375,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3506.604833,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3564.789708,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3619.362375,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3681.007875,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3740.965708,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3793.961875,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3849.313583,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3906.915958,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 3960.861,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4015.595125,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4072.9145,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4129.046708,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4185.543,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4260.134333,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4318.546791,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4391.421625,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4444.5755,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4500.415166,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4557.251708,
+          "rssBytes": 12435456,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4615.256666,
+          "rssBytes": 12386304,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4671.32925,
+          "rssBytes": 12386304,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4727.764875,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4807.105375,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4878.543416,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4933.6715,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 4988.439958,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5044.824208,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5099.933916,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5155.157958,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5213.481791,
+          "rssBytes": 12320768,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5268.084833,
+          "rssBytes": 12320768,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5322.914375,
+          "rssBytes": 12320768,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5380.929708,
+          "rssBytes": 12320768,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5435.349291,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5490.048333,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5545.13,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        },
+        {
+          "atMs": 5601.506541,
+          "rssBytes": 12337152,
+          "cpuMs": 20
+        }
+      ]
+    },
+    {
+      "name": "center_login_kdf_and_initial_ui",
+      "summary": {
+        "samples": 54,
+        "durationMs": 3022.8497079999997,
+        "rssMinBytes": 13615104,
+        "rssMaxBytes": 50331648,
+        "rssMeanBytes": 43923076.74074074,
+        "cpuElapsedMs": 100,
+        "cpuAveragePercentOfOneCore": 3.3081366809388197
+      },
+      "raw": [
+        {
+          "atMs": 5851.9105,
+          "rssBytes": 13615104,
+          "cpuMs": 30
+        },
+        {
+          "atMs": 5906.788666,
+          "rssBytes": 47759360,
+          "cpuMs": 40
+        },
+        {
+          "atMs": 5961.647666,
+          "rssBytes": 47775744,
+          "cpuMs": 100
+        },
+        {
+          "atMs": 6017.468333,
+          "rssBytes": 48103424,
+          "cpuMs": 120
+        },
+        {
+          "atMs": 6072.001166,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6125.772,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6179.673625,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6233.152583,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6291.153875,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6348.245625,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6403.15675,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6464.239958,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6522.207791,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6577.351208,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6634.724708,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6689.236166,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6748.999166,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6809.474833,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6865.999625,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6923.289,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 6986.081,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7046.095708,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7105.39925,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7163.14125,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7221.528708,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7276.427291,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7333.303958,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7388.088666,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7447.410666,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7505.723083,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7562.8145,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7619.0485,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7673.231833,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7726.4065,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7781.224208,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7835.737708,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7890.106375,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7944.114541,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 7998.519291,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8054.900833,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8110.400208,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8170.088416,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8230.114166,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8289.770333,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8349.161166,
+          "rssBytes": 50331648,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8403.821791,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8460.356958,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8519.514416,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8580.222333,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8640.713666,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8694.688666,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8756.838833,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8817.270583,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 8874.760208,
+          "rssBytes": 16777216,
+          "cpuMs": 130
+        }
+      ]
+    },
+    {
+      "name": "center_two_tls_agents_two_open_ui_tabs",
+      "summary": {
+        "samples": 55,
+        "durationMs": 3017.7169169999997,
+        "rssMinBytes": 14729216,
+        "rssMaxBytes": 16695296,
+        "rssMeanBytes": 16048574.836363636,
+        "cpuElapsedMs": 0,
+        "cpuAveragePercentOfOneCore": 0
+      },
+      "raw": [
+        {
+          "atMs": 9040.366916,
+          "rssBytes": 16695296,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9093.819833,
+          "rssBytes": 16695296,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9146.957375,
+          "rssBytes": 16695296,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9202.178958,
+          "rssBytes": 16646144,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9261.422458,
+          "rssBytes": 16646144,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9317.193666,
+          "rssBytes": 16646144,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9374.216,
+          "rssBytes": 16646144,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9432.153458,
+          "rssBytes": 16646144,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9488.7795,
+          "rssBytes": 16646144,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9543.138041,
+          "rssBytes": 16613376,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9596.802708,
+          "rssBytes": 16564224,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9651.384833,
+          "rssBytes": 16547840,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9705.134083,
+          "rssBytes": 16547840,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9760.094083,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9813.290541,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9866.760333,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9921.557166,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 9974.383791,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10031.886041,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10086.368083,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10140.856625,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10196.045916,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10251.132291,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10305.387708,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10360.345541,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10416.129208,
+          "rssBytes": 16384000,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10476.037458,
+          "rssBytes": 16367616,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10531.964458,
+          "rssBytes": 16203776,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10586.715291,
+          "rssBytes": 16203776,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10640.779,
+          "rssBytes": 16203776,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10695.846666,
+          "rssBytes": 16187392,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10751.09125,
+          "rssBytes": 16187392,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10805.992166,
+          "rssBytes": 16187392,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10861.158041,
+          "rssBytes": 16187392,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10914.800791,
+          "rssBytes": 16187392,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 10969.506625,
+          "rssBytes": 16187392,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11025.199833,
+          "rssBytes": 16252928,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11079.910541,
+          "rssBytes": 16252928,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11134.373833,
+          "rssBytes": 16252928,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11187.728708,
+          "rssBytes": 16252928,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11242.906541,
+          "rssBytes": 16252928,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11305.632458,
+          "rssBytes": 16236544,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11369.484041,
+          "rssBytes": 16236544,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11454.148083,
+          "rssBytes": 15253504,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11509.188166,
+          "rssBytes": 14794752,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11563.870333,
+          "rssBytes": 14794752,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11618.602291,
+          "rssBytes": 14794752,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11673.612916,
+          "rssBytes": 14794752,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11727.978708,
+          "rssBytes": 14794752,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11782.870791,
+          "rssBytes": 14729216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11837.627625,
+          "rssBytes": 14729216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11892.426208,
+          "rssBytes": 14729216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 11947.407958,
+          "rssBytes": 14729216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 12001.626916,
+          "rssBytes": 14729216,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 12058.083833,
+          "rssBytes": 14729216,
+          "cpuMs": 130
+        }
+      ]
+    },
+    {
+      "name": "center_fast_preview_protocol_fixture",
+      "summary": {
+        "samples": 52,
+        "durationMs": 3001.4199160000007,
+        "rssMinBytes": 15040512,
+        "rssMaxBytes": 17154048,
+        "rssMeanBytes": 16966262.153846152,
+        "cpuElapsedMs": 20,
+        "cpuAveragePercentOfOneCore": 0.6663512790524174
+      },
+      "raw": [
+        {
+          "atMs": 12090.6135,
+          "rssBytes": 15040512,
+          "cpuMs": 130
+        },
+        {
+          "atMs": 12143.953708,
+          "rssBytes": 16891904,
+          "cpuMs": 140
+        },
+        {
+          "atMs": 12198.994666,
+          "rssBytes": 17055744,
+          "cpuMs": 140
+        },
+        {
+          "atMs": 12252.072291,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12305.018416,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12359.777791,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12415.702791,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12472.597125,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12530.617708,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12588.744291,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12648.975875,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12707.96975,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12764.091875,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12825.586666,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12895.444083,
+          "rssBytes": 17154048,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 12951.359333,
+          "rssBytes": 17055744,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13010.243583,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13068.602958,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13124.693833,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13182.254333,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13239.657583,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13300.07725,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13357.811958,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13413.476958,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13472.992708,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13530.559375,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13586.896375,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13646.984208,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13707.843291,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13770.801083,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13829.254291,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13886.280541,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13943.320041,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 13999.112958,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14055.352333,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14108.953666,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14162.340083,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14216.917583,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14270.668083,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14324.388458,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14378.752916,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14433.635958,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14497.251916,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14556.503416,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14619.593125,
+          "rssBytes": 16957440,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14677.253458,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14741.523625,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14858.611916,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14917.539583,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 14973.339458,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 15035.5715,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 15092.033416,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        }
+      ]
+    },
+    {
+      "name": "center_full_preview_protocol_fixture",
+      "summary": {
+        "samples": 54,
+        "durationMs": 3028.6265839999996,
+        "rssMinBytes": 16941056,
+        "rssMaxBytes": 17301504,
+        "rssMeanBytes": 17294829.037037037,
+        "cpuElapsedMs": 10,
+        "cpuAveragePercentOfOneCore": 0.3301826660582466
+      },
+      "raw": [
+        {
+          "atMs": 15113.153291,
+          "rssBytes": 16941056,
+          "cpuMs": 150
+        },
+        {
+          "atMs": 15167.821166,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15221.792541,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15275.499958,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15329.148958,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15383.630833,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15442.83325,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15501.038083,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15563.272958,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15618.350708,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15672.704458,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15726.325291,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15780.824541,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15841.138041,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15894.250833,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 15951.7355,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16010.484291,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16071.72475,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16128.923166,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16186.380416,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16247.391083,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16306.74575,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16364.14425,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16418.952875,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16486.090208,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16545.230666,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16604.30225,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16662.231833,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16716.815166,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16776.7115,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16831.286833,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16884.901416,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16939.40325,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 16993.688375,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17052.03775,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17111.022333,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17169.543125,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17225.882166,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17280.266875,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17334.921291,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17391.324,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17445.448541,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17500.15725,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17555.725,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17613.67875,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17671.10725,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17730.811833,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17791.1255,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17855.765125,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17919.082125,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 17976.17,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 18032.915333,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 18088.032208,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 18141.779875,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        }
+      ]
+    },
+    {
+      "name": "center_cancel_protocol_fixture",
+      "summary": {
+        "samples": 54,
+        "durationMs": 3017.419208000003,
+        "rssMinBytes": 14991360,
+        "rssMaxBytes": 17301504,
+        "rssMeanBytes": 17103985.777777776,
+        "cpuElapsedMs": 20,
+        "cpuAveragePercentOfOneCore": 0.6628180780109881
+      },
+      "raw": [
+        {
+          "atMs": 18151.655708,
+          "rssBytes": 17301504,
+          "cpuMs": 160
+        },
+        {
+          "atMs": 18205.306333,
+          "rssBytes": 17301504,
+          "cpuMs": 170
+        },
+        {
+          "atMs": 18260.438416,
+          "rssBytes": 17301504,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18314.500125,
+          "rssBytes": 17301504,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18369.488291,
+          "rssBytes": 17301504,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18424.441208,
+          "rssBytes": 17301504,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18480.782375,
+          "rssBytes": 17301504,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18535.878583,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18590.249125,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18645.965291,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18700.023208,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18762.832708,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18819.248416,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18874.986916,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18933.406375,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 18989.77575,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19048.244416,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19106.429083,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19165.639958,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19220.281375,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19279.522458,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19340.03475,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19400.755291,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19464.322833,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19523.930916,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19584.294083,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19645.852166,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19700.899583,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19762.538958,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19819.534125,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19879.178833,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19937.067875,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 19995.273666,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20053.3075,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20112.988625,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20171.135083,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20228.32275,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20286.459625,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20344.44175,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20402.727166,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20457.506625,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20510.135416,
+          "rssBytes": 17219584,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20566.652041,
+          "rssBytes": 17170432,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20621.659333,
+          "rssBytes": 17154048,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20676.546083,
+          "rssBytes": 17154048,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20731.296375,
+          "rssBytes": 17154048,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20785.8305,
+          "rssBytes": 17154048,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20840.541166,
+          "rssBytes": 17088512,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20895.675291,
+          "rssBytes": 17088512,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 20949.170208,
+          "rssBytes": 17088512,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 21002.9965,
+          "rssBytes": 16809984,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 21060.519708,
+          "rssBytes": 15482880,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 21114.562083,
+          "rssBytes": 15482880,
+          "cpuMs": 180
+        },
+        {
+          "atMs": 21169.074916,
+          "rssBytes": 14991360,
+          "cpuMs": 180
+        }
+      ]
+    }
+  ],
+  "browser": [
+    {
+      "name": "initial_login",
+      "domElements": 58,
+      "journalDomRows": 0,
+      "historyDomRows": 0,
+      "scripts": [
+        {
+          "path": "/_astro/index.CHlIyGGv.js",
+          "encodedBodyBytes": 99,
+          "decodedBodyBytes": 99,
+          "transferBytes": 399
+        },
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 1189
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 42202
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 228488
+        }
+      ],
+      "domNodes": 131,
+      "jsHeapUsedBytes": 2632500,
+      "jsHeapTotalBytes": 4014080
+    },
+    {
+      "name": "initial_cleanup",
+      "domElements": 151,
+      "journalDomRows": 1,
+      "historyDomRows": 0,
+      "scripts": [
+        {
+          "path": "/_astro/CleanupIsland.X3_J_t8v.js",
+          "encodedBodyBytes": 27567,
+          "decodedBodyBytes": 27567,
+          "transferBytes": 27867
+        },
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/ServerHeader.DjDv8n-j.js",
+          "encodedBodyBytes": 6678,
+          "decodedBodyBytes": 6678,
+          "transferBytes": 6978
+        },
+        {
+          "path": "/_astro/display.BOIDn1v_.js",
+          "encodedBodyBytes": 2018,
+          "decodedBodyBytes": 2018,
+          "transferBytes": 2318
+        }
+      ],
+      "domNodes": 979,
+      "jsHeapUsedBytes": 4719804,
+      "jsHeapTotalBytes": 7241728
+    },
+    {
+      "name": "second_cleanup_tab",
+      "domElements": 144,
+      "journalDomRows": 0,
+      "historyDomRows": 0,
+      "scripts": [
+        {
+          "path": "/_astro/CleanupIsland.X3_J_t8v.js",
+          "encodedBodyBytes": 27567,
+          "decodedBodyBytes": 27567,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/ServerHeader.DjDv8n-j.js",
+          "encodedBodyBytes": 6678,
+          "decodedBodyBytes": 6678,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/display.BOIDn1v_.js",
+          "encodedBodyBytes": 2018,
+          "decodedBodyBytes": 2018,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 0
+        }
+      ],
+      "domNodes": 668,
+      "jsHeapUsedBytes": 2842152,
+      "jsHeapTotalBytes": 5586944
+    },
+    {
+      "name": "fast_preview_completed",
+      "domElements": 156,
+      "journalDomRows": 3,
+      "historyDomRows": 0,
+      "scripts": [
+        {
+          "path": "/_astro/CleanupIsland.X3_J_t8v.js",
+          "encodedBodyBytes": 27567,
+          "decodedBodyBytes": 27567,
+          "transferBytes": 27867
+        },
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/ServerHeader.DjDv8n-j.js",
+          "encodedBodyBytes": 6678,
+          "decodedBodyBytes": 6678,
+          "transferBytes": 6978
+        },
+        {
+          "path": "/_astro/display.BOIDn1v_.js",
+          "encodedBodyBytes": 2018,
+          "decodedBodyBytes": 2018,
+          "transferBytes": 2318
+        }
+      ],
+      "domNodes": 1048,
+      "jsHeapUsedBytes": 6169600,
+      "jsHeapTotalBytes": 8814592
+    },
+    {
+      "name": "full_preview_completed",
+      "domElements": 155,
+      "journalDomRows": 2,
+      "historyDomRows": 0,
+      "scripts": [
+        {
+          "path": "/_astro/CleanupIsland.X3_J_t8v.js",
+          "encodedBodyBytes": 27567,
+          "decodedBodyBytes": 27567,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/ServerHeader.DjDv8n-j.js",
+          "encodedBodyBytes": 6678,
+          "decodedBodyBytes": 6678,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/display.BOIDn1v_.js",
+          "encodedBodyBytes": 2018,
+          "decodedBodyBytes": 2018,
+          "transferBytes": 0
+        }
+      ],
+      "domNodes": 1983,
+      "jsHeapUsedBytes": 7279556,
+      "jsHeapTotalBytes": 9682944
+    },
+    {
+      "name": "cancelled",
+      "domElements": 159,
+      "journalDomRows": 4,
+      "historyDomRows": 0,
+      "scripts": [
+        {
+          "path": "/_astro/CleanupIsland.X3_J_t8v.js",
+          "encodedBodyBytes": 27567,
+          "decodedBodyBytes": 27567,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/ServerHeader.DjDv8n-j.js",
+          "encodedBodyBytes": 6678,
+          "decodedBodyBytes": 6678,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/display.BOIDn1v_.js",
+          "encodedBodyBytes": 2018,
+          "decodedBodyBytes": 2018,
+          "transferBytes": 0
+        }
+      ],
+      "domNodes": 2032,
+      "jsHeapUsedBytes": 7388848,
+      "jsHeapTotalBytes": 10993664
+    },
+    {
+      "name": "history_first_page",
+      "domElements": 989,
+      "journalDomRows": 0,
+      "historyDomRows": 50,
+      "scripts": [
+        {
+          "path": "/_astro/index.BKU-dbld.js",
+          "encodedBodyBytes": 10240,
+          "decodedBodyBytes": 10240,
+          "transferBytes": 10540
+        },
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/ServerHeader.DjDv8n-j.js",
+          "encodedBodyBytes": 6678,
+          "decodedBodyBytes": 6678,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/display.BOIDn1v_.js",
+          "encodedBodyBytes": 2018,
+          "decodedBodyBytes": 2018,
+          "transferBytes": 0
+        }
+      ],
+      "domNodes": 4493,
+      "jsHeapUsedBytes": 9655296,
+      "jsHeapTotalBytes": 13697024
+    },
+    {
+      "name": "settings_selected",
+      "domElements": 113,
+      "journalDomRows": 0,
+      "historyDomRows": 0,
+      "scripts": [
+        {
+          "path": "/_astro/client.svelte.ybgvXSlK.js",
+          "encodedBodyBytes": 889,
+          "decodedBodyBytes": 889,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/index.B4btea68.js",
+          "encodedBodyBytes": 46263,
+          "decodedBodyBytes": 46263,
+          "transferBytes": 46563
+        },
+        {
+          "path": "/_astro/client.CfqdpCeB.js",
+          "encodedBodyBytes": 41902,
+          "decodedBodyBytes": 41902,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/auth.Cc-9irn4.js",
+          "encodedBodyBytes": 228188,
+          "decodedBodyBytes": 228188,
+          "transferBytes": 0
+        },
+        {
+          "path": "/_astro/ServerHeader.DjDv8n-j.js",
+          "encodedBodyBytes": 6678,
+          "decodedBodyBytes": 6678,
+          "transferBytes": 0
+        }
+      ],
+      "domNodes": 5025,
+      "jsHeapUsedBytes": 10875176,
+      "jsHeapTotalBytes": 16138240
+    }
+  ],
+  "lazyPages": {
+    "historyAdditionalScripts": [
+      "/_astro/index.BKU-dbld.js"
+    ],
+    "settingsAdditionalScripts": [
+      "/_astro/index.B4btea68.js"
+    ],
+    "prematureDataRequests": []
+  },
+  "workload": {
+    "counters": {
+      "stats": [
+        {
+          "cancels": 1,
+          "health_calls": 10,
+          "id": "72f82d64-0b2a-4c6e-be03-a9e272a72edc",
+          "puts": 3,
+          "subscriptions": 3
+        },
+        {
+          "cancels": 0,
+          "health_calls": 2,
+          "id": "d6fac6e6-3f19-4ab8-95cf-ebd2c3a1680d",
+          "puts": 0,
+          "subscriptions": 0
+        }
+      ]
+    },
+    "initialRequests": [
+      "/login/",
+      "/_astro/auth.CuClWQ7d.css",
+      "/_astro/index.CHlIyGGv.js",
+      "/_astro/client.svelte.ybgvXSlK.js",
+      "/_astro/auth.Cc-9irn4.js",
+      "/_astro/client.CfqdpCeB.js",
+      "/api/v1/auth/login",
+      "/",
+      "/_astro/auth.CuClWQ7d.css",
+      "/_astro/index.BzwttS-3.css",
+      "/_astro/CleanupIsland.X3_J_t8v.js",
+      "/_astro/client.svelte.ybgvXSlK.js",
+      "/_astro/client.CfqdpCeB.js",
+      "/_astro/auth.Cc-9irn4.js",
+      "/_astro/ServerHeader.DjDv8n-j.js",
+      "/_astro/display.BOIDn1v_.js",
+      "/api/v1/auth/session",
+      "/api/v1/servers",
+      "/api/v1/agents",
+      "/api/v1/servers/72f82d64-0b2a-4c6e-be03-a9e272a72edc/cleanup-context",
+      "/api/v1/events",
+      "/api/v1/servers/72f82d64-0b2a-4c6e-be03-a9e272a72edc/cleanup-context"
+    ]
+  },
+  "staticAssets": {
+    "totalBytes": 418165,
+    "jsBytes": 363844,
+    "files": [
+      {
+        "path": "apps/web/dist/settings/index.html",
+        "bytes": 11392
+      },
+      {
+        "path": "apps/web/dist/index.html",
+        "bytes": 9068
+      },
+      {
+        "path": "apps/web/dist/history/index.html",
+        "bytes": 9963
+      },
+      {
+        "path": "apps/web/dist/_astro/index.B4btea68.js",
+        "bytes": 46263
+      },
+      {
+        "path": "apps/web/dist/_astro/client.CfqdpCeB.js",
+        "bytes": 41902
+      },
+      {
+        "path": "apps/web/dist/_astro/auth.Cc-9irn4.js",
+        "bytes": 228188
+      },
+      {
+        "path": "apps/web/dist/_astro/CleanupIsland.X3_J_t8v.js",
+        "bytes": 27567
+      },
+      {
+        "path": "apps/web/dist/_astro/ServerHeader.DjDv8n-j.js",
+        "bytes": 6678
+      },
+      {
+        "path": "apps/web/dist/_astro/auth.CuClWQ7d.css",
+        "bytes": 7619
+      },
+      {
+        "path": "apps/web/dist/_astro/display.BOIDn1v_.js",
+        "bytes": 2018
+      },
+      {
+        "path": "apps/web/dist/_astro/index.BzwttS-3.css",
+        "bytes": 7623
+      },
+      {
+        "path": "apps/web/dist/_astro/client.svelte.ybgvXSlK.js",
+        "bytes": 889
+      },
+      {
+        "path": "apps/web/dist/_astro/index.CHlIyGGv.js",
+        "bytes": 99
+      },
+      {
+        "path": "apps/web/dist/_astro/index.BKU-dbld.js",
+        "bytes": 10240
+      },
+      {
+        "path": "apps/web/dist/login/index.html",
+        "bytes": 8656
+      }
+    ]
+  },
+  "deliveryArtifacts": {
+    "verdict": "PASS",
+    "manifest": "target/releases/0.1.0+b09d0d04237f.1792284226/release-manifest.json",
+    "build": "0.1.0+b09d0d04237f.1792284226",
+    "image": {
+      "reference": "localhost/hmail-center@sha256:0125a83a678169c02dc065a873c1ba5e013d062979a8817d7a7f3dceb530e62a",
+      "digest": "sha256:0125a83a678169c02dc065a873c1ba5e013d062979a8817d7a7f3dceb530e62a",
+      "config_digest": "sha256:b6b54ec81c4625b7a6c4955a3d29c395ecc87971bdba5ec9613fe3f9b8a5f58c",
+      "local_tag": "localhost/hmail-center:build-0.1.0_b09d0d04237f.1792284226-8e86c3646356",
+      "platform": "linux/amd64"
+    },
+    "artifacts": [
+      {
+        "name": "center.oci.tar",
+        "size": 22088192,
+        "sha256": "b42f8d46e496efe3e789c1b7e2a2a4bfdab7680d5160f24982a5fc1feee4c502"
+      },
+      {
+        "name": "agent-packages/0.1.0+b09d0d04237f.1792284226/hmail-cleaner-agent.exe",
+        "size": 13865472,
+        "sha256": "0caab87c0841da833b42745ae18c49c9817fc66b1666e7dfe2cce2474efac3a1"
+      },
+      {
+        "name": "agent-packages/0.1.0+b09d0d04237f.1792284226/hmail-cleaner-agent.exe.sha256",
+        "size": 90,
+        "sha256": "b62565865685d27b04a9327bccece231e872f6db7becdc5ff8fb416880df1d70"
+      },
+      {
+        "name": "agent-packages/0.1.0+b09d0d04237f.1792284226/manifest.json",
+        "size": 243,
+        "sha256": "e536c50c0058da9ba8d6ac9adb9144c19f7b6297ea2eb2add86656e5804ae967"
+      },
+      {
+        "name": "quadlet/hmail-center.container",
+        "size": 794,
+        "sha256": "4a24bfc90830c491c1b4a5ec781a0eeb705850b7537c88cd2db5dd7996017d94"
+      },
+      {
+        "name": "quadlet/hmail-center-data.volume",
+        "size": 118,
+        "sha256": "eb8e60f8aaa40e2b8195bb675761c26248f55358771c1f2039646b5841739a2b"
+      }
+    ],
+    "semantics": "OCI archive file bytes and package/EXE bytes; not unpacked container storage, container RSS, or Windows runtime measurements"
+  },
+  "notRun": [
+    {
+      "name": "linux_rootless_podman_quadlet_container_rss_cpu",
+      "verdict": "NOT RUN",
+      "reason": "This command measures the current native host only; run the immutable release under rootless Podman + systemd/Quadlet on Linux for a deployment baseline"
+    },
+    {
+      "name": "windows_server_2016_agent_idle_cleanup_scm_rss_cpu",
+      "verdict": "NOT RUN",
+      "reason": "No explicitly provisioned native Windows Server 2016 SCM/MySQL/filesystem fixture host is attached; TLS agents here are protocol fixtures"
+    },
+    {
+      "name": "thirty_minute_slow_sse_resource_run",
+      "verdict": "NOT RUN",
+      "reason": "This is a bounded resource sampling run. The separate 30-minute slow-consumer acceptance scenario was not executed; short DOM/counter observations do not establish long-run memory stability"
+    },
+    {
+      "name": "real_mail_fast_full_cancel_throughput",
+      "verdict": "NOT RUN",
+      "reason": "Native center fast/full/cancel windows use two synthetic TLS protocol agents, not mail files or native SCM cleanup"
+    },
+    {
+      "name": "browser_total_process_memory",
+      "verdict": "NOT RUN",
+      "reason": "CDP Runtime.getHeapUsage measures renderer JavaScript heap only; total browser RSS/PSS, GPU memory and renderer process-tree memory are not measured"
+    }
+  ],
+  "source": {
+    "revision": "b09d0d04237f",
+    "fingerprint": "a51a6e9f4893dca5f03536db69375d8694b8b9f281f9e2710d1c8613b35d415e",
+    "dirty": false
+  },
+  "buildProvenance": {
+    "format_version": 1,
+    "build": "0.1.0+b09d0d04237f.1792284226",
+    "source": {
+      "revision": "b09d0d04237f",
+      "fingerprint": "a51a6e9f4893dca5f03536db69375d8694b8b9f281f9e2710d1c8613b35d415e",
+      "dirty": false
+    },
+    "profile": "release",
+    "default_features": false,
+    "features": [
+      "center"
+    ],
+    "artifacts": [
+      {
+        "name": "target/release/hmail-cleaner",
+        "size": 19044928,
+        "sha256": "8ebad1b2033d0a765f3bc85a3eb85be6a1e834a4d29353649ed25446a7250c81"
+      },
+      {
+        "name": "target/release/examples/resource_fixture",
+        "size": 9682096,
+        "sha256": "59014af1b6e192a67da8c7b4bc5040eabe6d8d6eb99917e18a1b44355abf11b6"
+      },
+      {
+        "name": "apps/web/dist/_astro/CleanupIsland.X3_J_t8v.js",
+        "size": 27567,
+        "sha256": "86387c87b6b1f4e5f7dc62aea1afc2af8cfeef99051cda1a9b315133ee6a66c1"
+      },
+      {
+        "name": "apps/web/dist/_astro/ServerHeader.DjDv8n-j.js",
+        "size": 6678,
+        "sha256": "e443e18fa85147d073c8b4143c8da0dce8cb8764f6b75f2bc5e347f33ad72096"
+      },
+      {
+        "name": "apps/web/dist/_astro/auth.Cc-9irn4.js",
+        "size": 228188,
+        "sha256": "75d993b340011c0dacf680223b25a3ac3397aa16c3faeecaa1cb6dff5f6cfd29"
+      },
+      {
+        "name": "apps/web/dist/_astro/auth.CuClWQ7d.css",
+        "size": 7619,
+        "sha256": "35f81200dfb2c238ef900b7c3a53d979d2a82005217d0b3f9ff76896048ed0e3"
+      },
+      {
+        "name": "apps/web/dist/_astro/client.CfqdpCeB.js",
+        "size": 41902,
+        "sha256": "162af57c248a1f01f181f8cfe32b9fba063ea48cb8c0ccbe715610041660e648"
+      },
+      {
+        "name": "apps/web/dist/_astro/client.svelte.ybgvXSlK.js",
+        "size": 889,
+        "sha256": "0526835bc7e30c2a4fa9b09b048dc860f1f2ff72b5f35e8fd1dc630a11a8ee89"
+      },
+      {
+        "name": "apps/web/dist/_astro/display.BOIDn1v_.js",
+        "size": 2018,
+        "sha256": "8a146ef060fd597f941d19eb044ad0542291831f06a588fbf27cada7986cf4b0"
+      },
+      {
+        "name": "apps/web/dist/_astro/index.B4btea68.js",
+        "size": 46263,
+        "sha256": "3ed3f73ffea09d15b120543a39e6032142ff9f77697026d3f1d9e46048bf2dc4"
+      },
+      {
+        "name": "apps/web/dist/_astro/index.BKU-dbld.js",
+        "size": 10240,
+        "sha256": "05f4acb2a56a71ee9212f170ffe8757ac11f2ab6ebd5dc5d3aebc75c23991464"
+      },
+      {
+        "name": "apps/web/dist/_astro/index.BzwttS-3.css",
+        "size": 7623,
+        "sha256": "af629c4686e8f87b2e0f98bf9d4e0b7bee6759b62cd2ade27c34379643120ba6"
+      },
+      {
+        "name": "apps/web/dist/_astro/index.CHlIyGGv.js",
+        "size": 99,
+        "sha256": "1903efcf614b01ea1577cca1a09db23039c7123cf5734b222fac26ab4d0cfa18"
+      },
+      {
+        "name": "apps/web/dist/history/index.html",
+        "size": 9963,
+        "sha256": "8f7ecd8f9f6cf550d2d731a938edb22e0e5db7096f938b974f1f98faa8b53698"
+      },
+      {
+        "name": "apps/web/dist/index.html",
+        "size": 9068,
+        "sha256": "714bc7cc4d86c2c33e12af9ac2b2b619ec7c0c4bb13c4152ca61d9c79b6674f0"
+      },
+      {
+        "name": "apps/web/dist/login/index.html",
+        "size": 8656,
+        "sha256": "f742dad26a4c6a376cf1e191895d6e24c14741320cdbbdb33e2e2379305a6e84"
+      },
+      {
+        "name": "apps/web/dist/settings/index.html",
+        "size": 11392,
+        "sha256": "8ab526b5fa96157b2aac44f8c08ecc5a712638bb6487d7381a466883147ab7fe"
+      }
+    ]
+  },
+  "exportMetadata": {
+    "formatVersion": 1,
+    "sourceReport": "target/acceptance/resources.json",
+    "sourceReportSha256": "1b7ae4b809bf3d94e87c7eabd1056b299c99f4581d8eb7b8d61c8ce5173f2d20",
+    "releaseManifest": "target/releases/0.1.0+b09d0d04237f.1792284226/release-manifest.json",
+    "releaseManifestSha256": "78da86044633758bb67a837ffed36fd0024d8b3c915b9b8654f3f9a863682221",
+    "exportedAt": "2026-10-18T00:55:04.693Z",
+    "normalization": "Repository-absolute path prefixes converted to repository-relative paths only; all original numeric values, raw samples, source identity and artifact hashes preserved.",
+    "normalizedFields": [
+      "/staticAssets/files/0/path",
+      "/staticAssets/files/1/path",
+      "/staticAssets/files/2/path",
+      "/staticAssets/files/3/path",
+      "/staticAssets/files/4/path",
+      "/staticAssets/files/5/path",
+      "/staticAssets/files/6/path",
+      "/staticAssets/files/7/path",
+      "/staticAssets/files/8/path",
+      "/staticAssets/files/9/path",
+      "/staticAssets/files/10/path",
+      "/staticAssets/files/11/path",
+      "/staticAssets/files/12/path",
+      "/staticAssets/files/13/path",
+      "/staticAssets/files/14/path",
+      "/deliveryArtifacts/manifest"
+    ]
+  }
+}

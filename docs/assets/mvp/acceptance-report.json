@@ -1,0 +1,90 @@
+{
+  "created_at": "2026-10-18T00:52:49.250Z",
+  "checks": [
+    {
+      "name": "fixture-guards",
+      "seconds": 8.101601125,
+      "log": "target/acceptance/fixture-guards.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "rust-workspace",
+      "seconds": 201.759635334,
+      "log": "target/acceptance/rust-workspace.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "center-only-cli",
+      "seconds": 18.50556366700001,
+      "log": "target/acceptance/center-only-cli.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "measurement-guards",
+      "seconds": 2.7226888329999928,
+      "log": "target/acceptance/measurement-guards.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "browser-contracts",
+      "seconds": 3.14900662499998,
+      "log": "target/acceptance/browser-contracts.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "web-types-unit",
+      "seconds": 8.286340584000019,
+      "log": "target/acceptance/web-types-unit.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "browser-behavior",
+      "seconds": 272.138960208,
+      "log": "target/acceptance/browser-behavior.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "delivery-contracts",
+      "seconds": 0.19279891700000734,
+      "log": "target/acceptance/delivery-contracts.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "test-db",
+      "seconds": 26.961309125000028,
+      "log": "target/acceptance/test-db.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "test-agent-db",
+      "seconds": 1.7352501250000205,
+      "log": "target/acceptance/test-agent-db.log",
+      "verdict": "PASS"
+    },
+    {
+      "name": "oci-lifecycle",
+      "verdict": "NOT RUN",
+      "reason": "Set HMAIL_MVP_RELEASE_MANIFEST to the local release manifest."
+    },
+    {
+      "name": "windows-server-2016-native",
+      "verdict": "NOT RUN",
+      "reason": "Two synthetic Server 2016 VMs with SCM/DACL/Win32-OpenSSH are not attached to this local harness."
+    },
+    {
+      "name": "rootless-quadlet-logoff-reboot",
+      "verdict": "NOT RUN",
+      "reason": "Run on the dedicated Linux VM with rootless Podman, systemd user manager and cgroup v2."
+    },
+    {
+      "name": "thirty-minute-slow-consumer",
+      "verdict": "NOT RUN",
+      "reason": "Bounded queue/journal behavior is covered by tests; a 30-minute wall-clock observation is a separate run."
+    }
+  ],
+  "documentationExport": {
+    "originalSha256": "b8f59e9c5c5521f9696c0cb7f3ed7f4987cd41cadb862cc3ec5fc8e60bffa985",
+    "observedSourceRevision": "b09d0d04237f",
+    "normalizedFields": "checks[].log: repository-relative paths; verdicts, timings and reasons unchanged"
+  }
+}
