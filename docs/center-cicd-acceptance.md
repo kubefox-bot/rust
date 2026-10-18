@@ -17,9 +17,27 @@
 - F2: pull съел запас диска — RED → GREEN; maintenance не начинается.
 - F3: cached generated unit при boot — RED → GREEN; выбор прежнего Quadlet предшествует reload и startup. Проверка использует порт с моделью generator cache, а не native systemd.
 
-Полная сборка новой OCI-поставки, Linux updater package и rollout на FCOS в
-этом исполнении не запускались. Внешние workflow/публикация/production не
-активированы. Исходники механизма готовы к выделенной target-приёмке.
+После implementation commit `a22a436` выполнена реальная локальная сборка
+поставки `git-a22a436a31427fd959e2d8962fe0af95019fbe86`: Windows x64 agent +
+Linux amd64 OCI + static Astro/Svelte. Digest:
+`sha256:033e63dfc4a5bc2f27ff521a96015ebb151aa89493bb50e04433af9eb3d5d7dd`.
+
+На локальном Docker/Colima (aarch64 host, amd64 container emulation) прошли
+10 lifecycle проверок: HTTPS до входа, executable/engine health, четыре static
+route, API404, login, graceful SIGTERM, offline backup, сохранение vault/CA и
+отзыв сессии после пересоздания. Отдельный runtime сценарий подтвердил отказ
+чтения policy без сессии, defaults60/15, сохранение120/30, сохранность после
+пересоздания и наличие policy в backup с mode0600. Все команды exit0.
+
+Windows cross-linker выдал LNK4099 о недоступных PDB Windows SDK; release build
+успешен. Это предупреждение о debug symbols не выдаётся за native Windows
+acceptance. Временные контейнеры/тома тестов удалены; прежняя MySQL сохранена.
+Локальные receipts: `target/acceptance/updates/implementation-a22a436/` и
+`target/releases/git-a22a436a31427fd959e2d8962fe0af95019fbe86/delivery-78aff288-6660-470a-aada-564c023f4c1c/`.
+
+Linux updater package, rollout на FCOS, native Quadlet/reboot и active remote
+agent job остаются NOT RUN. Внешние workflow/публикация/production не
+активированы. Проверка через Docker не заменяет FCOS/SELinux/rootless приёмку.
 
 ## Центр: локальные проверки
 
@@ -55,6 +73,8 @@ backup modes. Полный suite центра перед последним ра
 | Локальные ссылки runbook и acceptance | PASS |
 | Политика обновлений: authenticated API, CSRF, bounds, persistence | PASS: 6 backend + 5 browser tests; не является native delivery |
 | Descriptor/publishing/updater/reboot source tests | PASS в release:test и финальном workspace suite |
+| Локальная OCI amd64 поставка и Windows x64 пакет одного SHA | PASS: build exit0; linker warning LNK4099 сохранён |
+| Реальный запуск контейнера: lifecycle и policy persistence/backup | PASS: 10 lifecycle + 6 policy проверок; Docker amd64 emulation |
 | Реальный GitHub Actions run | NOT RUN |
 | Публикация OCI в GHCR и keyless signature реальным workflow | NOT RUN |
 | Изолированная FCOS: automatic A → B → bad C, rollback, power/reboot faults | NOT RUN |
