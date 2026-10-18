@@ -27,6 +27,14 @@ claim_volume() {
   if podman volume exists hmail-center-data; then return; else [[ $? -eq 1 ]] || return 1; fi
   podman volume create hmail-center-data >/dev/null
 }
+verify_image() {
+  local image=$1 config_digest=$2 actual
+  actual=$(podman image inspect --format '{{.Id}}' "$image")
+  actual=${actual#sha256:}
+  [[ "$actual" =~ ^[0-9a-f]{64}$ && "$config_digest" == "sha256:$actual" ]] || {
+    printf 'Loaded image identity differs from the release.\n' >&2; return 1;
+  }
+}
 prepare_user() {
   local payload=$1 state=$2 build=$3 image=$4 config_digest=$5 package entry
   ensure_state "$state"
@@ -34,9 +42,7 @@ prepare_user() {
   [[ ! -e "$state/prepared" ]] || return 1
   claim_volume "$state" "$build"
   podman load --input "$payload/center.oci.tar"
-  [[ "$(podman image inspect --format '{{.Id}}' "$image")" == "$config_digest" ]] || {
-    printf 'Loaded image identity differs from the release.\n' >&2; return 1;
-  }
+  verify_image "$image" "$config_digest"
   install -d -m 0700 "$HOME/.config/containers/systemd" "$HOME/.config/systemd/user/hmail-center.service.d" "$HOME/.local/bin"
   install_matching "$payload/quadlet/hmail-center.container" "$HOME/.config/containers/systemd/hmail-center.container" 0600
   install_matching "$payload/quadlet/hmail-center-data.volume" "$HOME/.config/containers/systemd/hmail-center-data.volume" 0600

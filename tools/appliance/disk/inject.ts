@@ -5,6 +5,8 @@ import { DISK_RESERVE_BYTES } from "../conts";
 import { artifact } from "../../release/manifest";
 import { withGuest } from "./session";
 import { mountRoot } from "./layout";
+import { createPayloadArchive } from "./archive";
+import { requireMetadata } from "./metadata";
 import type { Artifact } from "../types";
 const requireVhdx = async (path: string): Promise<void> => {
   const info: unknown = JSON.parse(
@@ -37,9 +39,11 @@ export const injectPayload = async ({
   await requireVhdx(upstream);
   await copyFile(upstream, output);
   const tar = join(scratch, "payload.tar");
-  await run({
-    argv: ["tar", "-cf", tar, "-C", payload, ...files.map((file) => file.name)],
-    cwd: scratch,
+  await createPayloadArchive({
+    payload,
+    tar,
+    scratch,
+    names: files.map((file) => file.name),
   });
   const identity = await withGuest({
     path: output,
@@ -68,6 +72,7 @@ export const injectPayload = async ({
       const destination = `${layout.varPath}/lib/astra-appliance`;
       await guest.command("mkdir-p", destination);
       await guest.command("tar-in", tar, destination);
+      await guest.command("chmod", "0755", destination);
       await guest.command("sync");
       await guest.command("umount-all");
       return layout.identity;
@@ -88,6 +93,7 @@ export const injectPayload = async ({
         .map((name) => name.replace(/^\/+/, ""))
         .filter(Boolean);
       const actualFiles: string[] = [];
+      requireMetadata(await guest.command("lstatns", destination), "directory");
       for (const name of names) {
         if (
           (
@@ -98,8 +104,18 @@ export const injectPayload = async ({
         if (
           (await guest.command("is-file", `${destination}/${name}`)).trim() ===
           "true"
-        )
+        ) {
+          requireMetadata(
+            await guest.command("lstatns", `${destination}/${name}`),
+            "file",
+          );
           actualFiles.push(name);
+        } else {
+          requireMetadata(
+            await guest.command("lstatns", `${destination}/${name}`),
+            "directory",
+          );
+        }
       }
       if (
         JSON.stringify(actualFiles.sort()) !==
