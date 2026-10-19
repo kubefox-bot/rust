@@ -4,6 +4,7 @@ use hmail_cleaner_core::{
     cleanup::{MAX_BATCH_SIZE, MAX_WORKERS},
     selection::Retention,
 };
+pub(crate) use hmail_cleaner_runner::Mode;
 use std::path::PathBuf;
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
 pub(crate) enum Scan {
@@ -39,21 +40,6 @@ enum Command {
 #[derive(Debug, Subcommand)]
 enum ServiceCommand {
     Run(Options),
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum Mode {
-    Preview,
-    Clean,
-}
-impl Mode {
-    pub fn action(self) -> hmail_cleaner_core::maintenance::recursive::Action {
-        use hmail_cleaner_core::maintenance::recursive::Action;
-        match self {
-            Self::Preview => Action::Preview,
-            Self::Clean => Action::Clean,
-        }
-    }
 }
 #[derive(Debug, Default, ClapArgs)]
 #[command(group(ArgGroup::new("retention").multiple(false)))]

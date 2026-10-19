@@ -1,0 +1,96 @@
+export const RELEASE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "format_version",
+    "build",
+    "source_revision",
+    "source_fingerprint",
+    "dirty",
+    "engine",
+    "image",
+    "base_images",
+    "agent",
+    "artifacts",
+  ],
+  properties: {
+    format_version: { const: 1 },
+    build: { type: "string", pattern: "^[0-9A-Za-z.+_-]{1,128}$" },
+    source_revision: {
+      type: "string",
+      pattern: "^[0-9a-f]{12}(?:-dirty\\.[0-9a-f]{12})?$",
+    },
+    source_fingerprint: { type: "string", pattern: "^[0-9a-f]{64}$" },
+    dirty: { type: "boolean" },
+    engine: { enum: ["podman", "docker"] },
+    image: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "reference",
+        "digest",
+        "config_digest",
+        "local_tag",
+        "platform",
+      ],
+      properties: {
+        reference: {
+          type: "string",
+          pattern: "^[a-z0-9./:_-]+@sha256:[0-9a-f]{64}$",
+        },
+        digest: { type: "string", pattern: "^sha256:[0-9a-f]{64}$" },
+        config_digest: { type: "string", pattern: "^sha256:[0-9a-f]{64}$" },
+        local_tag: { type: "string", minLength: 1 },
+        platform: { enum: ["linux/amd64", "linux/arm64"] },
+      },
+    },
+    base_images: {
+      type: "object",
+      additionalProperties: false,
+      required: ["bun", "rust", "runtime", "buildkit"],
+      properties: {
+        bun: { type: "string" },
+        rust: { type: "string" },
+        runtime: { type: "string" },
+        buildkit: { type: "string" },
+      },
+    },
+    agent: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "product",
+        "build",
+        "target",
+        "protocol_min",
+        "protocol_max",
+        "sha256",
+      ],
+      properties: {
+        product: { const: "hmail-cleaner-agent" },
+        build: { type: "string" },
+        target: { const: "x86_64-pc-windows-msvc" },
+        protocol_min: { const: 1 },
+        protocol_max: { const: 1 },
+        sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+      },
+    },
+    artifacts: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "size", "sha256"],
+        properties: {
+          name: {
+            type: "string",
+            pattern: "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[A-Za-z0-9._+/-]+$",
+          },
+          size: { type: "integer", minimum: 1 },
+          sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        },
+      },
+    },
+  },
+} as const;

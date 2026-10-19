@@ -1,4 +1,4 @@
-param([switch]$Test)
+param([switch]$Test, [ValidateSet('cli', 'agent')][string]$Component = 'cli')
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force -Path 'target/build-driver' | Out-Null
 if ($Test) {
@@ -8,6 +8,6 @@ if ($Test) {
 } else {
     rustc --edition=2021 tools/build-exe/main.rs -o target/build-driver/build-exe.exe
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & './target/build-driver/build-exe.exe'
+    & './target/build-driver/build-exe.exe' --component $Component
 }
 exit $LASTEXITCODE

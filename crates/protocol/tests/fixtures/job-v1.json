@@ -1,0 +1,23 @@
+{
+  "protocol_version": 1,
+  "job_id": "10000000-0000-4000-8000-000000000001",
+  "agent_id": "20000000-0000-4000-8000-000000000002",
+  "profile_id": "30000000-0000-4000-8000-000000000003",
+  "profile_version": "1",
+  "operation": "preview",
+  "scan": "fast",
+  "resolved_cutoff": {
+    "local": "2026-09-17T12:00:00",
+    "file_cutoff_utc": "2026-09-17T09:00:00Z",
+    "utc_offset_seconds": 10800,
+    "resolved_at_utc": "2026-10-17T09:00:00Z"
+  },
+  "service_policy": "require_stopped",
+  "limits": { "batch_size": 1000, "workers": 2 },
+  "mail_profile": {
+    "mysql": { "host": "127.0.0.1", "port": 3306, "database": "hmail_fixture", "username": "fixture", "password": "fixture-mail-secret" },
+    "data_dir": "D:\\Mail\\Data",
+    "hmail_ini": "D:\\Mail\\Bin\\hMailServer.ini",
+    "service_name": "hMailServer"
+  }
+}

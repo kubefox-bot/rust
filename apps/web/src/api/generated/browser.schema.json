@@ -1,0 +1,1638 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BrowserContracts",
+  "description": "Explicit browser allowlist. Never derive the internal application state or agent payloads here.",
+  "type": "object",
+  "properties": {
+    "agents": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AgentView"
+      }
+    },
+    "change_password": {
+      "$ref": "#/$defs/ChangePasswordInput"
+    },
+    "cleanup_context": {
+      "$ref": "#/$defs/CleanupContext"
+    },
+    "confirm_recovery": {
+      "$ref": "#/$defs/ConfirmRecoveryInput"
+    },
+    "counter": {
+      "$ref": "#/$defs/Counter"
+    },
+    "cutoff": {
+      "$ref": "#/$defs/ResolvedCutoff"
+    },
+    "enrollment": {
+      "$ref": "#/$defs/EnrollmentView"
+    },
+    "enrollments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EnrollmentView"
+      }
+    },
+    "error": {
+      "$ref": "#/$defs/PublicError"
+    },
+    "history": {
+      "$ref": "#/$defs/HistoryPage"
+    },
+    "host_key": {
+      "$ref": "#/$defs/HostKeyChallenge"
+    },
+    "identity_receipt": {
+      "$ref": "#/$defs/IdentityReceipt"
+    },
+    "install": {
+      "$ref": "#/$defs/InstallRequest"
+    },
+    "job": {
+      "$ref": "#/$defs/JobView"
+    },
+    "job_event": {
+      "$ref": "#/$defs/JobEvent"
+    },
+    "login": {
+      "$ref": "#/$defs/LoginRequest"
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AgentPackageView"
+      }
+    },
+    "phase": {
+      "$ref": "#/$defs/JobPhase"
+    },
+    "prepare_recovery": {
+      "$ref": "#/$defs/PrepareRecoveryInput"
+    },
+    "preview_files_page": {
+      "$ref": "#/$defs/PreviewFilesPage"
+    },
+    "profile": {
+      "$ref": "#/$defs/EditableProfile"
+    },
+    "profile_validation": {
+      "$ref": "#/$defs/ProfileValidationResponse"
+    },
+    "profile_version": {
+      "$ref": "#/$defs/ProfileVersion"
+    },
+    "recovery_candidate": {
+      "$ref": "#/$defs/RecoveryCandidate"
+    },
+    "retention": {
+      "$ref": "#/$defs/RetentionRequest"
+    },
+    "save_profile": {
+      "$ref": "#/$defs/SaveProfileRequest"
+    },
+    "server_id": {
+      "$ref": "#/$defs/ServerId"
+    },
+    "servers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ServerView"
+      }
+    },
+    "session": {
+      "$ref": "#/$defs/SessionView"
+    },
+    "session_settings": {
+      "$ref": "#/$defs/SessionSettings"
+    },
+    "ssh_target": {
+      "$ref": "#/$defs/SshTarget"
+    },
+    "submit": {
+      "$ref": "#/$defs/SubmitRequest"
+    },
+    "summary": {
+      "$ref": "#/$defs/SummaryDto"
+    },
+    "update": {
+      "$ref": "#/$defs/UpdateRequest"
+    },
+    "update_policy": {
+      "$ref": "#/$defs/UpdatePolicy"
+    }
+  },
+  "required": [
+    "cleanup_context",
+    "counter",
+    "server_id",
+    "phase",
+    "summary",
+    "session",
+    "login",
+    "change_password",
+    "prepare_recovery",
+    "recovery_candidate",
+    "confirm_recovery",
+    "session_settings",
+    "update_policy",
+    "servers",
+    "agents",
+    "profile",
+    "save_profile",
+    "profile_version",
+    "profile_validation",
+    "retention",
+    "cutoff",
+    "submit",
+    "job",
+    "job_event",
+    "preview_files_page",
+    "history",
+    "host_key",
+    "ssh_target",
+    "install",
+    "update",
+    "enrollment",
+    "enrollments",
+    "packages",
+    "identity_receipt",
+    "error"
+  ],
+  "$defs": {
+    "AgentId": {
+      "type": "string",
+      "format": "canonical-uuid"
+    },
+    "AgentPackageView": {
+      "type": "object",
+      "properties": {
+        "build": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "build",
+        "sha256"
+      ]
+    },
+    "AgentView": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "certificate_expired": {
+          "type": "boolean"
+        },
+        "certificate_expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "certificate_expiring": {
+          "type": "boolean"
+        },
+        "health": {
+          "$ref": "#/$defs/HealthView"
+        },
+        "name": {
+          "type": "string"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "server_id": {
+          "$ref": "#/$defs/ServerId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "server_id",
+        "name",
+        "revoked",
+        "health",
+        "certificate_expiring",
+        "certificate_expired"
+      ]
+    },
+    "ChangePasswordInput": {
+      "type": "object",
+      "properties": {
+        "confirm_password": {
+          "type": "string"
+        },
+        "current_password": {
+          "type": "string"
+        },
+        "new_password": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "current_password",
+        "new_password",
+        "confirm_password"
+      ]
+    },
+    "CleanupContext": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean"
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "latest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_version": {
+          "$ref": "#/$defs/Counter"
+        },
+        "server": {
+          "$ref": "#/$defs/ServerView"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "server",
+        "profile_version",
+        "configured",
+        "busy"
+      ]
+    },
+    "ConfirmRecoveryInput": {
+      "type": "object",
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "recovery_key": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "recovery_key"
+      ]
+    },
+    "Counter": {
+      "type": "string",
+      "format": "uint64-decimal",
+      "maxLength": 20,
+      "pattern": "^(0|[1-9][0-9]*)$"
+    },
+    "DatabaseTls": {
+      "type": "string",
+      "enum": [
+        "preferred",
+        "required",
+        "disabled_local"
+      ]
+    },
+    "DispatchState": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "acknowledged"
+      ]
+    },
+    "EditableProfile": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "configured": {
+          "type": "boolean"
+        },
+        "data_dir": {
+          "type": "string"
+        },
+        "hmail_ini": {
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/ProfileId"
+        },
+        "mysql_database": {
+          "type": "string"
+        },
+        "mysql_host": {
+          "type": "string"
+        },
+        "mysql_port": {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        },
+        "mysql_tls": {
+          "$ref": "#/$defs/DatabaseTls"
+        },
+        "mysql_username": {
+          "type": "string"
+        },
+        "password_set": {
+          "type": "boolean"
+        },
+        "service_name": {
+          "type": "string"
+        },
+        "version": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "agent_id",
+        "configured",
+        "mysql_host",
+        "mysql_port",
+        "mysql_database",
+        "mysql_username",
+        "password_set",
+        "mysql_tls",
+        "data_dir",
+        "hmail_ini",
+        "service_name"
+      ]
+    },
+    "EnrollmentPhase": {
+      "type": "string",
+      "enum": [
+        "preparing",
+        "transferring",
+        "identity_issued",
+        "installing",
+        "verifying",
+        "ready",
+        "failed",
+        "unknown"
+      ]
+    },
+    "EnrollmentView": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "expected_sha256": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "phase": {
+          "$ref": "#/$defs/EnrollmentPhase"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/ProfileId"
+        },
+        "server_id": {
+          "$ref": "#/$defs/ServerId"
+        },
+        "slot_held": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "agent_id",
+        "server_id",
+        "profile_id",
+        "phase",
+        "fingerprint",
+        "package_version",
+        "expected_sha256",
+        "slot_held"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "bad_request",
+        "unauthorized",
+        "busy",
+        "conflict",
+        "unavailable",
+        "interrupted",
+        "cancelled",
+        "cleanup_failed",
+        "restore_failed",
+        "internal"
+      ]
+    },
+    "HealthView": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "healthy": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "observed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "online",
+        "stale"
+      ]
+    },
+    "HistoryPage": {
+      "type": "object",
+      "properties": {
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JobView"
+          }
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Counter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "jobs"
+      ]
+    },
+    "HostKeyChallenge": {
+      "type": "object",
+      "properties": {
+        "fingerprint": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/SshTarget"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "fingerprint"
+      ]
+    },
+    "IdentityReceipt": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "serial": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "maximum": 255,
+            "minimum": 0
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "serial"
+      ]
+    },
+    "InstallRequest": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "credentials": {
+          "$ref": "#/$defs/SshCredentials"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "legacy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LegacyService"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/ProfileId"
+        },
+        "server_id": {
+          "$ref": "#/$defs/ServerId"
+        },
+        "target": {
+          "$ref": "#/$defs/SshTarget"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "agent_id",
+        "server_id",
+        "profile_id",
+        "name",
+        "endpoint",
+        "target",
+        "fingerprint",
+        "credentials",
+        "package_version"
+      ]
+    },
+    "JobEvent": {
+      "type": "object",
+      "properties": {
+        "job": {
+          "$ref": "#/$defs/JobView"
+        },
+        "revision": {
+          "$ref": "#/$defs/Counter"
+        },
+        "stream_epoch": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "stream_epoch",
+        "revision",
+        "job"
+      ]
+    },
+    "JobId": {
+      "type": "string",
+      "format": "canonical-uuid"
+    },
+    "JobPhase": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "running",
+        "cancelling",
+        "restoring",
+        "completed",
+        "partial",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ]
+    },
+    "JobSnapshot": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PublicError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "initial_mail_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservedMailState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "job": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PublicJob"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "job_id": {
+          "$ref": "#/$defs/JobId"
+        },
+        "mail_state": {
+          "$ref": "#/$defs/ObservedMailState"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "phase": {
+          "$ref": "#/$defs/JobPhase"
+        },
+        "revision": {
+          "$ref": "#/$defs/Counter"
+        },
+        "stage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobStage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stream_epoch": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "summary": {
+          "$ref": "#/$defs/SummaryDto"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "stream_epoch",
+        "revision",
+        "phase",
+        "summary",
+        "mail_state",
+        "observed_at"
+      ]
+    },
+    "JobStage": {
+      "type": "string",
+      "enum": [
+        "preflight",
+        "snapshot",
+        "selection",
+        "files",
+        "database",
+        "verification",
+        "directories",
+        "orphan_database",
+        "references",
+        "scan",
+        "complete",
+        "cancelled"
+      ]
+    },
+    "JobView": {
+      "type": "object",
+      "properties": {
+        "dispatch": {
+          "$ref": "#/$defs/DispatchState"
+        },
+        "intent": {
+          "$ref": "#/$defs/SubmitRequest"
+        },
+        "job_id": {
+          "$ref": "#/$defs/JobId"
+        },
+        "revision": {
+          "$ref": "#/$defs/Counter"
+        },
+        "slot_held": {
+          "type": "boolean"
+        },
+        "snapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stream_epoch": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "intent",
+        "dispatch",
+        "slot_held",
+        "stream_epoch",
+        "revision"
+      ]
+    },
+    "LegacyService": {
+      "type": "object",
+      "properties": {
+        "env_file": {
+          "type": "string"
+        },
+        "executable": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "executable",
+        "env_file"
+      ]
+    },
+    "LoginRequest": {
+      "type": "object",
+      "properties": {
+        "login": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "login",
+        "password"
+      ]
+    },
+    "ObservedMailState": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "running",
+        "stopped",
+        "restoring"
+      ]
+    },
+    "Operation": {
+      "type": "string",
+      "enum": [
+        "preview",
+        "clean"
+      ]
+    },
+    "PasswordPatch": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "keep"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "replace"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ]
+        }
+      ]
+    },
+    "PrepareRecoveryInput": {
+      "type": "object",
+      "properties": {
+        "current_password": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "current_password"
+      ]
+    },
+    "PreviewFile": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "id": {
+          "type": "string"
+        },
+        "orphan": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "size_bytes",
+        "created_at",
+        "orphan"
+      ]
+    },
+    "PreviewFilesPage": {
+      "type": "object",
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "job_id": {
+          "$ref": "#/$defs/JobId"
+        },
+        "revision": {
+          "$ref": "#/$defs/Counter"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PreviewFile"
+          }
+        },
+        "total": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "rows",
+        "total",
+        "revision",
+        "complete"
+      ]
+    },
+    "ProfileId": {
+      "type": "string",
+      "format": "canonical-uuid"
+    },
+    "ProfilePatch": {
+      "type": "object",
+      "properties": {
+        "data_dir": {
+          "type": "string"
+        },
+        "hmail_ini": {
+          "type": "string"
+        },
+        "mysql_database": {
+          "type": "string"
+        },
+        "mysql_host": {
+          "type": "string"
+        },
+        "mysql_port": {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        },
+        "mysql_tls": {
+          "$ref": "#/$defs/DatabaseTls"
+        },
+        "mysql_username": {
+          "type": "string"
+        },
+        "password": {
+          "$ref": "#/$defs/PasswordPatch"
+        },
+        "service_name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "mysql_host",
+        "mysql_port",
+        "mysql_database",
+        "mysql_username",
+        "password",
+        "mysql_tls",
+        "data_dir",
+        "hmail_ini",
+        "service_name"
+      ]
+    },
+    "ProfileValidationResponse": {
+      "type": "object",
+      "properties": {
+        "mail_state": {
+          "$ref": "#/$defs/ObservedMailState"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "mail_state"
+      ]
+    },
+    "ProfileVersion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ProfileId"
+        },
+        "version": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version"
+      ]
+    },
+    "PublicError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "correlation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "correlation_id"
+      ]
+    },
+    "PublicJob": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "limits": {
+          "$ref": "#/$defs/RunLimits"
+        },
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/ProfileId"
+        },
+        "profile_version": {
+          "$ref": "#/$defs/Counter"
+        },
+        "resolved_cutoff": {
+          "$ref": "#/$defs/ResolvedCutoff"
+        },
+        "scan": {
+          "$ref": "#/$defs/Scan"
+        },
+        "service_policy": {
+          "$ref": "#/$defs/ServicePolicy"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "profile_id",
+        "profile_version",
+        "operation",
+        "scan",
+        "resolved_cutoff",
+        "service_policy",
+        "limits"
+      ]
+    },
+    "RecoveryCandidate": {
+      "type": "object",
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expires_in_seconds": {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        },
+        "recovery_key": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "recovery_key",
+        "expires_in_seconds"
+      ]
+    },
+    "ResolvedCutoff": {
+      "type": "object",
+      "properties": {
+        "file_cutoff_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "local": {
+          "type": "string",
+          "format": "partial-date-time"
+        },
+        "resolved_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "utc_offset_seconds": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "local",
+        "file_cutoff_utc",
+        "utc_offset_seconds",
+        "resolved_at_utc"
+      ]
+    },
+    "RetentionRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "kind": {
+              "type": "string",
+              "const": "days"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "count"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "kind": {
+              "type": "string",
+              "const": "months"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "count"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 1
+            },
+            "kind": {
+              "type": "string",
+              "const": "years"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "count"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "before"
+            },
+            "local": {
+              "type": "string",
+              "format": "partial-date-time"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "local"
+          ]
+        }
+      ]
+    },
+    "RunLimits": {
+      "type": "object",
+      "properties": {
+        "batch_size": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "workers": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "batch_size",
+        "workers"
+      ]
+    },
+    "SaveProfileRequest": {
+      "type": "object",
+      "properties": {
+        "expected_version": {
+          "$ref": "#/$defs/Counter"
+        },
+        "profile": {
+          "$ref": "#/$defs/ProfilePatch"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "expected_version",
+        "profile"
+      ]
+    },
+    "Scan": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "full"
+      ]
+    },
+    "ServerId": {
+      "type": "string",
+      "format": "canonical-uuid"
+    },
+    "ServerView": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/AgentId"
+        },
+        "id": {
+          "$ref": "#/$defs/ServerId"
+        },
+        "name": {
+          "type": "string"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/ProfileId"
+        },
+        "slug": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "agent_id",
+        "profile_id"
+      ]
+    },
+    "ServicePolicy": {
+      "type": "string",
+      "enum": [
+        "require_stopped",
+        "manage"
+      ]
+    },
+    "SessionSettings": {
+      "type": "object",
+      "properties": {
+        "idle_minutes": {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "idle_minutes"
+      ]
+    },
+    "SessionView": {
+      "type": "object",
+      "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
+        "generation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Counter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "authenticated"
+      ]
+    },
+    "SshCredentials": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "const": "password"
+            },
+            "password": {
+              "type": "string"
+            },
+            "username": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "username",
+            "password"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "method": {
+              "type": "string",
+              "const": "key"
+            },
+            "passphrase": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "private_key": {
+              "type": "string"
+            },
+            "username": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "username",
+            "private_key"
+          ]
+        }
+      ]
+    },
+    "SshTarget": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "host",
+        "port"
+      ]
+    },
+    "SubmitRequest": {
+      "type": "object",
+      "properties": {
+        "confirmed": {
+          "type": "boolean"
+        },
+        "job_id": {
+          "$ref": "#/$defs/JobId"
+        },
+        "limits": {
+          "$ref": "#/$defs/RunLimits"
+        },
+        "operation": {
+          "$ref": "#/$defs/Operation"
+        },
+        "preview_job_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile_version": {
+          "$ref": "#/$defs/Counter"
+        },
+        "resolved_cutoff": {
+          "$ref": "#/$defs/ResolvedCutoff"
+        },
+        "scan": {
+          "$ref": "#/$defs/Scan"
+        },
+        "server_id": {
+          "$ref": "#/$defs/ServerId"
+        },
+        "service_policy": {
+          "description": "Intended cleanup policy; preview itself never stops the service.",
+          "$ref": "#/$defs/ServicePolicy"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "server_id",
+        "profile_version",
+        "operation",
+        "scan",
+        "resolved_cutoff",
+        "service_policy",
+        "limits",
+        "confirmed"
+      ]
+    },
+    "SummaryDto": {
+      "type": "object",
+      "properties": {
+        "absent_files": {
+          "$ref": "#/$defs/Counter"
+        },
+        "deleted_messages": {
+          "$ref": "#/$defs/Counter"
+        },
+        "deleted_metadata": {
+          "$ref": "#/$defs/Counter"
+        },
+        "deleted_recipients": {
+          "$ref": "#/$defs/Counter"
+        },
+        "examined_messages": {
+          "$ref": "#/$defs/Counter"
+        },
+        "failed": {
+          "$ref": "#/$defs/Counter"
+        },
+        "orphan_metadata": {
+          "$ref": "#/$defs/Counter"
+        },
+        "orphan_recipients": {
+          "$ref": "#/$defs/Counter"
+        },
+        "remaining_old_files": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Counter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "removed_bytes": {
+          "$ref": "#/$defs/Counter"
+        },
+        "removed_directories": {
+          "$ref": "#/$defs/Counter"
+        },
+        "removed_files": {
+          "$ref": "#/$defs/Counter"
+        },
+        "removed_orphan_files": {
+          "$ref": "#/$defs/Counter"
+        },
+        "scanned_files": {
+          "$ref": "#/$defs/Counter"
+        },
+        "selected": {
+          "$ref": "#/$defs/Counter"
+        },
+        "selected_bytes": {
+          "$ref": "#/$defs/Counter"
+        },
+        "selected_files": {
+          "$ref": "#/$defs/Counter"
+        },
+        "selected_orphan_files": {
+          "$ref": "#/$defs/Counter"
+        },
+        "selected_orphan_metadata": {
+          "$ref": "#/$defs/Counter"
+        },
+        "selected_orphan_recipients": {
+          "$ref": "#/$defs/Counter"
+        },
+        "total_scan_files": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Counter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verified_files": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "selected_bytes",
+        "selected_files",
+        "verified_files",
+        "examined_messages",
+        "selected",
+        "removed_files",
+        "absent_files",
+        "deleted_messages",
+        "removed_directories",
+        "failed",
+        "removed_bytes",
+        "deleted_metadata",
+        "deleted_recipients",
+        "orphan_metadata",
+        "orphan_recipients",
+        "selected_orphan_metadata",
+        "selected_orphan_recipients",
+        "scanned_files",
+        "selected_orphan_files",
+        "removed_orphan_files"
+      ]
+    },
+    "UpdateMode": {
+      "type": "string",
+      "enum": [
+        "binary",
+        "recover_identity"
+      ]
+    },
+    "UpdatePolicy": {
+      "type": "object",
+      "properties": {
+        "check_interval_seconds": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 86400,
+          "minimum": 30
+        },
+        "graceful_timeout_minutes": {
+          "type": "integer",
+          "format": "uint32",
+          "maximum": 1440,
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "check_interval_seconds",
+        "graceful_timeout_minutes"
+      ]
+    },
+    "UpdateRequest": {
+      "type": "object",
+      "properties": {
+        "credentials": {
+          "$ref": "#/$defs/SshCredentials"
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/UpdateMode",
+          "default": "binary"
+        },
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/SshTarget"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "target",
+        "fingerprint",
+        "credentials",
+        "package_version"
+      ]
+    }
+  },
+  "$id": "https://hmail.invalid/browser-contracts/v1",
+  "additionalProperties": false
+}

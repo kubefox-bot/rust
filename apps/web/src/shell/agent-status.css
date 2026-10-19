@@ -1,0 +1,28 @@
+.agent-status {
+  height: 40px;
+  color: var(--muted);
+  background: var(--surface);
+  justify-self: start;
+}
+.agent-status[data-status="online"] {
+  color: var(--success-ink);
+  background: var(--success-soft);
+  border-color: var(--success-line);
+}
+.agent-status[data-status="stale"] {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
+}
+.agent-status[data-status="offline"] {
+  color: var(--danger);
+  background: #fff1f2;
+  border-color: #f5c9ce;
+}
+.agent-status .dot {
+  flex: 0 0 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}

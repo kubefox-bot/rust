@@ -4,17 +4,37 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["mail"]
+mail = ["dep:sqlx", "dep:windows-service", "dep:windows-sys", "dep:hmail-cleaner-protocol"]
+mtls = ["dep:rustls", "dep:x509-parser", "dep:uuid", "dep:tokio-util"]
+
 [dependencies]
+serde.workspace = true
+serde_json = "1"
 hmail-cleaner-core = { path = "../core" }
+hmail-cleaner-protocol = { path = "../protocol", optional = true }
 chrono.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-sqlx.workspace = true
+sqlx = { workspace = true, optional = true, features = ["runtime-tokio-rustls", "mysql", "sqlite", "chrono"] }
+rustls = { version = "0.23.46", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
+x509-parser = { version = "0.18", optional = true, default-features = false }
+uuid = { workspace = true, optional = true }
+tokio-util = { version = "0.7", optional = true, features = ["rt"] }
 
 [dev-dependencies]
+tokio = { workspace = true, features = ["io-util", "macros", "rt", "time"] }
 url = "2"
 tempfile = "3"
+rcgen = { version = "0.14.10", default-features = false, features = ["ring", "pem"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+uuid = { workspace = true, features = ["v4"] }
+
+[[test]]
+name = "mtls"
+required-features = ["mtls"]
 
 [target.'cfg(windows)'.dependencies]
-windows-service = "0.8"
-windows-sys = { version = "0.59", features = ["Win32_System_WindowsProgramming"] }
+windows-service = { version = "0.8", optional = true }
+windows-sys = { version = "0.59", optional = true, features = ["Win32_System_WindowsProgramming"] }

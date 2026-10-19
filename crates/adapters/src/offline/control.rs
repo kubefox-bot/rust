@@ -9,6 +9,9 @@ pub struct WindowsMailControl {
 }
 impl WindowsMailControl {
     pub fn new(name: &str) -> PortResult<Self> {
+        if hmail_cleaner_core::maintenance::mail_service::is_reserved_service_name(name) {
+            return Err("cleaner service cannot be used as the mail service".into());
+        }
         #[cfg(windows)]
         {
             Ok(Self {

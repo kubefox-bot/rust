@@ -1,5 +1,5 @@
 use super::types::{FileReferences, OrphanBatch, OrphanRow, OrphanSelection, OrphanTable};
-use crate::cleanup::{DeleteResult, PortResult, Repository};
+use crate::cleanup::{Cancellation, DeleteResult, PortResult, Repository};
 use std::future::Future;
 
 pub trait FullRepository: Repository {
@@ -44,7 +44,10 @@ pub trait FullFileStore: crate::cleanup::FileStore {
     ) -> impl Future<Output = PortResult<crate::cleanup::PruneOutcome>> + Send {
         self.prune_empty(paths)
     }
-    fn validate_tree(&self) -> impl Future<Output = PortResult<super::types::ScanStats>> + Send;
+    fn validate_tree(
+        &self,
+        cancel: &Cancellation,
+    ) -> impl Future<Output = PortResult<super::types::ScanStats>> + Send;
     fn open_scan(&self) -> impl Future<Output = PortResult<Self::Scan>> + Send;
     fn delete_orphans(
         &self,

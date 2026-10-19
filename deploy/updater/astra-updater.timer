@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh Astra delivery policy and check for releases
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=30s
+AccuracySec=1s
+RandomizedDelaySec=5s
+Unit=astra-updater.service
+
+[Install]
+WantedBy=timers.target

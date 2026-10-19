@@ -1,0 +1,104 @@
+name: Astra image delivery
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ./.github/workflows/center-ci.yml
+
+  publish:
+    needs: verify
+    # Set only after test rollout acceptance; implementing this workflow does not activate production.
+    if: vars.ASTRA_DELIVERY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    env:
+      HMAIL_DELIVERY_DIRECTORY: ${{ github.workspace }}/target/delivery
+      HMAIL_DELIVERY_SOURCE_SHA: ${{ github.sha }}
+      HMAIL_DELIVERY_SEQUENCE: ${{ github.run_number }}
+      HMAIL_REGISTRY_AUTH_FILE: ${{ github.workspace }}/target/astra-registry-auth.json
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+        with:
+          version: 2026.10.3
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.verify.outputs.artifact_id }}
+          path: target/delivery
+          merge-multiple: true
+      - run: mise exec -- bun install --frozen-lockfile
+      - name: Install OCI transfer tool
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y skopeo
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2; verifies signed release from pinned bootstrap
+        with:
+          cosign-release: v3.1.3
+      - name: Verify pinned Cosign binary and bundled trust root
+        run: mise exec -- bun tools/release/check-tool-pins.ts
+      - name: Authenticate GHCR through task-owned auth file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTOR: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$GH_TOKEN" | skopeo login --authfile "$HMAIL_REGISTRY_AUTH_FILE" --username "$GH_ACTOR" --password-stdin ghcr.io
+      - name: Publish verified bytes into draft release and sign descriptor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: mise exec -- bun tools/release/publishing/run.ts publish
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: astra-publication-${{ github.sha }}-${{ github.run_number }}
+          path: target/delivery/
+          if-no-files-found: error
+          retention-days: 14
+      - if: always()
+        shell: bash
+        run: rm -f -- "$HMAIL_REGISTRY_AUTH_FILE"
+
+  promote:
+    needs: [verify, publish]
+    runs-on: ubuntu-24.04
+    # Serializes exposing complete releases; slow builds cannot replace a newer main release.
+    concurrency:
+      group: astra-main-promotion
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    env:
+      HMAIL_DELIVERY_DIRECTORY: ${{ github.workspace }}/target/delivery
+      HMAIL_DELIVERY_SOURCE_SHA: ${{ github.sha }}
+      HMAIL_DELIVERY_SEQUENCE: ${{ github.run_number }}
+      HMAIL_REGISTRY_AUTH_FILE: ${{ github.workspace }}/target/unused-promotion-auth.json
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+        with:
+          version: 2026.10.3
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: astra-publication-${{ github.sha }}-${{ github.run_number }}
+          path: target/delivery
+      - run: mise exec -- bun install --frozen-lockfile
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+      - run: mise exec -- bun tools/release/check-tool-pins.ts
+      - name: Recheck main HEAD, signed sequence and all asset digests, then expose release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: mise exec -- bun tools/release/publishing/run.ts promote

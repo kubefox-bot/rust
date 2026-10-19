@@ -1,0 +1,20 @@
+{
+  "build": "0.1.0+b09d0d04237f.1792284226",
+  "engine": "docker",
+  "platform": "linux/amd64",
+  "image_digest": "sha256:0125a83a678169c02dc065a873c1ba5e013d062979a8817d7a7f3dceb530e62a",
+  "checks": {
+    "prelogin_https_health": "PASS",
+    "direct_container_healthcheck": "PASS",
+    "engine_health_state_before_login": "PASS",
+    "static_routes": "PASS",
+    "api_404": "PASS",
+    "credential_login": "PASS",
+    "graceful_sigterm": "PASS",
+    "stopped_backup": "PASS",
+    "recreate_vault_and_ca": "PASS",
+    "restart_revokes_session": "PASS",
+    "native_quadlet_logout_reboot": "NOT RUN",
+    "active_remote_agent_job": "NOT RUN"
+  }
+}

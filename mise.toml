@@ -1,5 +1,6 @@
 [tools]
-rust = "1.98.1"
+rust = { version = "1.99.1", profile = "minimal", components = ["rustfmt", "clippy"] }
+bun = "1.4.3"
 
 [tasks.fmt]
 description = "Format the Rust workspace"
@@ -12,6 +13,7 @@ run = ["cargo fmt --all -- --check", "rustfmt --edition 2021 --check tools/build
 [tasks.test]
 description = "Run portable workspace tests"
 run = "cargo test --workspace --locked"
+run_windows = "cargo test --workspace --locked --no-fail-fast"
 
 [tasks.lint]
 description = "Check Rust code with Clippy"
@@ -55,8 +57,80 @@ dir = "{{ config_root }}"
 run = "sh tools/build-exe.sh"
 run_windows = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build-exe.ps1"
 
+[tasks."test:agent-db"]
+description = "Run agent integration tests against disposable MySQL"
+depends = ["db:up"]
+env.HMAIL_TEST_DATABASE_URL = "{{ env.HMAIL_TEST_DATABASE_URL | default(value='mysql://root:hmail_fixture@127.0.0.1:13306/mysql?ssl-mode=disabled') }}"
+run = "cargo test -p hmail-cleaner-agent --test execution --locked -- --ignored --test-threads=1"
+
+[tasks."build:agent"]
+description = "Build the standalone Windows agent package"
+dir = "{{ config_root }}"
+run = "sh tools/build-exe.sh --component agent"
+run_windows = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build-exe.ps1 -Component agent"
+
 [tasks."test:build"]
 description = "Проверить публикацию EXE и передачу исходников без env-файлов"
 dir = "{{ config_root }}"
 run = "sh tools/build-exe.sh --test"
 run_windows = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build-exe.ps1 -Test"
+
+[tasks."build:center"]
+description = "Build the standalone center without mail/Windows cleanup dependencies"
+run = "cargo build --release -p hmail-cleaner --no-default-features --features center --locked"
+
+[tasks."contracts:generate"]
+description = "Generate browser schemas, TypeScript and standalone validators from Rust DTOs"
+run = "bun run contracts:generate"
+
+[tasks."contracts:check"]
+description = "Verify generated browser contracts are current"
+run = "bun run contracts:check"
+
+[tasks."web:check"]
+description = "Check Astro, Svelte, TypeScript and browser API tests"
+run = "bun run web:check"
+
+[tasks."web:build"]
+description = "Build static Astro pages and Svelte islands"
+run = "bun run web:build"
+
+[tasks."release:local"]
+description = "Build a local immutable center image and matching Windows agent package without publishing"
+run = "bun tools/release/build.ts"
+
+[tasks."test:delivery"]
+description = "Verify local OCI release bytes and disposable center lifecycle"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/release/tsconfig.json", "bun test ./tools/release/tests tools/release/agent-manifest.test.ts", "bun tools/release/verify.ts"]
+
+[tasks."test:mvp"]
+description = "Run isolated MVP checks and emit separate PASS, FAIL and NOT RUN receipts"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/acceptance/tsconfig.json", "bun tools/acceptance/run.ts"]
+
+[tasks."measure:mvp"]
+description = "Build and measure a separate release center with static web and two TLS fixtures"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/acceptance/tsconfig.json", "bun tools/acceptance/prepare-measurement.ts"]
+
+[tasks."release:test"]
+description = "Check release tooling and signed publication contracts"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/release/tsconfig.json", "bun test ./tools/release/tests tools/release/agent-manifest.test.ts"]
+
+[tasks."release:contracts:check"]
+description = "Verify release compatibility metadata against the shared Rust contract"
+run = "bun tools/release/compatibility.ts check"
+
+[tasks."delivery:test"]
+description = "Verify updater and graceful replacement behavior"
+run = "cargo test -p astra-updater --locked"
+
+[tasks."appliance:test"]
+description = "Check offline appliance contracts, bootstrap and installer boundaries"
+run = ["bun apps/web/node_modules/typescript/bin/tsc --project tools/appliance/tsconfig.json", "bun test tools/appliance/tests"]
+
+[tasks."appliance:build"]
+description = "Build an unbooted FCOS Hyper-V bundle from a clean same-SHA release on Linux"
+run = "bun tools/appliance/build.ts"
+
+[tasks."test:updates"]
+description = "Record local delivery verification; native target acceptance stays separate"
+run = "bun tools/acceptance/delivery/run.ts"

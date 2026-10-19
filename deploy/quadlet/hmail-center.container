@@ -1,0 +1,36 @@
+[Unit]
+Description=hMail Control Center
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=hmail-center
+Image=@HMAIL_IMAGE@
+Pull=never
+Exec=center run --data-dir /data
+User=10001
+Group=10001
+UserNS=keep-id:uid=10001,gid=10001
+Volume=hmail-center-data.volume:/data:Z,U
+Volume=%t/astra-maintenance:/run/astra-maintenance:Z
+PublishPort=8443:8443
+ReadOnly=true
+NoNewPrivileges=true
+DropCapability=all
+HealthCmd=["/usr/local/bin/hmail-cleaner","center","health","--data-dir","/data","--expect-build","@HMAIL_BUILD@"]
+HealthInterval=30s
+HealthTimeout=10s
+HealthStartPeriod=10s
+HealthRetries=3
+StopTimeout=30
+
+[Service]
+RuntimeDirectory=astra-maintenance
+RuntimeDirectoryMode=0700
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=120
+TimeoutStopSec=45
+
+[Install]
+WantedBy=default.target

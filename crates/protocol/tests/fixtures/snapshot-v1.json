@@ -1,0 +1,29 @@
+{
+  "job_id": "10000000-0000-4000-8000-000000000001",
+  "job": {
+    "agent_id": "20000000-0000-4000-8000-000000000002",
+    "profile_id": "30000000-0000-4000-8000-000000000003",
+    "profile_version": "1",
+    "operation": "preview",
+    "scan": "fast",
+    "resolved_cutoff": {"local":"2026-09-17T12:00:00","file_cutoff_utc":"2026-09-17T09:00:00Z","utc_offset_seconds":10800,"resolved_at_utc":"2026-10-17T09:00:00Z"},
+    "service_policy": "require_stopped",
+    "limits": {"batch_size":1000,"workers":2}
+  },
+  "stream_epoch": "40000000-0000-4000-8000-000000000004",
+  "revision": "2",
+  "phase": "completed",
+  "stage": "complete",
+  "summary": {
+    "selected_bytes":"9007199254740993","selected_files":"1","total_scan_files":null,
+    "verified_files":"0","remaining_old_files":null,"examined_messages":"1",
+    "selected":"1","removed_files":"0","absent_files":"0","deleted_messages":"0",
+    "removed_directories":"0","failed":"0","removed_bytes":"0","deleted_metadata":"0",
+    "deleted_recipients":"0","orphan_metadata":"0","orphan_recipients":"0",
+    "selected_orphan_metadata":"0","selected_orphan_recipients":"0","scanned_files":"1",
+    "selected_orphan_files":"0","removed_orphan_files":"0"
+  },
+  "mail_state": "running",
+  "error": null,
+  "observed_at": "2026-10-17T09:00:01Z"
+}

@@ -12,6 +12,8 @@ use std::{
 use uuid::Uuid;
 #[derive(Default)]
 struct State {
+    rows: Vec<StoredMessage>,
+    seen: HashSet<String>,
     trace: Vec<&'static str>,
     metadata: bool,
     recipients: bool,
@@ -22,6 +24,8 @@ struct State {
     bad_outcome: bool,
     closed: bool,
     cancel_after_commit: Option<Arc<Cancellation>>,
+    cancel_after_inventory: Option<Arc<Cancellation>>,
+    cancel_during_precheck: Option<Arc<Cancellation>>,
 }
 type Shared = Arc<Mutex<State>>;
 struct Repo(Shared);
@@ -120,8 +124,15 @@ impl FullRepository for Repo {
     }
 }
 impl FileStore for Files {
-    async fn inspect(&self, _: Vec<FileTarget>, _: u8) -> PortResult<Vec<FileInspection>> {
-        panic!("no messages")
+    async fn inspect(&self, files: Vec<FileTarget>, _: u8) -> PortResult<Vec<FileInspection>> {
+        Ok(files
+            .into_iter()
+            .map(|file| FileInspection {
+                id: file.id,
+                path: file.path,
+                result: Ok(None),
+            })
+            .collect())
     }
     async fn delete(&self, _: Vec<FileInspection>, _: u8) -> PortResult<Vec<FileOutcome>> {
         panic!("no messages")
@@ -133,9 +144,13 @@ impl FileStore for Files {
 }
 impl FullFileStore for Files {
     type Scan = Scan;
-    async fn validate_tree(&self) -> PortResult<ScanStats> {
+    async fn validate_tree(&self, _: &Cancellation) -> PortResult<ScanStats> {
         let mut s = self.0.lock().unwrap();
         s.trace.push("precheck");
+        if let Some(cancel) = &s.cancel_during_precheck {
+            cancel.request();
+            return Err("precheck cancelled".into());
+        }
         if s.fail == Some("precheck") {
             return Err("precheck denied".into());
         }
@@ -391,4 +406,256 @@ async fn orphan_age_uses_creation_time_instead_of_modification_time() {
     let state = s.lock().unwrap();
     assert_eq!(state.files.len(), 1);
     assert_eq!(state.files[0].guid, Uuid::from_u128(2));
+}
+
+impl maintenance::recursive::TreeRepository for Repo {
+    async fn prepare_inventory(&mut self, _: &std::path::Path, _: &Cancellation) -> PortResult<()> {
+        let mut state = self.0.lock().unwrap();
+        state.trace.push("inventory");
+        if let Some(cancel) = &state.cancel_after_inventory {
+            cancel.request();
+        }
+        state.seen.clear();
+        Ok(())
+    }
+    async fn match_files(
+        &mut self,
+        paths: &[PathBuf],
+    ) -> PortResult<Vec<maintenance::recursive::StoredGroup>> {
+        let mut state = self.0.lock().unwrap();
+        let keys = paths
+            .iter()
+            .map(|path| hmail_cleaner_core::paths::path_key(path))
+            .collect::<HashSet<_>>();
+        let groups = state
+            .rows
+            .iter()
+            .filter(|row| keys.contains(&hmail_cleaner_core::paths::path_key(&row.path)))
+            .map(|row| maintenance::recursive::StoredGroup {
+                row: row.clone(),
+                references: 1,
+            })
+            .collect();
+        state.seen.extend(keys);
+        Ok(groups)
+    }
+    async fn unmatched_batch(
+        &mut self,
+        cursor: i64,
+        limit: u32,
+    ) -> PortResult<Vec<maintenance::recursive::StoredGroup>> {
+        let state = self.0.lock().unwrap();
+        let mut rows = state
+            .rows
+            .iter()
+            .filter(|row| {
+                row.candidate.id > cursor
+                    && !state
+                        .seen
+                        .contains(&hmail_cleaner_core::paths::path_key(&row.path))
+            })
+            .collect::<Vec<_>>();
+        rows.sort_by_key(|row| row.candidate.id);
+        Ok(rows
+            .into_iter()
+            .take(limit as usize)
+            .map(|row| maintenance::recursive::StoredGroup {
+                row: row.clone(),
+                references: 1,
+            })
+            .collect())
+    }
+    async fn delete_stored(&mut self, _: &[StoredMessage]) -> PortResult<DeleteResult> {
+        unreachable!()
+    }
+}
+
+#[tokio::test]
+async fn recursive_cancel_during_inventory_skips_full_precheck_and_file_work() {
+    let state = setup();
+    let cancel = Arc::new(Cancellation::default());
+    state.lock().unwrap().cancel_after_inventory = Some(cancel.clone());
+    let mut repo = Repo(state.clone());
+    let options = RunOptions {
+        cutoff: chrono::NaiveDate::from_ymd_opt(2025, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap(),
+        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
+        batch_size: NonZeroU32::new(2).unwrap(),
+        workers: 1,
+        data_directory: "/Data".into(),
+    };
+    let error = maintenance::recursive::run(
+        Dependencies {
+            repository: &mut repo,
+            files: &Files(state.clone()),
+            guard: &Guard,
+        },
+        &options,
+        ScanOptions::Full,
+        &cancel,
+        |_| {},
+        maintenance::recursive::Action::Clean,
+    )
+    .await
+    .unwrap_err();
+    assert!(error.is_cancelled());
+    assert_eq!(state.lock().unwrap().trace, ["inventory"]);
+}
+
+#[tokio::test]
+async fn recursive_cancelled_precheck_is_cancelled_instead_of_failed() {
+    let state = setup();
+    let cancel = Arc::new(Cancellation::default());
+    state.lock().unwrap().cancel_during_precheck = Some(cancel.clone());
+    let mut repo = Repo(state.clone());
+    let options = RunOptions {
+        cutoff: chrono::NaiveDate::from_ymd_opt(2025, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap(),
+        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
+        batch_size: NonZeroU32::new(2).unwrap(),
+        workers: 1,
+        data_directory: "/Data".into(),
+    };
+    let error = maintenance::recursive::run(
+        Dependencies {
+            repository: &mut repo,
+            files: &Files(state.clone()),
+            guard: &Guard,
+        },
+        &options,
+        ScanOptions::Full,
+        &cancel,
+        |_| {},
+        maintenance::recursive::Action::Clean,
+    )
+    .await
+    .unwrap_err();
+    assert!(error.is_cancelled(), "{error}");
+    assert_eq!(state.lock().unwrap().trace, ["inventory", "precheck"]);
+}
+
+#[tokio::test]
+async fn recursive_details_observe_only_selected_physical_files_and_await_failure() {
+    use maintenance::recursive::{self, SelectedFile, SelectionObserver};
+    struct Details(Mutex<Vec<SelectedFile>>);
+    impl SelectionObserver for Details {
+        async fn selected(&self, files: &[SelectedFile]) -> PortResult<()> {
+            tokio::task::yield_now().await;
+            self.0.lock().unwrap().extend_from_slice(files);
+            Err("metadata persistence failed".into())
+        }
+    }
+    let state = setup();
+    let mut repo = Repo(state.clone());
+    let files = Files(state.clone());
+    let details = Details(Mutex::new(Vec::new()));
+    let options = RunOptions {
+        cutoff: chrono::NaiveDate::from_ymd_opt(2025, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap(),
+        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
+        batch_size: NonZeroU32::new(2).unwrap(),
+        workers: 1,
+        data_directory: "/Data".into(),
+    };
+    let error = recursive::run_with_details(
+        Dependencies {
+            repository: &mut repo,
+            files: &files,
+            guard: &Guard,
+        },
+        &options,
+        ScanOptions::Fast,
+        &Cancellation::default(),
+        |_| {},
+        recursive::Action::Preview,
+        &details,
+    )
+    .await
+    .unwrap_err();
+    assert!(error
+        .source
+        .to_string()
+        .contains("metadata persistence failed"));
+    let observed = details.0.lock().unwrap();
+    assert_eq!(observed.len(), 1);
+    assert_eq!(observed[0].file, observation(1, 10));
+    assert!(observed[0].orphan);
+    assert!(
+        state.lock().unwrap().closed,
+        "scan closes even if awaited persistence fails"
+    );
+}
+
+#[tokio::test]
+async fn recursive_catalog_contains_linked_and_orphan_files_but_not_missing_or_new_files() {
+    use maintenance::recursive::{self, SelectedFile, SelectionObserver};
+    struct Details(Mutex<Vec<SelectedFile>>);
+    impl SelectionObserver for Details {
+        async fn selected(&self, files: &[SelectedFile]) -> PortResult<()> {
+            self.0.lock().unwrap().extend_from_slice(files);
+            Ok(())
+        }
+    }
+    let state = setup();
+    let cutoff = chrono::NaiveDate::from_ymd_opt(2025, 1, 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap();
+    let row = |id, path: PathBuf| StoredMessage {
+        candidate: Candidate {
+            id,
+            account_id: 0,
+            folder_id: 0,
+            storage: MessageStorage::Queue,
+            filename: path.to_string_lossy().into(),
+            created_at: cutoff - chrono::Duration::days(1),
+        },
+        message_type: 1,
+        path,
+    };
+    {
+        let mut data = state.lock().unwrap();
+        data.files.push(observation(3, 20));
+        data.rows = vec![
+            row(1, observation(1, 10).path),
+            row(4, observation(4, 10).path),
+        ];
+    }
+    let mut repo = Repo(state.clone());
+    let details = Details(Mutex::new(Vec::new()));
+    let options = RunOptions {
+        cutoff,
+        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
+        batch_size: NonZeroU32::new(3).unwrap(),
+        workers: 1,
+        data_directory: "/Data".into(),
+    };
+    let summary = recursive::run_with_details(
+        Dependencies {
+            repository: &mut repo,
+            files: &Files(state),
+            guard: &Guard,
+        },
+        &options,
+        ScanOptions::Fast,
+        &Cancellation::default(),
+        |_| {},
+        recursive::Action::Preview,
+        &details,
+    )
+    .await
+    .unwrap();
+    let observed = details.0.lock().unwrap();
+    assert_eq!(observed.len(), 2);
+    assert_eq!(observed[0].file, observation(1, 10));
+    assert!(!observed[0].orphan);
+    assert_eq!(observed[1].file, observation(3, 20));
+    assert!(observed[1].orphan);
+    assert_eq!(summary.absent_files, 1);
 }

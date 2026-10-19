@@ -26,8 +26,9 @@ pub(super) async fn run<F: FullFileStore, G: OfflineGuard, P: Fn(Progress) + Sen
     } = &request;
     workflow::cancelled(cancel, *summary)?;
     workflow::at(guard.ensure_stopped().await, Stage::Preflight, *summary)?;
-    workflow::at(files.validate_tree().await, Stage::Scan, *summary)?;
+    let checked = files.validate_tree(cancel).await;
     workflow::cancelled(cancel, *summary)?;
+    workflow::at(checked, Stage::Scan, *summary)?;
     let mut scan = workflow::at(files.open_scan().await, Stage::Scan, *summary)?;
     let result = iterate(&mut scan, &request, summary).await;
     let closed = scan.close().await;

@@ -1,0 +1,117 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 10px 15px;
+  border: 1px solid var(--control-line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.button[hidden] {
+  display: none;
+}
+.button:hover:enabled,
+a.button:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+.button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.button[data-variant="primary"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.button[data-variant="primary"]:hover:enabled,
+a.button[data-variant="primary"]:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.button[data-variant="danger"] {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.button[data-variant="success"] {
+  background: var(--success-soft);
+  border-color: var(--success-line);
+  color: var(--success-ink);
+}
+.button[data-variant="success"]:hover:enabled,
+a.button[data-variant="success"]:hover {
+  background: var(--success-hover);
+  border-color: var(--success-ink);
+}
+.button[data-variant="warning"] {
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
+  color: var(--warning);
+}
+.button[data-variant="warning"]:hover:enabled,
+a.button[data-variant="warning"]:hover {
+  background: var(--warning-hover);
+  border-color: var(--warning);
+}
+.button[data-variant="danger"]:hover:enabled,
+a.button[data-variant="danger"]:hover {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+.button[data-variant="quiet"] {
+  background: transparent;
+}
+.button[data-size="small"] {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+.button[data-variant="link"] {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 500;
+}
+.button[data-variant="link"]:hover:enabled,
+a.button[data-variant="link"]:hover {
+  background: transparent;
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+.button-spinner {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: button-spin 0.75s linear infinite;
+}
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .button-spinner {
+    animation: none;
+  }
+}

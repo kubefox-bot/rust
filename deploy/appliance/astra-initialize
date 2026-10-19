@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec /usr/bin/bash /var/lib/astra-appliance/scripts/initialize.sh "$@"

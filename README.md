@@ -37,3 +37,33 @@ mise run build:exe
 следующие используют кэш. Node.js, Yarn, Tauri и WebView2 не нужны.
 
 Подробности, настройки службы и ограничения: [инструкция CLI](docs/cleanup-cli.md).
+
+Отдельный ручной агент центра собирается через `mise run build:agent` в
+`dist/agent/windows-x64`. Установка, mTLS bootstrap, миграция и проверки:
+[инструкция агента](docs/agent-installation.md).
+
+## Центр управления
+
+MVP добавляет Rust-центр с SQLite и статическими Astro/Svelte-страницами:
+выбор почтового сервера, ручной предпросмотр/очистка, прогресс, журнал,
+история, профили, агенты и учётная запись суперадмина. Агент запускается
+нативно на каждой почтовой Windows-ВМ; центр предназначен для Linux-ВМ.
+
+```sh
+mise run web:check
+mise run build:center
+mise run release:local
+mise run test:mvp
+mise run measure:mvp
+```
+
+Локальная поставка через Podman/Quadlet, первоначальный вход и ручное
+обновление описаны в [инструкции центра](docs/center-deployment.md).
+Подготовка Fedora CoreOS без привязки к гипервизору: [IaC](iac/README.md).
+Границы фактической проверки перечислены в [приёмке MVP](docs/mvp-acceptance.md).
+Методика и результаты замеров — в [ресурсном отчёте](docs/mvp-resource-report.md),
+принятые при реализации решения — в [журнале решений](docs/mvp-implementation-decisions.md).
+JavaScript runtime нужен для сборки; в образе работает Rust-процесс.
+
+Автоматическая доставка контейнерных образов: [установка и обслуживание](docs/center-cicd.md),
+[фактические проверки и границы](docs/center-cicd-acceptance.md).

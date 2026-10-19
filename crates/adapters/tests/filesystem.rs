@@ -1,7 +1,7 @@
 use hmail_cleaner_adapters::filesystem::LocalFiles;
 #[cfg(unix)]
 use hmail_cleaner_core::cleanup::FileFailureKind;
-use hmail_cleaner_core::cleanup::{DeletionResult, FileStore, FileTarget};
+use hmail_cleaner_core::cleanup::{Cancellation, DeletionResult, FileStore, FileTarget};
 use hmail_cleaner_core::maintenance::{FileScan, FullFileStore};
 use std::{
     fs,
@@ -16,6 +16,28 @@ fn stored(root: &Path, id: i64) -> FileTarget {
             "domain/account/AB/{{AB000000-0000-0000-0000-{id:012X}}}.eml"
         )),
     }
+}
+
+#[tokio::test]
+async fn full_precheck_observes_the_shared_cancellation_request() {
+    let temp = TempDir::new().unwrap();
+    let root = temp.path().canonicalize().unwrap();
+    let file = root.join("keep.eml");
+    fs::write(&file, b"unchanged").unwrap();
+    let files = LocalFiles::new(root).unwrap();
+    let cancel = Cancellation::default();
+    let worker_signal = cancel.clone();
+    cancel.request();
+    assert!(files.validate_tree(&worker_signal).await.is_err());
+    assert_eq!(fs::read(file).unwrap(), b"unchanged");
+    assert_eq!(
+        files
+            .validate_tree(&Cancellation::default())
+            .await
+            .unwrap()
+            .examined_files,
+        1
+    );
 }
 
 #[tokio::test]
@@ -45,7 +67,14 @@ async fn scan_counts_fresh_and_referenced_files() {
     write(&stored(&root, 1));
     write(&stored(&root, 2));
     let files = LocalFiles::new(root).unwrap();
-    assert_eq!(files.validate_tree().await.unwrap().examined_files, 2);
+    assert_eq!(
+        files
+            .validate_tree(&Cancellation::default())
+            .await
+            .unwrap()
+            .examined_files,
+        2
+    );
     let mut scan = files.open_scan().await.unwrap();
     assert_eq!(scan.next_batch(1000).await.unwrap().files.len(), 2);
     scan.close().await.unwrap();
@@ -61,7 +90,14 @@ async fn public_and_root_queue_are_scanned() {
     fs::create_dir_all(public.parent().unwrap()).unwrap();
     fs::write(&public, b"public").unwrap();
     let files = LocalFiles::new(root.clone()).unwrap();
-    assert_eq!(files.validate_tree().await.unwrap().examined_files, 3);
+    assert_eq!(
+        files
+            .validate_tree(&Cancellation::default())
+            .await
+            .unwrap()
+            .examined_files,
+        3
+    );
     let mut scan = files.open_scan().await.unwrap();
     let batch = scan.next_batch(1000).await.unwrap();
     assert_eq!(batch.files.len(), 3);
@@ -160,7 +196,10 @@ async fn inaccessible_tree_fails_precheck() {
     write(&selected);
     let parent = selected.path.parent().unwrap();
     fs::set_permissions(parent, fs::Permissions::from_mode(0o000)).unwrap();
-    let result = LocalFiles::new(root.clone()).unwrap().validate_tree().await;
+    let result = LocalFiles::new(root.clone())
+        .unwrap()
+        .validate_tree(&Cancellation::default())
+        .await;
     fs::set_permissions(parent, fs::Permissions::from_mode(0o700)).unwrap();
     assert!(result.is_err());
     assert!(selected.path.exists());

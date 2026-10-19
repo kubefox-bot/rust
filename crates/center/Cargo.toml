@@ -1,0 +1,72 @@
+[package]
+name = "hmail-cleaner-center"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+cli = ["dep:clap", "dep:rpassword"]
+
+[dependencies]
+bytes = "1"
+russh = { version = "=0.64.1", default-features = false, features = ["ring"] }
+russh-sftp = { version = "=3.0.1", default-features = false }
+futures-util = "0.3"
+chrono.workspace = true
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json", "query"] }
+hmail-cleaner-adapters = { path = "../adapters", default-features = false, features = ["mtls"] }
+x509-parser = { version = "0.18.1", features = ["verify"] }
+
+rustls-pemfile = "2"
+
+hmail-cleaner-core = { path = "../core" }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+hyper = { version = "1", features = ["client", "http1"] }
+
+url = "2"
+time = "0.3"
+
+tower-cookies = "0.11.0"
+tower-http = { version = "0.7.1", features = ["csrf", "limit", "timeout", "set-header", "fs"] }
+tower = { version = "0.5", features = ["util"] }
+axum-server = { version = "0.8", default-features = false, features = ["tls-rustls-no-provider"] }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+rcgen = { version = "0.14.10", default-features = false, features = ["ring", "pem", "x509-parser", "zeroize"] }
+hmail-cleaner-protocol = { path = "../protocol" }
+
+clap = { version = "4", optional = true, features = ["derive"] }
+rpassword = { version = "7", optional = true }
+axum = "0.8"
+
+argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "password-hash", "zeroize"] }
+chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc", "zeroize"] }
+ring = "0.17.14"
+zeroize = { version = "1.9.1", features = ["serde"] }
+base64ct = { version = "1.8.3", features = ["alloc"] }
+serde.workspace = true
+serde_json = "1"
+thiserror.workspace = true
+uuid = { workspace = true, features = ["serde", "v4"] }
+subtle = "2.6"
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio"] }
+
+tokio.workspace = true
+
+[dev-dependencies]
+rand = "0.10"
+hmail-cleaner-agent = { path = "../agent" }
+
+tokio = { workspace = true, features = ["test-util"] }
+
+tower = { version = "0.5", features = ["util"] }
+
+tempfile = "3"
+
+uuid = { workspace = true, features = ["v4"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(unix)'.dev-dependencies]
+astra-updater = { path = "../updater" }

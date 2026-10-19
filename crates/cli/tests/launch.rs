@@ -1,4 +1,21 @@
+#![cfg(feature = "local-cli")]
 use std::process::{Command, Stdio};
+#[test]
+fn legacy_service_run_is_rejected_before_loading_configuration() {
+    let temp = tempfile::tempdir().unwrap();
+    let missing = temp.path().join("not-configured.env");
+    let output = Command::new(env!("CARGO_BIN_EXE_hmail-cleaner"))
+        .args(["service", "run", "--env-file"])
+        .arg(&missing)
+        .env_clear()
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("расписани"));
+    assert!(!missing.exists());
+}
 #[test]
 fn no_terminal_no_implicit_menu() {
     let output = Command::new(env!("CARGO_BIN_EXE_hmail-cleaner"))

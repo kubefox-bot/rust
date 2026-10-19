@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "build": "0.1.0+b09d0d04237f.1792284226",
+  "source_revision": "b09d0d04237f",
+  "source_fingerprint": "a51a6e9f4893dca5f03536db69375d8694b8b9f281f9e2710d1c8613b35d415e",
+  "dirty": false,
+  "engine": "docker",
+  "image": {
+    "reference": "localhost/hmail-center@sha256:0125a83a678169c02dc065a873c1ba5e013d062979a8817d7a7f3dceb530e62a",
+    "digest": "sha256:0125a83a678169c02dc065a873c1ba5e013d062979a8817d7a7f3dceb530e62a",
+    "config_digest": "sha256:b6b54ec81c4625b7a6c4955a3d29c395ecc87971bdba5ec9613fe3f9b8a5f58c",
+    "local_tag": "localhost/hmail-center:build-0.1.0_b09d0d04237f.1792284226-8e86c3646356",
+    "platform": "linux/amd64"
+  },
+  "base_images": {
+    "bun": "docker.io/oven/bun:1.4.3-debian@sha256:923bedb355f7746666659f71e724998159a5c8c54bd1cb1030e1975a0698415b",
+    "rust": "docker.io/library/rust:1.99.1-bookworm@sha256:e12566d5abc17a0da741628782cdb504b68b8961f5bfcf677936bf3e8b32de29",
+    "runtime": "gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f",
+    "buildkit": "docker.io/moby/buildkit:v0.30.0@sha256:0168606be2315b7c807a03b3d8aa79beefdb31c98740cebdffdfeebf31190c9f"
+  },
+  "agent": {
+    "product": "hmail-cleaner-agent",
+    "target": "x86_64-pc-windows-msvc",
+    "build": "0.1.0+b09d0d04237f.1792284226",
+    "protocol_min": 1,
+    "protocol_max": 1,
+    "sha256": "0caab87c0841da833b42745ae18c49c9817fc66b1666e7dfe2cce2474efac3a1"
+  },
+  "artifacts": [
+    {
+      "name": "center.oci.tar",
+      "size": 22088192,
+      "sha256": "b42f8d46e496efe3e789c1b7e2a2a4bfdab7680d5160f24982a5fc1feee4c502"
+    },
+    {
+      "name": "agent-packages/0.1.0+b09d0d04237f.1792284226/hmail-cleaner-agent.exe",
+      "size": 13865472,
+      "sha256": "0caab87c0841da833b42745ae18c49c9817fc66b1666e7dfe2cce2474efac3a1"
+    },
+    {
+      "name": "agent-packages/0.1.0+b09d0d04237f.1792284226/hmail-cleaner-agent.exe.sha256",
+      "size": 90,
+      "sha256": "b62565865685d27b04a9327bccece231e872f6db7becdc5ff8fb416880df1d70"
+    },
+    {
+      "name": "agent-packages/0.1.0+b09d0d04237f.1792284226/manifest.json",
+      "size": 243,
+      "sha256": "e536c50c0058da9ba8d6ac9adb9144c19f7b6297ea2eb2add86656e5804ae967"
+    },
+    {
+      "name": "quadlet/hmail-center.container",
+      "size": 794,
+      "sha256": "4a24bfc90830c491c1b4a5ec781a0eeb705850b7537c88cd2db5dd7996017d94"
+    },
+    {
+      "name": "quadlet/hmail-center-data.volume",
+      "size": 118,
+      "sha256": "eb8e60f8aaa40e2b8195bb675761c26248f55358771c1f2039646b5841739a2b"
+    }
+  ]
+}

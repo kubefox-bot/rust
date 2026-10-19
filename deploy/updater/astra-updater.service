@@ -1,0 +1,10 @@
+[Unit]
+Description=Check and apply a verified Astra image
+Wants=network-online.target
+After=network-online.target astra-updater-recover.service hmail-center.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/astra-updater apply --config %h/.config/astra-updater/config.json
+TimeoutStartSec=infinity
+UMask=0077

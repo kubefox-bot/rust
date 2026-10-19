@@ -1,0 +1,1 @@
+export { injectPayload } from "./inject";

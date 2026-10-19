@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use uuid::Uuid;
 
@@ -72,7 +72,7 @@ pub struct OrphanFileOutcome {
 }
 
 /// A database row and its resolved physical location, including queue entries.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StoredMessage {
     pub candidate: crate::cleanup::Candidate,
     pub message_type: i8,

@@ -12,7 +12,6 @@ const KEYS: &[&str] = &[
     "HMAIL_WORKERS",
     "HMAIL_SCAN",
     "HMAIL_LOG_FILE",
-    "HMAIL_RUN_AT",
 ];
 pub(super) type Values = BTreeMap<String, String>;
 pub(super) fn environment() -> Result<Values, ConfigError> {

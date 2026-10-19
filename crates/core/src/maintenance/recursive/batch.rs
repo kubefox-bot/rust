@@ -1,5 +1,10 @@
 use super::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+pub(super) struct Observers<'a, P, O> {
+    pub progress: &'a P,
+    pub selection: &'a O,
+}
 
 pub(super) async fn run<
     R: TreeRepository,
@@ -10,20 +15,54 @@ pub(super) async fn run<
     deps: &mut Dependencies<'_, R, F, G>,
     options: &RunOptions,
     operation: Operation,
-    progress: &P,
-    map: &mut HashMap<String, Vec<StoredMessage>>,
+    observers: Observers<'_, P, impl SelectionObserver>,
     scanned: ScanBatch,
     summary: &mut Summary,
 ) -> Result<(), CleanupError> {
+    let progress = observers.progress;
+    let paths = scanned
+        .files
+        .iter()
+        .map(|file| file.path.clone())
+        .collect::<Vec<_>>();
+    let groups = workflow::at(
+        deps.repository.match_files(&paths).await,
+        Stage::References,
+        *summary,
+    )?;
+    workflow::at(
+        validation::groups(&groups, &options.data_directory, paths.len()),
+        Stage::References,
+        *summary,
+    )?;
+    let mut map = groups
+        .into_iter()
+        .map(|group| (path_key(&group.row.path), group))
+        .collect::<HashMap<_, _>>();
+    let requested = paths
+        .iter()
+        .map(|path| path_key(path))
+        .collect::<HashSet<_>>();
+    workflow::at(
+        if map.keys().all(|key| requested.contains(key)) {
+            Ok(())
+        } else {
+            Err("Индекс вернул посторонний путь".into())
+        },
+        Stage::References,
+        *summary,
+    )?;
     let mut selected = Vec::new();
+    let mut details = Vec::new();
     let mut linked = HashMap::new();
     for file in scanned.files {
-        let rows = map.remove(&path_key(&file.path)).unwrap_or_default();
-        summary.examined_messages += rows.len() as u64;
+        let group = map.remove(&path_key(&file.path));
+        let references = group.as_ref().map_or(0, |group| group.references);
+        summary.examined_messages += references;
         if file.created_at >= options.file_cutoff {
             continue;
         }
-        if rows.len() > 1 {
+        if references > 1 {
             fail(
                 summary,
                 file.path,
@@ -32,16 +71,30 @@ pub(super) async fn run<
             );
             continue;
         }
-        summary.selected += rows.len() as u64;
+        let rows = group.into_iter().map(|group| group.row).collect::<Vec<_>>();
+        summary.selected += references;
         summary.selected_bytes += file.size_bytes;
         summary.selected_files += 1;
         if rows.is_empty() {
             summary.selected_orphan_files += 1;
         }
+        if operation == Operation::Preview {
+            details.push(SelectedFile {
+                file: file.clone(),
+                orphan: rows.is_empty(),
+            });
+        }
         linked.insert(path_key(&file.path), (file.clone(), rows));
         selected.push(file);
     }
     workflow::emit(Stage::Selection, *summary, progress);
+    if !details.is_empty() {
+        workflow::at(
+            observers.selection.selected(&details).await,
+            Stage::Selection,
+            *summary,
+        )?;
+    }
     if operation == Operation::Clean && !selected.is_empty() {
         workflow::at(
             deps.guard.ensure_stopped().await,

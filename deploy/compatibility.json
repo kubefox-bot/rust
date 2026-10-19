@@ -1,0 +1,7 @@
+{
+  "backup_schema_versions": [
+    1,
+    2
+  ],
+  "current_schema_version": 2
+}

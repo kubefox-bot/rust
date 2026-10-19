@@ -1,0 +1,14 @@
+---
+import Shell from "../layouts/Shell.astro";
+import { HistoryIsland } from "../features/history";
+---
+
+<Shell title="История" section="history">
+  <div class="page-heading">
+    <div>
+      <h1>История очистки</h1>
+      <p class="subtitle">Сохранённые запуски выбранного почтового сервера</p>
+    </div>
+  </div>
+  <HistoryIsland client:load />
+</Shell>

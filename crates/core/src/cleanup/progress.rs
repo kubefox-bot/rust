@@ -3,17 +3,28 @@ use serde::Serialize;
 use std::{
     error::Error,
     path::PathBuf,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
-#[derive(Debug, Default)]
-pub struct Cancellation(AtomicBool);
+/// Clones share the same cancellation request, including blocking file workers.
+#[derive(Debug, Default, Clone)]
+pub struct Cancellation(Arc<AtomicBool>);
 impl Cancellation {
     pub fn request(&self) {
         self.0.store(true, Ordering::Release);
     }
     pub fn is_requested(&self) -> bool {
         self.0.load(Ordering::Acquire)
+    }
+    pub fn check(&self) -> PortResult<()> {
+        if self.is_requested() {
+            Err("Операция отменена после завершения текущего пакета".into())
+        } else {
+            Ok(())
+        }
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

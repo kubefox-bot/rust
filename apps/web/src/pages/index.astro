@@ -1,0 +1,14 @@
+---
+import Shell from "../layouts/Shell.astro";
+import CleanupIsland from "../features/cleanup/CleanupIsland.svelte";
+---
+
+<Shell title="Очистка почты" section="cleanup">
+  <div class="page-heading">
+    <div>
+      <h1>Очистка почты</h1>
+      <p class="subtitle">Управляйте хранением почты на выбранном сервере</p>
+    </div>
+  </div>
+  <CleanupIsland client:load />
+</Shell>

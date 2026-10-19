@@ -2,13 +2,9 @@ use crate::args::Mode;
 use hmail_cleaner_adapters::mysql::{DatabaseConfig, DatabaseConfigError};
 use hmail_cleaner_core::cleanup::RunOptions;
 use hmail_cleaner_core::{maintenance::ScanMode, selection::Retention};
+pub(crate) use hmail_cleaner_runner::ServicePolicy;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ServicePolicy {
-    RequireStopped,
-    Manage,
-}
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct RunIntent {
     pub mode: Mode,
@@ -26,12 +22,6 @@ pub(crate) struct Settings {
     pub scan: ScanMode,
     pub batch_size: NonZeroU32,
     pub workers: u8,
-    pub log_file: Option<PathBuf>,
-}
-#[derive(Debug, Clone)]
-pub(crate) struct ServiceSettings {
-    pub cleanup: Settings,
-    pub run_at: chrono::NaiveTime,
 }
 #[derive(Debug)]
 pub(crate) struct Config {
