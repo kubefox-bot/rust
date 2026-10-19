@@ -13,6 +13,7 @@ run = ["cargo fmt --all -- --check", "rustfmt --edition 2021 --check tools/build
 [tasks.test]
 description = "Run portable workspace tests"
 run = "cargo test --workspace --locked"
+run_windows = "cargo test --workspace --locked --no-fail-fast"
 
 [tasks.lint]
 description = "Check Rust code with Clippy"
