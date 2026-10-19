@@ -1,3 +1,5 @@
+#[path = "fixtures/plaintext.rs"]
+mod plaintext;
 use hmail_cleaner_center::{
     account::{initialize, InitInput, SecretPrompt},
     storage::{CenterStore, DataDirectory},
@@ -84,20 +86,10 @@ async fn snapshot_restores_both_unlock_methods_without_plaintext() {
         *open_password(&account.material, &password).unwrap(),
         *open_recovery(&account.material, &prompt.recovery.unwrap()).unwrap()
     );
+    let secrets: Vec<&str> = std::iter::once(password.as_str())
+        .chain(sentinels)
+        .collect();
     for root in [source.path(), destination.as_path()] {
-        for entry in std::fs::read_dir(root).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_file() {
-                let bytes = std::fs::read(path).unwrap();
-                assert!(!bytes
-                    .windows(password.len())
-                    .any(|w| w == password.as_bytes()));
-                for sentinel in sentinels {
-                    assert!(!bytes
-                        .windows(sentinel.len())
-                        .any(|w| w == sentinel.as_bytes()));
-                }
-            }
-        }
+        plaintext::assert_absent(root, &secrets);
     }
 }

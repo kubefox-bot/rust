@@ -1,4 +1,6 @@
 pub mod fixtures;
+#[path = "fixtures/plaintext.rs"]
+mod plaintext;
 use hmail_cleaner_center::{
     account::AccountService,
     vault::{self, RecoveryKey, SecretText},
@@ -61,22 +63,14 @@ async fn password_change_rewraps_only_and_recovery_stays_valid() {
     let backup = center.root.path().join("credential-backup");
     center.store.backup(&backup).await.unwrap();
     for directory in [center.root.path(), backup.as_path()] {
-        for item in std::fs::read_dir(directory).unwrap() {
-            let path = item.unwrap().path();
-            if !path.is_file() {
-                continue;
-            }
-            let bytes = std::fs::read(path).unwrap();
-            for secret in [
+        plaintext::assert_absent(
+            directory,
+            &[
                 "fixture-center-password",
                 "fresh-center-password-2026",
                 "NEVER-PERSIST-JOB-PASSWORD",
                 center.recovery.as_str(),
-            ] {
-                assert!(!bytes
-                    .windows(secret.len())
-                    .any(|value| value == secret.as_bytes()));
-            }
-        }
+            ],
+        );
     }
 }
