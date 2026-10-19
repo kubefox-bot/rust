@@ -1,10 +1,11 @@
+import { update_policy as updatePolicySchema } from "../../../api/contracts";
 import { decode, requestJson } from "../../../api";
 import type { BrowserContracts } from "../../../api";
 
 export const readPolicy = (signal: AbortSignal) =>
   requestJson({
     path: "/settings/updates",
-    responseSchema: "update_policy",
+    responseSchema: updatePolicySchema,
     signal,
   });
 export const savePolicy = (
@@ -14,7 +15,7 @@ export const savePolicy = (
   requestJson({
     path: "/settings/updates",
     method: "PATCH",
-    body: decode("update_policy", policy),
-    responseSchema: "update_policy",
+    body: decode(updatePolicySchema, policy),
+    responseSchema: updatePolicySchema,
     signal,
   });

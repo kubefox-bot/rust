@@ -1,6 +1,62 @@
 import { expect, test } from "bun:test";
 import { agentStatus, agentBadge, footerText } from "../src/shell/agent-status";
 import type { BrowserContracts } from "../src/api";
+
+class Visibility extends EventTarget {
+  visibilityState: DocumentVisibilityState = "visible";
+  change(state: DocumentVisibilityState) {
+    this.visibilityState = state;
+    this.dispatchEvent(new Event("visibilitychange"));
+  }
+}
+
+test("data polling pauses while hidden, refreshes on return and releases its listener", async () => {
+  const { mountVisiblePolling } = await import("../src/shell/visibility");
+  const visibility = new Visibility();
+  const refreshed: string[] = [];
+  const dispose = mountVisiblePolling({
+    visibility,
+    intervalMs: 10,
+    refresh: () => {
+      refreshed.push(visibility.visibilityState);
+    },
+  });
+  expect(refreshed).toEqual(["visible"]);
+  visibility.change("hidden");
+  await Bun.sleep(25);
+  expect(refreshed).toEqual(["visible"]);
+  visibility.change("visible");
+  expect(refreshed).toEqual(["visible", "visible"]);
+  visibility.change("visible");
+  expect(refreshed).toHaveLength(2);
+  await Bun.sleep(15);
+  expect(refreshed.length).toBeGreaterThan(2);
+  dispose();
+  const finalCount = refreshed.length;
+  visibility.change("hidden");
+  visibility.change("visible");
+  await Bun.sleep(15);
+  expect(refreshed).toHaveLength(finalCount);
+});
+
+test("an initially hidden page performs no data poll until it becomes visible", async () => {
+  const { mountVisiblePolling } = await import("../src/shell/visibility");
+  const visibility = new Visibility();
+  visibility.change("hidden");
+  let refreshed = 0;
+  const dispose = mountVisiblePolling({
+    visibility,
+    intervalMs: 10,
+    refresh: () => {
+      refreshed++;
+    },
+  });
+  await Bun.sleep(15);
+  expect(refreshed).toBe(0);
+  visibility.change("visible");
+  expect(refreshed).toBe(1);
+  dispose();
+});
 const agent: BrowserContracts["agents"][number] = {
   agent_id: "11111111-1111-4111-8111-111111111111",
   server_id: "22222222-2222-4222-8222-222222222222",

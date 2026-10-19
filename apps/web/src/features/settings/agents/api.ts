@@ -1,4 +1,13 @@
 import {
+  ssh_target as sshTargetSchema,
+  install as installSchema,
+  update as updateSchema,
+  enrollments as enrollmentsSchema,
+  host_key as hostKeySchema,
+  enrollment as enrollmentSchema,
+  identity_receipt as identityReceiptSchema,
+} from "../../../api/contracts";
+import {
   ApiError,
   ContractError,
   decode,
@@ -9,7 +18,11 @@ import {
 import type { EnrollmentAttempt, Enrollment } from "./types";
 
 export const recent = (signal: AbortSignal) =>
-  requestJson({ path: "/enrollment", responseSchema: "enrollments", signal });
+  requestJson({
+    path: "/enrollment",
+    responseSchema: enrollmentsSchema,
+    signal,
+  });
 export const probe = (
   input: Readonly<{
     target: BrowserContracts["ssh_target"];
@@ -19,8 +32,8 @@ export const probe = (
   requestJson({
     path: "/enrollment/probe",
     method: "POST",
-    body: decode("ssh_target", input.target),
-    responseSchema: "host_key",
+    body: decode(sshTargetSchema, input.target),
+    responseSchema: hostKeySchema,
     signal: input.signal,
   });
 export const install = (
@@ -29,8 +42,8 @@ export const install = (
   requestJson({
     path: "/enrollment/install",
     method: "POST",
-    body: decode("install", input.body),
-    responseSchema: "enrollment",
+    body: decode(installSchema, input.body),
+    responseSchema: enrollmentSchema,
     signal: input.signal,
   });
 export const update = (
@@ -43,8 +56,8 @@ export const update = (
   requestJson({
     path: `/agents/${encodeURIComponent(input.agentId)}/update`,
     method: "POST",
-    body: decode("update", input.body),
-    responseSchema: "enrollment",
+    body: decode(updateSchema, input.body),
+    responseSchema: enrollmentSchema,
     signal: input.signal,
   });
 export const read = (
@@ -52,7 +65,7 @@ export const read = (
 ) =>
   requestJson({
     path: `/enrollment/${encodeURIComponent(input.operationId)}`,
-    responseSchema: "enrollment",
+    responseSchema: enrollmentSchema,
     signal: input.signal,
   });
 export const reconcile = (
@@ -62,7 +75,7 @@ export const reconcile = (
     path: `/enrollment/${encodeURIComponent(input.operationId)}/reconcile`,
     method: "POST",
     body: {},
-    responseSchema: "enrollment",
+    responseSchema: enrollmentSchema,
     signal: input.signal,
   });
 export const renew = (
@@ -72,7 +85,7 @@ export const renew = (
     path: `/agents/${encodeURIComponent(input.agentId)}/renew`,
     method: "POST",
     body: {},
-    responseSchema: "identity_receipt",
+    responseSchema: identityReceiptSchema,
     signal: input.signal,
   });
 export const revoke = (

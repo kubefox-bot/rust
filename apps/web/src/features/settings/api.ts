@@ -1,17 +1,26 @@
+import {
+  server_id as serverIdSchema,
+  save_profile as saveProfileSchema,
+  servers as serversSchema,
+  cleanup_context as cleanupContextSchema,
+  profile as profileSchema,
+  profile_version as profileVersionSchema,
+  profile_validation as profileValidationSchema,
+} from "../../api/contracts";
 import { decode, requestJson } from "../../api";
 import type { BrowserContracts } from "../../api";
 export const servers = (signal: AbortSignal) =>
-  requestJson({ path: "/servers", responseSchema: "servers", signal });
+  requestJson({ path: "/servers", responseSchema: serversSchema, signal });
 export const context = (id: string, signal: AbortSignal) =>
   requestJson({
-    path: `/servers/${decode("server_id", id)}/cleanup-context`,
-    responseSchema: "cleanup_context",
+    path: `/servers/${decode(serverIdSchema, id)}/cleanup-context`,
+    responseSchema: cleanupContextSchema,
     signal,
   });
 export const profile = (id: string, signal: AbortSignal) =>
   requestJson({
-    path: `/servers/${decode("server_id", id)}/profile`,
-    responseSchema: "profile",
+    path: `/servers/${decode(serverIdSchema, id)}/profile`,
+    responseSchema: profileSchema,
     signal,
   });
 export const save = (
@@ -20,16 +29,16 @@ export const save = (
   signal: AbortSignal,
 ) =>
   requestJson({
-    path: `/servers/${decode("server_id", id)}/profile`,
+    path: `/servers/${decode(serverIdSchema, id)}/profile`,
     method: "PATCH",
-    body: decode("save_profile", input),
-    responseSchema: "profile_version",
+    body: decode(saveProfileSchema, input),
+    responseSchema: profileVersionSchema,
     signal,
   });
 export const validate = (id: string, signal: AbortSignal) =>
   requestJson({
-    path: `/servers/${decode("server_id", id)}/validate`,
+    path: `/servers/${decode(serverIdSchema, id)}/validate`,
     method: "POST",
-    responseSchema: "profile_validation",
+    responseSchema: profileValidationSchema,
     signal,
   });

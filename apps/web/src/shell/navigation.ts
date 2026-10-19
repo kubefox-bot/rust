@@ -1,3 +1,4 @@
+import { server_id as serverIdSchema } from "../api/contracts";
 import { decode } from "../api";
 
 type ServerReference = Readonly<{ id: string; slug?: string | null }>;
@@ -43,7 +44,7 @@ export const selectServer = ({
   id,
   servers,
 }: Readonly<{ id: string; servers: ReadonlyArray<ServerReference> }>): void => {
-  decode("server_id", id);
+  decode(serverIdSchema, id);
   const server = servers.find((server) => server.id === id);
   if (!server) throw new Error("Выбранный сервер не найден.");
   const reference = serverUrlValue(server);

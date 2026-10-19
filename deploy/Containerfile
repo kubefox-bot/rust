@@ -9,6 +9,7 @@ COPY apps/web/package.json apps/web/package.json
 RUN bun install --frozen-lockfile
 COPY apps/web/astro.config.mjs apps/web/tsconfig.json apps/web/
 COPY apps/web/src apps/web/src
+COPY tools/web/compression tools/web/compression
 ARG HMAIL_BUILD_VERSION
 RUN PUBLIC_BUILD_VERSION=${HMAIL_BUILD_VERSION} bun run web:build && \
     find apps/web/dist -type d -exec chmod 0555 {} + && \

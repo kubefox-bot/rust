@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { createTable, tableFeatures } from "@tanstack/svelte-table";
   import { Button } from "../button";
   import { formatBytes } from "../../jobs/display";
   import { formatDateTime } from "../../lib/time";
-  import { FILE_COLUMNS } from "./conts";
+  import { SORTABLE_COLUMNS } from "./conts";
   import type { FileRow, FileSort, SortDirection } from "./types";
   let {
     rows,
@@ -12,21 +11,12 @@
     onsort,
     loading = false,
   }: {
-    rows: FileRow[];
+    rows: ReadonlyArray<FileRow>;
     sort: FileSort;
     direction: SortDirection;
     onsort: (sort: FileSort) => void;
     loading?: boolean;
   } = $props();
-  const features = tableFeatures({});
-  const table = createTable({
-    features,
-    columns: FILE_COLUMNS,
-    get data() {
-      return rows;
-    },
-    getRowId: (row) => row.id,
-  });
 </script>
 
 <div
@@ -37,47 +27,46 @@
 >
   <table>
     <thead>
-      {#each table.getHeaderGroups() as group (group.id)}
-        <tr
-          >{#each group.headers as header (header.id)}
-            <th
-              aria-sort={header.id === sort
+      <tr
+        >{#each SORTABLE_COLUMNS as column (column.id)}
+          <th
+            scope="col"
+            aria-sort={column.id === sort
+              ? direction === "asc"
+                ? "ascending"
+                : "descending"
+              : undefined}
+          >
+            <Button
+              size="small"
+              variant="quiet"
+              onclick={() => onsort(column.id)}
+              >{column.header}
+              {sort === column.id
                 ? direction === "asc"
-                  ? "ascending"
-                  : "descending"
-                : undefined}
+                  ? "↑"
+                  : "↓"
+                : "↕"}</Button
             >
-              {#if header.id === "path" || header.id === "size" || header.id === "created_at"}
-                {@const key = header.id}
-                <Button size="small" variant="quiet" onclick={() => onsort(key)}
-                  >{header.column.columnDef.header}
-                  {sort === key
-                    ? direction === "asc"
-                      ? "↑"
-                      : "↓"
-                    : "↕"}</Button
-                >
-              {:else}Связь с базой{/if}
-            </th>
-          {/each}</tr
-        >
-      {/each}
+          </th>
+        {/each}<th scope="col">Связь с базой</th></tr
+      >
     </thead>
     <tbody>
-      {#each table.getRowModel().rows as row (row.id)}
+      {#each rows as row (row.id)}
         <tr>
-          <td class="path">{row.original.path}</td>
-          <td class="size" title={`${row.original.size_bytes} Б`}
-            >{formatBytes(row.original.size_bytes)}</td
+          <td class="path">{row.path}</td>
+          <td class="size" title={`${row.size_bytes} Б`}
+            >{formatBytes(row.size_bytes)}</td
           >
           <td
-            ><time datetime={row.original.created_at}
-              >{formatDateTime(row.original.created_at)}</time
+            ><time datetime={row.created_at}
+              >{formatDateTime(row.created_at)}</time
             ></td
           >
           <td
-            ><span class:orphan={row.original.orphan}
-              >{row.original.orphan ? "Без записи" : "Связан"}</span
+            ><span class:orphan={row.orphan}
+              >{row.orphan ? "Без записи" : "Связан"}</span
             ></td
           >
         </tr>

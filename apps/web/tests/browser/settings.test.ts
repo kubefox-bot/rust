@@ -1,8 +1,64 @@
+import { save_profile as saveProfileSchema } from "../../src/api/contracts";
 import { selectValue } from "./controls";
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
 import { signIn } from "./cleanup-steps";
 import { decode } from "../../src/api";
+test("agent settings and footer share the page package catalog", async () => {
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await signIn(page, fixture.origin);
+    const packages: string[] = [];
+    page.on("request", (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path === "/api/v1/enrollment/packages") packages.push(path);
+    });
+    await page.goto(`${fixture.origin}/settings/#agents`);
+    await page
+      .getByRole("heading", { name: "Добавить сервер", exact: true })
+      .waitFor();
+    expect(packages).toHaveLength(1);
+    await page.getByRole("button", { name: "Обновления", exact: true }).click();
+    await page
+      .getByLabel("Проверять обновления каждые, секунд", { exact: true })
+      .waitFor();
+    await page.getByRole("button", { name: "Агенты", exact: true }).click();
+    await page
+      .getByRole("heading", { name: "Добавить сервер", exact: true })
+      .waitFor();
+    expect(packages).toHaveLength(1);
+  } finally {
+    await fixture.close();
+  }
+}, 60000);
+test("center settings do not load mail context or profile", async () => {
+  const fixture = await startFixture();
+  try {
+    const page = await fixture.context.newPage();
+    await signIn(page, fixture.origin);
+    const mailRequests: string[] = [];
+    page.on("request", (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.endsWith("/cleanup-context") || path.endsWith("/profile"))
+        mailRequests.push(path);
+    });
+    await page.goto(`${fixture.origin}/settings/#updates`);
+    await page
+      .getByLabel("Проверять обновления каждые, секунд", { exact: true })
+      .waitFor();
+    expect(mailRequests).toEqual([]);
+    await page
+      .getByRole("button", { name: "Учётная запись", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "Ключ восстановления", exact: true })
+      .waitFor();
+    expect(mailRequests).toEqual([]);
+  } finally {
+    await fixture.close();
+  }
+}, 60000);
 test("profile edits preserve the stored password with Keep and unconfigured agents are not ready", async () => {
   const f = await startFixture();
   try {
@@ -26,7 +82,7 @@ test("profile edits preserve the stored password with Keep and unconfigured agen
     await page
       .getByRole("button", { name: "Сохранить профиль", exact: true })
       .click();
-    const input = decode("save_profile", (await saved).postDataJSON());
+    const input = decode(saveProfileSchema, (await saved).postDataJSON());
     expect(input.profile.password.kind).toBe("keep");
     await page.getByText("Профиль сохранён", { exact: true }).waitFor();
     await selectValue(page, { label: "Сервер", value: f.servers[1].id });
@@ -57,7 +113,7 @@ test("replacement password is sent only to the selected server and cleared after
       .getByRole("button", { name: "Сохранить профиль", exact: true })
       .click();
     const request = await saved;
-    const input = decode("save_profile", request.postDataJSON());
+    const input = decode(saveProfileSchema, request.postDataJSON());
     expect(new URL(request.url()).pathname).toBe(
       `/api/v1/servers/${f.servers[0].id}/profile`,
     );

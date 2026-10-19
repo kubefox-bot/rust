@@ -1,3 +1,4 @@
+import { error as errorSchema } from "./contracts";
 import {
   API_PREFIX,
   MAX_RESPONSE_BYTES,
@@ -6,8 +7,7 @@ import {
   UNSAFE_HEADERS,
 } from "./conts";
 import { decode, ContractError } from "./decode";
-import type { RequestOptions, ContractName } from "./types";
-import type { BrowserContracts } from "./generated/browser.types";
+import type { RequestOptions } from "./types";
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -64,7 +64,7 @@ const responseValue = async (response: Response): Promise<unknown> => {
 const fetchApi = async (
   options: Readonly<{
     path: string;
-    method?: RequestOptions<ContractName>["method"];
+    method?: RequestOptions<unknown>["method"];
     body?: unknown;
     signal?: AbortSignal;
   }>,
@@ -93,7 +93,7 @@ const fetchApi = async (
 };
 const correlationId = (body: unknown): string | undefined => {
   try {
-    return decode("error", body).correlation_id;
+    return decode(errorSchema, body).correlation_id;
   } catch {
     return undefined;
   }
@@ -104,9 +104,9 @@ const checkResponse = async (response: Response): Promise<void> => {
   const body = await responseValue(response).catch(() => undefined);
   throw new ApiError(response.status, correlationId(body));
 };
-export const requestJson = async <Name extends ContractName>(
-  options: RequestOptions<Name>,
-): Promise<BrowserContracts[Name]> => {
+export const requestJson = async <Value>(
+  options: RequestOptions<Value>,
+): Promise<Value> => {
   const response = await fetchApi(options);
   await checkResponse(response);
   return decode(options.responseSchema, await responseValue(response));

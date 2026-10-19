@@ -140,10 +140,18 @@
         ?.querySelector(`#${CSS.escape(id)}-option-${activeIndex}`)
         ?.scrollIntoView({ block: "nearest" });
   });
+  $effect(() => {
+    if (!open) return;
+    document.addEventListener("pointerdown", outside);
+    window.addEventListener("resize", followViewport);
+    window.addEventListener("scroll", followViewport);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      window.removeEventListener("resize", followViewport);
+      window.removeEventListener("scroll", followViewport);
+    };
+  });
 </script>
-
-<svelte:document onpointerdown={outside} />
-<svelte:window onresize={followViewport} onscroll={followViewport} />
 
 <div
   class="select"

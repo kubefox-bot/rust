@@ -1,10 +1,11 @@
+import { ssh_target as sshTargetSchema } from "../../../api/contracts";
 import { decode, type BrowserContracts } from "../../../api";
 import { MAX_PORT } from "./conts";
 
 export const sshTarget = (
   input: Readonly<{ host: string; port: number | undefined }>,
 ): BrowserContracts["ssh_target"] => {
-  const target = decode("ssh_target", input);
+  const target = decode(sshTargetSchema, input);
   if (
     !target.host ||
     target.host.trim() !== target.host ||

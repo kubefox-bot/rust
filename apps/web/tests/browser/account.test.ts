@@ -9,7 +9,10 @@ test("session settings expose and persist exactly the agreed idle intervals", as
     const page = await fixture.context.newPage();
     await signIn(page, fixture.origin);
     await page.goto(`${fixture.origin}/settings/#account`);
-    const timeout = page.getByLabel("Выход при бездействии", { exact: true });
+    const timeout = page.getByRole("combobox", {
+      name: "Выход при бездействии",
+      exact: true,
+    });
     await timeout.waitFor({ timeout: 3000 });
     await timeout.click();
     expect(

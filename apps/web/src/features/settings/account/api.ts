@@ -1,10 +1,14 @@
+import {
+  session_settings as sessionSettingsSchema,
+  recovery_candidate as recoveryCandidateSchema,
+} from "../../../api/contracts";
 import { requestEmpty, requestJson } from "../../../api";
 import type { BrowserContracts } from "../../../api";
 
 export const sessionSettings = (signal: AbortSignal) =>
   requestJson({
     path: "/settings/session",
-    responseSchema: "session_settings",
+    responseSchema: sessionSettingsSchema,
     signal,
   });
 
@@ -15,7 +19,7 @@ export const saveSessionSettings = (
     path: "/settings/session",
     method: "PATCH",
     body: input,
-    responseSchema: "session_settings",
+    responseSchema: sessionSettingsSchema,
   });
 
 export const changePassword = (input: BrowserContracts["change_password"]) =>
@@ -26,7 +30,7 @@ export const prepareRecovery = (input: BrowserContracts["prepare_recovery"]) =>
     path: "/account/recovery/prepare",
     method: "POST",
     body: input,
-    responseSchema: "recovery_candidate",
+    responseSchema: recoveryCandidateSchema,
   });
 
 export const confirmRecovery = (input: BrowserContracts["confirm_recovery"]) =>

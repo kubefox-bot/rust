@@ -12,6 +12,10 @@
 !apps/web/astro.config.mjs
 !apps/web/src
 !apps/web/src/**
+!tools
+!tools/web
+!tools/web/compression
+!tools/web/compression/**
 !deploy
 !deploy/Containerfile
 **/.env

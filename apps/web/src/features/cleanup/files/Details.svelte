@@ -9,6 +9,7 @@
   import { FileGrid } from "../../../ui/file-grid";
   import type { FileSort } from "../../../ui/file-grid";
   import { formatCount } from "../../../jobs/display";
+  import { mountVisibility } from "../../../shell/visibility";
   import { fetchFilesPage } from "./api";
   import { createRefreshScheduler } from "./refresh";
   import { createPageLoader } from "./loader";
@@ -18,18 +19,21 @@
     MAX_SEARCH_BYTES,
     PAGE_SIZE,
     PAGE_SIZE_OPTIONS,
-    REFRESH_DELAY_MS,
+    SEARCH_DEBOUNCE_MS,
+    PROGRESS_REFRESH_MS,
   } from "./conts";
   import type { FileFilters, FilesPage, FilesQuery } from "./types";
   let {
     jobId,
     revision,
     refreshVersion,
+    terminal,
     ondismiss,
   }: {
     jobId: string;
     revision: string;
     refreshVersion: number;
+    terminal: boolean;
     ondismiss: () => void;
   } = $props();
   let dialog: HTMLDialogElement | undefined = undefined;
@@ -48,6 +52,7 @@
   let error = $state("");
   let loading = $state(true);
   let retry = $state(0);
+  let visible = $state(false);
   const loader = createPageLoader((signal) =>
     fetchFilesPage({ jobId, query, signal }),
   );
@@ -100,7 +105,7 @@
         return;
       }
       query = { ...query, search: value, offset: 0n };
-    }, REFRESH_DELAY_MS);
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   });
   const scheduler = createRefreshScheduler({
@@ -109,12 +114,13 @@
       error = filesError(cause);
       loading = false;
     },
-    delayMs: REFRESH_DELAY_MS,
+    delayMs: PROGRESS_REFRESH_MS,
   });
   $effect(() => {
     jobId;
     query;
     retry;
+    if (!visible) return;
     untrack(() => scheduler.restart());
     return () => {
       scheduler.cancel();
@@ -122,9 +128,7 @@
     };
   });
   $effect(() => {
-    revision;
-    refreshVersion;
-    scheduler.schedule();
+    scheduler.observe({ revision, refreshVersion, terminal, visible });
   });
   const changeFilters = (value: FileFilters) => {
     filters = value;
@@ -161,9 +165,20 @@
     };
   };
   onMount(() => {
+    const unwatch = mountVisibility({
+      onVisible: () => {
+        visible = true;
+      },
+      onHidden: () => {
+        visible = false;
+        scheduler.cancel();
+        loader.cancel();
+      },
+    });
     dialog?.showModal();
     closeButton?.focus();
     return () => {
+      unwatch();
       scheduler.cancel();
       loader.cancel();
       dialog?.close();

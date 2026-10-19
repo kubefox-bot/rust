@@ -1,5 +1,10 @@
 import { API_PREFIX, MAX_EVENT_BYTES } from "./conts";
 import { decode } from "./decode";
+import {
+  server_id as serverIdSchema,
+  job_event as jobEventSchema,
+  session as sessionSchema,
+} from "./contracts";
 import type { BrowserContracts } from "./generated/browser.types";
 import type { EventDependencies, EventTransport, Subscription } from "./types";
 import { requestJson } from "./request";
@@ -18,7 +23,7 @@ export const createSubscriptions = (dependencies: EventDependencies) => {
     if (active === owner) active = null;
   };
   const subscribe = (options: Subscription): (() => void) => {
-    decode("server_id", options.serverId);
+    decode(serverIdSchema, options.serverId);
     if (active && active.serverId !== options.serverId)
       throw new Error("Release previous server subscription first");
     if (!active) {
@@ -48,7 +53,7 @@ export const createSubscriptions = (dependencies: EventDependencies) => {
             return null;
           try {
             const input: unknown = JSON.parse(event.data);
-            return decode("job_event", input);
+            return decode(jobEventSchema, input);
           } catch {
             return null;
           }
@@ -60,11 +65,7 @@ export const createSubscriptions = (dependencies: EventDependencies) => {
         }
         if (snapshot.job.intent.server_id !== owner.serverId) return;
         const revision = BigInt(snapshot.revision);
-        if (
-          owner.last &&
-          (owner.last.epoch !== snapshot.stream_epoch ||
-            revision > owner.last.revision + 1n)
-        ) {
+        if (owner.last && owner.last.epoch !== snapshot.stream_epoch) {
           resync();
           owner.last = { epoch: snapshot.stream_epoch, revision };
           return;
@@ -106,10 +107,17 @@ export const createSubscriptions = (dependencies: EventDependencies) => {
   };
   return { subscribe };
 };
-const shared = createSubscriptions({
-  open: (url) => new EventSource(url),
-  authenticated: async () =>
-    (await requestJson({ path: "/auth/session", responseSchema: "session" }))
-      .authenticated,
-});
-export const subscribe = shared.subscribe;
+let shared: ReturnType<typeof createSubscriptions> | null = null;
+export const subscribe = (options: Subscription): (() => void) => {
+  shared ??= createSubscriptions({
+    open: (url) => new EventSource(url),
+    authenticated: async () =>
+      (
+        await requestJson({
+          path: "/auth/session",
+          responseSchema: sessionSchema,
+        })
+      ).authenticated,
+  });
+  return shared.subscribe(options);
+};

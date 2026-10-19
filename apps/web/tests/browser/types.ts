@@ -1,4 +1,9 @@
 import type { BrowserContracts } from "../../src/api";
+export type GlobalListenerCounts = Readonly<{
+  resize: number;
+  scroll: number;
+  outside: number;
+}>;
 export type FixtureReady = Readonly<{
   origin: string;
   spki: string;
@@ -29,6 +34,7 @@ export type JobEventObservation = Readonly<{
 }>;
 declare global {
   interface Window {
+    readonly __mailGlobalListeners?: () => GlobalListenerCounts;
     readonly __mailEventSources?: Readonly<{ active: number; created: number }>;
     readonly __mailJobEvents?: ReadonlyArray<JobEventObservation>;
   }
