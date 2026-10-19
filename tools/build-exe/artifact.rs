@@ -17,7 +17,11 @@ fn hash(path: &Path) -> io::Result<String> {
             .output()?
     };
     if !output.status.success() {
-        return Err(io::Error::other("Не удалось вычислить SHA-256"));
+        return Err(io::Error::other(format!(
+            "Не удалось вычислить SHA-256 ({}): {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        )));
     }
     let digest = String::from_utf8_lossy(&output.stdout)
         .split_whitespace()
@@ -114,6 +118,16 @@ mod tests {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.0);
         }
+    }
+    #[test]
+    fn hashes_literal_unicode_paths_with_shell_metacharacters() {
+        let dir = Directory::new();
+        let source = dir.0.join("письмо ' $ & [x].bin");
+        fs::write(&source, b"abc").unwrap();
+        assert_eq!(
+            hash(&source).unwrap(),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
     }
     #[test]
     fn publishes_matching_pair_and_preserves_previous_pair_on_failure() {
