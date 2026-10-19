@@ -13,3 +13,9 @@ thiserror = "1"
 uuid = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "sync"] }
 sqlx = { version = "0.7", default-features = false, features = [] }
+
+[profile.agent-release]
+inherits = "release"
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

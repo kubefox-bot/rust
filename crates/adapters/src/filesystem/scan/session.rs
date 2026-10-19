@@ -1,7 +1,7 @@
 use super::layout;
 use crate::filesystem::validation;
 use hmail_cleaner_core::{
-    cleanup::{PortResult, MAX_BATCH_SIZE},
+    cleanup::{Cancellation, PortResult, DEFAULT_BATCH_SIZE, MAX_BATCH_SIZE},
     maintenance::{FileScan, ScanBatch, ScanStats},
 };
 use std::{
@@ -92,12 +92,18 @@ pub(in crate::filesystem) async fn open(root: PathBuf) -> PortResult<Session> {
         pending: None,
     })
 }
-pub(in crate::filesystem) async fn check(root: PathBuf) -> PortResult<ScanStats> {
+pub(in crate::filesystem) async fn check(
+    root: PathBuf,
+    cancel: Cancellation,
+) -> PortResult<ScanStats> {
     tokio::task::spawn_blocking(move || {
+        cancel.check()?;
         let mut walker = Walker::new(root)?;
         let mut examined_files = 0;
         loop {
-            let batch = walker.batch(MAX_BATCH_SIZE)?;
+            cancel.check()?;
+            let batch = walker.batch(DEFAULT_BATCH_SIZE)?;
+            cancel.check()?;
             examined_files += batch.examined_files;
             if batch.finished {
                 return Ok(ScanStats { examined_files });

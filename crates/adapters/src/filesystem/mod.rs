@@ -9,7 +9,7 @@ mod validation;
 mod workers;
 
 use hmail_cleaner_core::cleanup::{
-    FileInspection, FileOutcome, FileStore, FileTarget, PortResult, PruneOutcome,
+    Cancellation, FileInspection, FileOutcome, FileStore, FileTarget, PortResult, PruneOutcome,
 };
 use hmail_cleaner_core::maintenance::{
     FileObservation, FullFileStore, OrphanFileOutcome, ScanStats,
@@ -25,8 +25,8 @@ impl FullFileStore for LocalFiles {
         let root = self.root.clone();
         Ok(tokio::task::spawn_blocking(move || prune::completed(&root, paths)).await?)
     }
-    async fn validate_tree(&self) -> PortResult<ScanStats> {
-        scan::check(self.root.clone()).await
+    async fn validate_tree(&self, cancel: &Cancellation) -> PortResult<ScanStats> {
+        scan::check(self.root.clone(), cancel.clone()).await
     }
     async fn open_scan(&self) -> PortResult<Self::Scan> {
         scan::open(self.root.clone()).await

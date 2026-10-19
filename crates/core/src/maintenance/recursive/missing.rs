@@ -11,36 +11,59 @@ pub(super) async fn run<
     operation: Operation,
     cancel: &Cancellation,
     progress: &P,
-    map: HashMap<String, Vec<StoredMessage>>,
     summary: &mut Summary,
 ) -> Result<(), CleanupError> {
-    let mut pending = Vec::new();
-    for rows in map.into_values() {
-        if rows.len() > 1 {
-            fail(
-                summary,
-                rows[0].path.clone(),
-                "Неоднозначные ссылки БД на отсутствующий в обходе файл".into(),
-                progress,
-            );
-            continue;
+    let mut cursor = 0;
+    loop {
+        workflow::cancelled(cancel, *summary)?;
+        let groups = workflow::at(
+            deps.repository
+                .unmatched_batch(cursor, options.batch_size.get())
+                .await,
+            Stage::References,
+            *summary,
+        )?;
+        workflow::at(
+            validation::groups(
+                &groups,
+                &options.data_directory,
+                options.batch_size.get() as usize,
+            ),
+            Stage::References,
+            *summary,
+        )?;
+        let mut pending = Vec::new();
+        if groups.is_empty() {
+            break;
         }
-        for row in rows {
-            pending.push(row);
-            if pending.len() == options.batch_size.get() as usize {
-                inspect(
-                    deps, options, operation, cancel, progress, &pending, summary,
-                )
-                .await?;
-                pending.clear();
+        for group in groups {
+            workflow::at(
+                if group.row.candidate.id > cursor {
+                    Ok(())
+                } else {
+                    Err("Индекс не продвинул курсор отсутствующих файлов".into())
+                },
+                Stage::References,
+                *summary,
+            )?;
+            cursor = group.row.candidate.id;
+            if group.references > 1 {
+                fail(
+                    summary,
+                    group.row.path,
+                    "Неоднозначные ссылки БД на отсутствующий в обходе файл".into(),
+                    progress,
+                );
+            } else {
+                pending.push(group.row);
             }
         }
-    }
-    if !pending.is_empty() {
-        inspect(
-            deps, options, operation, cancel, progress, &pending, summary,
-        )
-        .await?;
+        if !pending.is_empty() {
+            inspect(
+                deps, options, operation, cancel, progress, &pending, summary,
+            )
+            .await?;
+        }
     }
     Ok(())
 }

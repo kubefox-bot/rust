@@ -1,16 +1,19 @@
-//! Recursive file-first maintenance. The database map contains rows, never file contents.
+//! Recursive file-first maintenance with bounded inventory and filesystem batches.
 mod batch;
 mod commit;
+mod inventory;
 mod missing;
 mod validation;
 mod verification;
 pub use super::workflow::Operation as Action;
 use super::{
     workflow::{self, Operation},
-    FileScan, FullFileStore, FullRepository, ScanBatch, ScanOptions, StoredMessage, MAX_REFERENCES,
+    FileScan, FullFileStore, FullRepository, ScanBatch, ScanOptions, StoredMessage,
 };
 use crate::cleanup::*;
-use std::{collections::HashMap, future::Future, path::Path};
+use crate::paths::path_key;
+pub use inventory::{StoredGroup, TreeRepository};
+use std::{future::Future, path::Path};
 
 /// Awaited at the physical-file selection boundary; failures stop the preview.
 pub trait SelectionObserver: Send + Sync {
@@ -28,20 +31,6 @@ impl SelectionObserver for IgnoreSelection {
     }
 }
 
-pub trait TreeRepository: FullRepository {
-    fn stored_messages(
-        &mut self,
-        root: &Path,
-        limit: usize,
-    ) -> impl Future<Output = PortResult<Vec<StoredMessage>>> + Send;
-    fn delete_stored(
-        &mut self,
-        rows: &[StoredMessage],
-    ) -> impl Future<Output = PortResult<DeleteResult>> + Send;
-}
-pub(super) fn path_key(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/").to_lowercase()
-}
 pub(super) fn fail(
     summary: &mut Summary,
     path: std::path::PathBuf,
@@ -102,34 +91,23 @@ pub async fn run_with_details<
         workflow::at(deps.guard.ensure_stopped().await, Stage::Preflight, summary)?;
     }
     workflow::emit(Stage::References, summary, &progress);
-    let rows = workflow::at(
-        deps.repository
-            .stored_messages(&options.data_directory, MAX_REFERENCES)
-            .await,
-        Stage::References,
-        summary,
-    )?;
-    workflow::at(
-        validation::inventory(&rows, &options.data_directory),
-        Stage::References,
-        summary,
-    )?;
-    let mut map: HashMap<String, Vec<StoredMessage>> = HashMap::new();
-    for row in rows {
-        map.entry(path_key(&row.path)).or_default().push(row);
-    }
+    workflow::cancelled(cancel, summary)?;
+    let inventory = deps
+        .repository
+        .prepare_inventory(&options.data_directory, cancel)
+        .await;
+    workflow::cancelled(cancel, summary)?;
+    workflow::at(inventory, Stage::References, summary)?;
     if matches!(scan, ScanOptions::Full) {
         workflow::emit(Stage::Verification, summary, &progress);
-        summary.total_scan_files = Some(
-            workflow::at(
-                deps.files.validate_tree().await,
-                Stage::Verification,
-                summary,
-            )?
-            .examined_files,
-        );
+        workflow::cancelled(cancel, summary)?;
+        let checked = deps.files.validate_tree(cancel).await;
+        workflow::cancelled(cancel, summary)?;
+        summary.total_scan_files =
+            Some(workflow::at(checked, Stage::Verification, summary)?.examined_files);
     }
     workflow::emit(Stage::Scan, summary, &progress);
+    workflow::cancelled(cancel, summary)?;
     let mut session = workflow::at(deps.files.open_scan().await, Stage::Scan, summary)?;
     let result: Result<(), CleanupError> = async {
         loop {
@@ -151,7 +129,6 @@ pub async fn run_with_details<
                     progress: &progress,
                     selection: observer,
                 },
-                &mut map,
                 scanned,
                 &mut summary,
             )
@@ -178,7 +155,6 @@ pub async fn run_with_details<
         operation,
         cancel,
         &progress,
-        map,
         &mut summary,
     )
     .await?;

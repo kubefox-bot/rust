@@ -17,7 +17,7 @@ hmail-cleaner-protocol = { path = "../protocol", optional = true }
 chrono.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-sqlx = { workspace = true, optional = true, features = ["runtime-tokio-rustls", "mysql", "chrono"] }
+sqlx = { workspace = true, optional = true, features = ["runtime-tokio-rustls", "mysql", "sqlite", "chrono"] }
 rustls = { version = "0.23.46", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
 x509-parser = { version = "0.18", optional = true, default-features = false }
 uuid = { workspace = true, optional = true }

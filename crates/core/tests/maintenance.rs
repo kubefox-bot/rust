@@ -13,6 +13,7 @@ use uuid::Uuid;
 #[derive(Default)]
 struct State {
     rows: Vec<StoredMessage>,
+    seen: HashSet<String>,
     trace: Vec<&'static str>,
     metadata: bool,
     recipients: bool,
@@ -23,6 +24,8 @@ struct State {
     bad_outcome: bool,
     closed: bool,
     cancel_after_commit: Option<Arc<Cancellation>>,
+    cancel_after_inventory: Option<Arc<Cancellation>>,
+    cancel_during_precheck: Option<Arc<Cancellation>>,
 }
 type Shared = Arc<Mutex<State>>;
 struct Repo(Shared);
@@ -141,9 +144,13 @@ impl FileStore for Files {
 }
 impl FullFileStore for Files {
     type Scan = Scan;
-    async fn validate_tree(&self) -> PortResult<ScanStats> {
+    async fn validate_tree(&self, _: &Cancellation) -> PortResult<ScanStats> {
         let mut s = self.0.lock().unwrap();
         s.trace.push("precheck");
+        if let Some(cancel) = &s.cancel_during_precheck {
+            cancel.request();
+            return Err("precheck cancelled".into());
+        }
         if s.fail == Some("precheck") {
             return Err("precheck denied".into());
         }
@@ -402,16 +409,133 @@ async fn orphan_age_uses_creation_time_instead_of_modification_time() {
 }
 
 impl maintenance::recursive::TreeRepository for Repo {
-    async fn stored_messages(
+    async fn prepare_inventory(&mut self, _: &std::path::Path, _: &Cancellation) -> PortResult<()> {
+        let mut state = self.0.lock().unwrap();
+        state.trace.push("inventory");
+        if let Some(cancel) = &state.cancel_after_inventory {
+            cancel.request();
+        }
+        state.seen.clear();
+        Ok(())
+    }
+    async fn match_files(
         &mut self,
-        _: &std::path::Path,
-        _: usize,
-    ) -> PortResult<Vec<StoredMessage>> {
-        Ok(self.0.lock().unwrap().rows.clone())
+        paths: &[PathBuf],
+    ) -> PortResult<Vec<maintenance::recursive::StoredGroup>> {
+        let mut state = self.0.lock().unwrap();
+        let keys = paths
+            .iter()
+            .map(|path| hmail_cleaner_core::paths::path_key(path))
+            .collect::<HashSet<_>>();
+        let groups = state
+            .rows
+            .iter()
+            .filter(|row| keys.contains(&hmail_cleaner_core::paths::path_key(&row.path)))
+            .map(|row| maintenance::recursive::StoredGroup {
+                row: row.clone(),
+                references: 1,
+            })
+            .collect();
+        state.seen.extend(keys);
+        Ok(groups)
+    }
+    async fn unmatched_batch(
+        &mut self,
+        cursor: i64,
+        limit: u32,
+    ) -> PortResult<Vec<maintenance::recursive::StoredGroup>> {
+        let state = self.0.lock().unwrap();
+        let mut rows = state
+            .rows
+            .iter()
+            .filter(|row| {
+                row.candidate.id > cursor
+                    && !state
+                        .seen
+                        .contains(&hmail_cleaner_core::paths::path_key(&row.path))
+            })
+            .collect::<Vec<_>>();
+        rows.sort_by_key(|row| row.candidate.id);
+        Ok(rows
+            .into_iter()
+            .take(limit as usize)
+            .map(|row| maintenance::recursive::StoredGroup {
+                row: row.clone(),
+                references: 1,
+            })
+            .collect())
     }
     async fn delete_stored(&mut self, _: &[StoredMessage]) -> PortResult<DeleteResult> {
         unreachable!()
     }
+}
+
+#[tokio::test]
+async fn recursive_cancel_during_inventory_skips_full_precheck_and_file_work() {
+    let state = setup();
+    let cancel = Arc::new(Cancellation::default());
+    state.lock().unwrap().cancel_after_inventory = Some(cancel.clone());
+    let mut repo = Repo(state.clone());
+    let options = RunOptions {
+        cutoff: chrono::NaiveDate::from_ymd_opt(2025, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap(),
+        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
+        batch_size: NonZeroU32::new(2).unwrap(),
+        workers: 1,
+        data_directory: "/Data".into(),
+    };
+    let error = maintenance::recursive::run(
+        Dependencies {
+            repository: &mut repo,
+            files: &Files(state.clone()),
+            guard: &Guard,
+        },
+        &options,
+        ScanOptions::Full,
+        &cancel,
+        |_| {},
+        maintenance::recursive::Action::Clean,
+    )
+    .await
+    .unwrap_err();
+    assert!(error.is_cancelled());
+    assert_eq!(state.lock().unwrap().trace, ["inventory"]);
+}
+
+#[tokio::test]
+async fn recursive_cancelled_precheck_is_cancelled_instead_of_failed() {
+    let state = setup();
+    let cancel = Arc::new(Cancellation::default());
+    state.lock().unwrap().cancel_during_precheck = Some(cancel.clone());
+    let mut repo = Repo(state.clone());
+    let options = RunOptions {
+        cutoff: chrono::NaiveDate::from_ymd_opt(2025, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap(),
+        file_cutoff: SystemTime::UNIX_EPOCH + Duration::from_secs(50),
+        batch_size: NonZeroU32::new(2).unwrap(),
+        workers: 1,
+        data_directory: "/Data".into(),
+    };
+    let error = maintenance::recursive::run(
+        Dependencies {
+            repository: &mut repo,
+            files: &Files(state.clone()),
+            guard: &Guard,
+        },
+        &options,
+        ScanOptions::Full,
+        &cancel,
+        |_| {},
+        maintenance::recursive::Action::Clean,
+    )
+    .await
+    .unwrap_err();
+    assert!(error.is_cancelled(), "{error}");
+    assert_eq!(state.lock().unwrap().trace, ["inventory", "precheck"]);
 }
 
 #[tokio::test]

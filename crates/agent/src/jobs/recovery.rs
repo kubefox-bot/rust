@@ -18,6 +18,7 @@ impl JobRepository {
             self.bump(&mut snapshot)?;
             self.save(&mut transaction, &snapshot).await?;
         }
+        super::retention::prune(&mut transaction).await?;
         transaction.commit().await?;
         Ok(())
     }

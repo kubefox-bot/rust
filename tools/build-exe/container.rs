@@ -91,7 +91,8 @@ pub(super) fn build(settings: &Settings) -> io::Result<PathBuf> {
     copy_sources(&root.join("crates"), &staging.join("crates"))?;
     let source_revision = super::source::revision(settings)?;
     let flags = settings.component.arguments().join(" ");
-    let script = format!("rustup toolchain install {RUST} --profile minimal --no-self-update && rustup target add --toolchain {RUST} {TARGET} && cargo +{RUST} xwin build --release -p hmail-cleaner --target {TARGET} --locked {flags}");
+    let profile = settings.component.profile();
+    let script = format!("rustup toolchain install {RUST} --profile minimal --no-self-update && rustup target add --toolchain {RUST} {TARGET} && cargo +{RUST} xwin build --profile {profile} -p hmail-cleaner --target {TARGET} --locked {flags}");
     let build_environment = settings
         .build_version
         .as_ref()
@@ -143,7 +144,7 @@ pub(super) fn build(settings: &Settings) -> io::Result<PathBuf> {
     run(docker(settings)
         .arg("cp")
         .arg(format!(
-            "{}:/cache/target/{TARGET}/release/hmail-cleaner.exe",
+            "{}:/cache/target/{TARGET}/{profile}/hmail-cleaner.exe",
             container.id
         ))
         .arg(&output))?;

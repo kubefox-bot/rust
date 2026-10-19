@@ -28,7 +28,8 @@ fn build() -> io::Result<()> {
         run(Command::new("cargo")
             .args([
                 "build",
-                "--release",
+                "--profile",
+                settings.component.profile(),
                 "-p",
                 "hmail-cleaner",
                 "--target",
@@ -46,7 +47,8 @@ fn build() -> io::Result<()> {
             .env("RUSTFLAGS", "-C target-feature=+crt-static"))?;
         root.join("target")
             .join(TARGET)
-            .join("release/hmail-cleaner.exe")
+            .join(settings.component.profile())
+            .join("hmail-cleaner.exe")
     } else {
         println!("Сборка Windows EXE через cargo-xwin 0.23.1; первый запуск загружает Rust и Windows SDK.");
         container::build(&settings)?

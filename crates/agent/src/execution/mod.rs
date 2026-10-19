@@ -4,6 +4,7 @@ mod native;
 mod observer;
 mod persist;
 mod preview_files;
+mod progress;
 mod run;
 mod types;
 mod worker;

@@ -22,6 +22,12 @@ HMAIL_BUILD_DOCKER_CONTEXT=colima mise run build:agent
 - `manifest.json`: product, build, target, protocol_min/max и sha256.
 
 Bun нужен при сборке manifest. Работающий агент использует один Rust EXE.
+Сборка агента использует профиль `agent-release`: Thin LTO, один codegen unit
+и удаление символов из EXE. Поведение обработки panic сохраняется; сборки CLI
+и центра используют прежний профиль `release`.
+Агент запускает один Tokio runtime с двумя рабочими потоками; SCM worker
+использует тот же runtime. Дополнительные потоки для блокирующего I/O
+создаются по необходимости.
 Команда `mise run build:exe` сохраняет отдельный ручной CLI в корне проекта.
 Пакет агента публикуется целиком после успешной сборки EXE и manifest;
 сбой подготовки нового manifest сохраняет предыдущий пакет.

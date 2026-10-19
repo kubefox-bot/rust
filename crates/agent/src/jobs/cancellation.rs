@@ -54,6 +54,9 @@ impl JobRepository {
                 snapshot
             }
         };
+        if !snapshot.phase.is_active() {
+            super::retention::prune(&mut transaction).await?;
+        }
         transaction.commit().await?;
         Ok(snapshot)
     }

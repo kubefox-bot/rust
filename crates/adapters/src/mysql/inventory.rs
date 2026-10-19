@@ -1,33 +1,33 @@
-use super::{registry::Registry, RepositoryError, MAX_BATCH_SIZE};
+mod index;
+use super::{registry::Registry, RepositoryError};
 use hmail_cleaner_core::{
-    cleanup::{Candidate, MessageStorage, PortResult},
+    cleanup::{Cancellation, Candidate, MessageStorage, PortResult},
     maintenance::StoredMessage,
     paths::resolve_path,
 };
+pub(super) use index::Index;
 use sqlx::{MySqlConnection, Row};
 use std::path::Path;
+const READ_BATCH_SIZE: u32 = hmail_cleaner_core::cleanup::DEFAULT_BATCH_SIZE;
 pub(super) async fn load(
     connection: &mut MySqlConnection,
     registry: &Registry,
     root: &Path,
     upper: i64,
-    limit: usize,
-) -> PortResult<Vec<StoredMessage>> {
-    if limit == 0 || limit > hmail_cleaner_core::maintenance::MAX_REFERENCES {
-        return Err("Некорректный лимит карты БД".into());
-    }
-    let mut result = Vec::new();
+    cancel: &Cancellation,
+) -> PortResult<Index> {
+    let mut index = Index::create().await?;
     let mut cursor = 0;
     loop {
+        cancel.check()?;
         let rows = sqlx::query("SELECT messageid,messageaccountid,messagefolderid,messagefilename,messagecreatetime,messagetype FROM hm_messages FORCE INDEX(PRIMARY) WHERE messageid>? AND messageid<=? ORDER BY messageid LIMIT ?")
-            .bind(cursor).bind(upper).bind(MAX_BATCH_SIZE as u32).fetch_all(&mut *connection).await?;
+            .bind(cursor).bind(upper).bind(READ_BATCH_SIZE).fetch_all(&mut *connection).await?;
+        cancel.check()?;
         if rows.is_empty() {
-            return Ok(result);
+            return Ok(index);
         }
+        let mut batch = Vec::with_capacity(rows.len());
         for row in rows {
-            if result.len() >= limit {
-                return Err("Карта БД превышает лимит; очистка не начата".into());
-            }
             let id: i64 = row.try_get("messageid")?;
             if id <= cursor || id > upper {
                 return Err("Некорректный курсор карты БД".into());
@@ -65,11 +65,12 @@ pub(super) async fn load(
                     reason: error.to_string(),
                 }
             })?;
-            result.push(StoredMessage {
+            batch.push(StoredMessage {
                 candidate,
                 message_type,
                 path,
             });
         }
+        index.insert(&batch).await?;
     }
 }

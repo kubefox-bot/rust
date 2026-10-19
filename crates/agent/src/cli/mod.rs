@@ -116,11 +116,12 @@ fn host(
     build_version: &'static str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // The existing SCM host owns STOP and waits until the async worker restores mail.
+    let runtime = tokio::runtime::Handle::current();
     hmail_cleaner_adapters::service::host(
         service::SERVICE_NAME,
         Box::new(move |stop| {
             let config = AgentConfig::load(&path, build_version)?;
-            tokio::runtime::Runtime::new()?
+            runtime
                 .block_on(crate::run(config, stop))
                 .map_err(Into::into)
         }),
