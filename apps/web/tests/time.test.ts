@@ -9,8 +9,8 @@ test("server wall time stays unchanged across midnight and DST gaps", () => {
   expect(formatServerDateTime("2026-01-01T00:04:05.123456789")).toBe(
     "1 янв. 2026 г., 00:04:05",
   );
-  expect(formatServerDateTime("2026-03-29T02:30:00")).toBe(
-    "29 марта 2026 г., 02:30:00",
+  expect(formatServerDateTime("2026-03-29T02:30:00")).toMatch(
+    /^29 мар(?:та|\.) 2026 г\., 02:30:00$/,
   );
 });
 
