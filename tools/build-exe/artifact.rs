@@ -9,6 +9,8 @@ fn hash(path: &Path) -> io::Result<String> {
                 "(Get-FileHash -Algorithm SHA256 -LiteralPath $env:HMAIL_HASH_INPUT).Hash",
             ])
             .env("HMAIL_HASH_INPUT", path)
+            // A Rust child of PowerShell 7 inherits PS7 module paths, unlike a direct PS5 child.
+            .env_remove("PSModulePath")
             .output()?
     } else {
         Command::new("shasum")
@@ -127,6 +129,26 @@ mod tests {
         assert_eq!(
             hash(&source).unwrap(),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+    #[cfg(windows)]
+    #[test]
+    fn windows_hash_reconstructs_builtin_module_paths() {
+        let dir = Directory::new();
+        let output = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "artifact::tests::hashes_literal_unicode_paths_with_shell_metacharacters",
+            ])
+            .env("PSModulePath", &dir.0)
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            output.status.success() && stdout.contains("test result: ok. 1 passed; 0 failed"),
+            "{}\n{}",
+            stdout,
+            String::from_utf8_lossy(&output.stderr)
         );
     }
     #[test]
