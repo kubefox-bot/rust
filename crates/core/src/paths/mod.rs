@@ -67,6 +67,11 @@ pub fn resolve_path(root: &Path, candidate: &Candidate) -> Result<PathBuf, PathE
     Ok(resolved)
 }
 
+/// hMailServer paths are case-insensitive, including legacy absolute filenames.
+pub fn path_key(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/").to_lowercase()
+}
+
 pub fn message_guid(filename: &str) -> Result<Uuid, PathError> {
     let basename = filename
         .rsplit(['/', '\\'])

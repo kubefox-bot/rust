@@ -1,8 +1,8 @@
 use chrono::NaiveDateTime;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{num::NonZeroU32, path::PathBuf};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Candidate {
     pub id: i64,
     pub account_id: i32,
@@ -12,7 +12,7 @@ pub struct Candidate {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MessageStorage {
     Queue,
     Account { address: String },

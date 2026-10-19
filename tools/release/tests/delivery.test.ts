@@ -312,6 +312,12 @@ test("the Docker and Podman build context includes source while excluding creden
       "apps/web/tsconfig.json",
       "apps/web/astro.config.mjs",
       "apps/web/src/component.svelte",
+      "tools/web/compression/index.ts",
+      "tools/web/compression/compress.ts",
+      "tools/web/compression/conts.ts",
+      "tools/web/compression/.env",
+      "tools/web/compression/build.log",
+      "tools/private.ts",
       "deploy/Containerfile",
       ".containerignore",
       ".env",
@@ -356,12 +362,19 @@ test("the Docker and Podman build context includes source while excluding creden
     expect(
       await Bun.file(join(context, "crates/example/src/lib.rs")).text(),
     ).toBe("source");
+    for (const name of ["index.ts", "compress.ts", "conts.ts"])
+      expect(
+        await Bun.file(join(context, "tools/web/compression", name)).exists(),
+      ).toBe(true);
     for (const name of [
       ".env",
       ".git/private",
       ".superpowers/private",
       "apps/web/src/private.env",
       "crates/example/src/.env.production",
+      "tools/web/compression/.env",
+      "tools/web/compression/build.log",
+      "tools/private.ts",
     ])
       expect(await Bun.file(join(context, name)).exists()).toBe(false);
     expect(await Bun.file(join(context, ".dockerignore")).text()).toBe(

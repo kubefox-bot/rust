@@ -9,6 +9,12 @@ pub(super) enum Component {
     Agent,
 }
 impl Component {
+    pub fn profile(self) -> &'static str {
+        match self {
+            Self::Cli => "release",
+            Self::Agent => "agent-release",
+        }
+    }
     pub fn arguments(self) -> &'static [&'static str] {
         match self {
             Self::Cli => &[],

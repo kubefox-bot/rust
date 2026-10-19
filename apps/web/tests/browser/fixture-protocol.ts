@@ -1,3 +1,9 @@
+import {
+  servers as serversSchema,
+  server_id as serverIdSchema,
+  phase as phaseSchema,
+  counter as counterSchema,
+} from "../../src/api/contracts";
 import { decode } from "../../src/api";
 import type {
   AgentStats,
@@ -24,7 +30,7 @@ export const readyMessage = (value: unknown): FixtureReady => {
     !origin.port
   )
     throw new Error("Fixture must use local HTTPS");
-  const servers = decode("servers", value.servers);
+  const servers = decode(serversSchema, value.servers);
   const [first, second] = servers;
   if (servers.length !== 2 || !first || !second)
     throw new Error("Fixture must contain two servers");
@@ -42,7 +48,7 @@ export const statsMessage = (value: unknown): ReadonlyArray<AgentStats> => {
     )
       throw new Error("Invalid agent stats");
     return {
-      id: decode("server_id", item.id),
+      id: decode(serverIdSchema, item.id),
       puts: item.puts,
       cancels: item.cancels,
       subscriptions: item.subscriptions,
@@ -66,8 +72,8 @@ export const receiptMessage = (
   )
     throw new Error("Invalid fixture lookup observation");
   return {
-    phase: decode("phase", value.receipt.phase),
-    revision: decode("counter", value.receipt.revision),
+    phase: decode(phaseSchema, value.receipt.phase),
+    revision: decode(counterSchema, value.receipt.revision),
     lookupHidden: value.receipt.lookup_hidden,
     lookups: value.receipt.lookups,
   };

@@ -145,4 +145,5 @@ export const CONTAINER_INPUTS = [
   "apps/web/astro.config.mjs",
   "apps/web/src",
   "deploy/Containerfile",
+  "tools/web/compression",
 ] as const;

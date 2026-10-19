@@ -11,16 +11,24 @@ fn contained(root: &Path, path: &Path) -> bool {
                 .all(|part| matches!(part, Component::Normal(_)))
         })
 }
-pub(super) fn inventory(rows: &[StoredMessage], root: &Path) -> PortResult<()> {
-    let unique = rows
+pub(super) fn groups(groups: &[StoredGroup], root: &Path, limit: usize) -> PortResult<()> {
+    let unique = groups
         .iter()
-        .map(|row| row.candidate.id)
+        .map(|group| group.row.candidate.id)
         .collect::<HashSet<_>>();
-    if rows.len() > MAX_REFERENCES
-        || unique.len() != rows.len()
-        || rows
-            .iter()
-            .any(|row| row.candidate.id <= 0 || row.path == root || !contained(root, &row.path))
+    let paths = groups
+        .iter()
+        .map(|group| path_key(&group.row.path))
+        .collect::<HashSet<_>>();
+    if groups.len() > limit
+        || unique.len() != groups.len()
+        || paths.len() != groups.len()
+        || groups.iter().any(|group| {
+            group.references == 0
+                || group.row.candidate.id <= 0
+                || group.row.path == root
+                || !contained(root, &group.row.path)
+        })
     {
         return Err("Некорректная карта путей БД; очистка не начата".into());
     }

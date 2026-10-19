@@ -77,6 +77,8 @@ fn cache(mut response: Response, value: &'static str) -> Response {
 }
 async fn asset(root: StaticDir, name: String, request: Request) -> Response {
     if name.len() > MAX_ASSET_PATH_BYTES
+        || name.ends_with(".br")
+        || name.ends_with(".gz")
         || name.split('/').any(|part| {
             part.is_empty()
                 || part.starts_with('.')
@@ -98,10 +100,38 @@ async fn asset(root: StaticDir, name: String, request: Request) -> Response {
         }
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
-    match ServeFile::new(canonical).oneshot(request).await {
-        Ok(response) => cache(response.into_response(), ASSET_CACHE),
+    let service = ServeFile::new(&canonical);
+    let service = if has_safe_sidecar(&asset_root, &canonical, ".br") {
+        service.precompressed_br()
+    } else {
+        service
+    };
+    let service = if has_safe_sidecar(&asset_root, &canonical, ".gz") {
+        service.precompressed_gzip()
+    } else {
+        service
+    };
+    match service.oneshot(request).await {
+        Ok(response) => {
+            let mut response = response.into_response();
+            response
+                .headers_mut()
+                .insert(header::VARY, HeaderValue::from_static("accept-encoding"));
+            if response.status().is_success() || response.status() == StatusCode::NOT_MODIFIED {
+                cache(response, ASSET_CACHE)
+            } else {
+                response
+            }
+        }
         Err(error) => match error {},
     }
+}
+fn has_safe_sidecar(root: &FilePath, path: &FilePath, suffix: &str) -> bool {
+    let mut sidecar = path.as_os_str().to_os_string();
+    sidecar.push(suffix);
+    FilePath::new(&sidecar)
+        .canonicalize()
+        .is_ok_and(|path| path.starts_with(root) && path.is_file())
 }
 pub fn routes<S: Clone + Send + Sync + 'static>(directory: StaticDir) -> Router<S> {
     let mut router = Router::new();

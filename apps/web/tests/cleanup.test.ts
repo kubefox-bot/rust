@@ -249,20 +249,27 @@ test("authoritative context cannot adopt a latest job belonging to another serve
   expect(next.confirmation).toEqual(confirmed.confirmation);
 });
 
-test("context loading keeps the newest request when responses finish out of order", async () => {
+test("context loading aborts superseded scopes and ignores out of order responses", async () => {
   const { createContextLoader } =
     await import("../src/features/cleanup/context-loader");
   const first = Promise.withResolvers<typeof context>();
   const second = Promise.withResolvers<typeof context>();
   const responses = [first.promise, second.promise][Symbol.iterator]();
-  const loader = createContextLoader(async () => {
+  const requestedSignals: AbortSignal[] = [];
+  const loader = createContextLoader(async (_serverId, signal) => {
+    requestedSignals.push(signal);
     const next = responses.next();
     if (next.done) throw new Error("Unexpected context request");
     return next.value;
   });
   const signal = new AbortController().signal;
   const older = loader.load({ serverId: context.server.id, signal });
-  const newer = loader.load({ serverId: context.server.id, signal });
+  const newer = loader.load({
+    serverId: context.server.id,
+    signal: new AbortController().signal,
+  });
+  expect(requestedSignals[0]?.aborted).toBe(true);
+  expect(signal.aborted).toBe(false);
   second.resolve(context);
   const accepted = await newer;
   expect(accepted?.context).toBe(context);
@@ -300,12 +307,86 @@ test("a failed newest context request cannot resurrect an older success", async 
   });
   const signal = new AbortController().signal;
   const older = loader.load({ serverId: context.server.id, signal });
-  const newer = loader.load({ serverId: context.server.id, signal });
+  const newer = loader.load({
+    serverId: context.server.id,
+    signal: new AbortController().signal,
+  });
   second.reject(new Error("Current context unavailable"));
   const failure = await newer.catch((cause: unknown) => cause);
   expect(failure).toEqual(new Error("Current context unavailable"));
   first.resolve(context);
   expect(await older).toBeNull();
+});
+
+test("same-server context requests share only pending work in the same scope", async () => {
+  const { createContextLoader } =
+    await import("../src/features/cleanup/context-loader");
+  const result = Promise.withResolvers<typeof context>();
+  let requests = 0;
+  const loader = createContextLoader(async () => {
+    requests++;
+    return result.promise;
+  });
+  const options = {
+    serverId: context.server.id,
+    signal: new AbortController().signal,
+  };
+  const first = loader.load(options);
+  const second = loader.load(options);
+  expect(requests).toBe(1);
+  result.resolve(context);
+  const [firstResult, secondResult] = await Promise.all([first, second]);
+  expect(firstResult?.context).toBe(context);
+  expect(secondResult?.current()).toBe(true);
+  await loader.load(options);
+  expect(requests).toBe(2);
+});
+
+test("context invalidation aborts pending work and forces the preview preflight to reload", async () => {
+  const { createContextLoader } =
+    await import("../src/features/cleanup/context-loader");
+  const requests: {
+    signal: AbortSignal;
+    result: ReturnType<typeof Promise.withResolvers<typeof context>>;
+  }[] = [];
+  const loader = createContextLoader(async (_serverId, signal) => {
+    const result = Promise.withResolvers<typeof context>();
+    requests.push({ signal, result });
+    return result.promise;
+  });
+  const options = {
+    serverId: context.server.id,
+    signal: new AbortController().signal,
+  };
+  const stale = loader.load(options);
+  loader.invalidate();
+  expect(requests[0]?.signal.aborted).toBe(true);
+  const fresh = loader.load(options);
+  expect(requests).toHaveLength(2);
+  requests[1]?.result.resolve(context);
+  expect((await fresh)?.current()).toBe(true);
+  requests[0]?.result.resolve(context);
+  expect(await stale).toBeNull();
+});
+
+test("a synchronous context failure remains retryable in the same scope", async () => {
+  const { createContextLoader } =
+    await import("../src/features/cleanup/context-loader");
+  let attempts = 0;
+  const loader = createContextLoader(() => {
+    attempts++;
+    if (attempts === 1) throw new Error("Context unavailable");
+    return Promise.resolve(context);
+  });
+  const options = {
+    serverId: context.server.id,
+    signal: new AbortController().signal,
+  };
+  expect(await loader.load(options).catch((error: unknown) => error)).toEqual(
+    new Error("Context unavailable"),
+  );
+  expect((await loader.load(options))?.context).toBe(context);
+  expect(attempts).toBe(2);
 });
 
 test("superseded context errors and aborted scopes cannot affect the selected view", async () => {

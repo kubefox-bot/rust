@@ -17,15 +17,7 @@ pub(super) fn at<T>(
     })
 }
 pub(super) fn cancelled(cancel: &Cancellation, summary: Summary) -> Result<(), CleanupError> {
-    at(
-        if cancel.is_requested() {
-            Err("Операция отменена после завершения текущего пакета".into())
-        } else {
-            Ok(())
-        },
-        Stage::Cancelled,
-        summary,
-    )
+    at(cancel.check(), Stage::Cancelled, summary)
 }
 pub(super) fn emit(stage: Stage, summary: Summary, progress: &(impl Fn(Progress) + Send + Sync)) {
     progress(Progress {

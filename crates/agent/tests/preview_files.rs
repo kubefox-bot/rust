@@ -4,6 +4,84 @@ use hmail_cleaner_protocol::{
 };
 
 #[tokio::test]
+async fn catalog_batch_commits_one_revision_with_all_rows_and_preserves_duplicates() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("jobs.sqlite");
+    let repo = JobRepository::open(&path).await.unwrap();
+    let command: JobCommand =
+        serde_json::from_str(include_str!("../../protocol/tests/fixtures/job-v1.json")).unwrap();
+    let job = validate_job(command).unwrap();
+    let id = job.command().job_id;
+    repo.accept(&job, repo.fingerprint(&job)).await.unwrap();
+    let rows = (0..1000)
+        .map(|index| PreviewFile {
+            id: index.to_string(),
+            path: format!("D:/Mail/{index:04}.eml"),
+            size_bytes: 7.into(),
+            created_at: chrono::DateTime::UNIX_EPOCH,
+            orphan: false,
+        })
+        .collect::<Vec<_>>();
+    repo.append_preview_files(id, &rows).await.unwrap();
+    repo.close().await;
+    let repo = JobRepository::open(&path).await.unwrap();
+    let first = repo
+        .preview_files(id, &PreviewFilesQuery::default())
+        .await
+        .unwrap();
+    assert_eq!(first.total.get(), 1000);
+    assert_eq!(first.revision.get(), 2);
+    let duplicate = PreviewFile {
+        size_bytes: 99.into(),
+        ..rows[0].clone()
+    };
+    repo.append_preview_files(id, &[duplicate]).await.unwrap();
+    let page = repo
+        .preview_files(id, &PreviewFilesQuery::default())
+        .await
+        .unwrap();
+    assert_eq!(page.total.get(), 1000);
+    assert_eq!(page.revision.get(), 3);
+    assert_eq!(page.rows[0].size_bytes.get(), 7);
+    repo.close().await;
+}
+
+#[tokio::test]
+async fn failed_catalog_revision_rolls_back_every_insert_chunk() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("jobs.sqlite");
+    let repo = JobRepository::open(&path).await.unwrap();
+    let command: JobCommand =
+        serde_json::from_str(include_str!("../../protocol/tests/fixtures/job-v1.json")).unwrap();
+    let job = validate_job(command).unwrap();
+    let id = job.command().job_id;
+    repo.accept(&job, repo.fingerprint(&job)).await.unwrap();
+    let database = sqlx::SqlitePool::connect(&format!("sqlite://{}", path.display()))
+        .await
+        .unwrap();
+    sqlx::query("CREATE TRIGGER refuse_snapshot BEFORE UPDATE ON jobs BEGIN SELECT RAISE(ABORT, 'fixture write failure'); END")
+        .execute(&database).await.unwrap();
+    let rows = (0..1000)
+        .map(|index| PreviewFile {
+            id: index.to_string(),
+            path: format!("D:/Mail/{index}.eml"),
+            size_bytes: 7.into(),
+            created_at: chrono::DateTime::UNIX_EPOCH,
+            orphan: false,
+        })
+        .collect::<Vec<_>>();
+    assert!(repo.append_preview_files(id, &rows).await.is_err());
+    let page = repo
+        .preview_files(id, &PreviewFilesQuery::default())
+        .await
+        .unwrap();
+    assert_eq!(page.total.get(), 0);
+    assert_eq!(page.revision.get(), 1);
+    database.close().await;
+    repo.close().await;
+}
+
+#[tokio::test]
 async fn catalog_is_persistent_bounded_sorted_and_literal_searchable() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("jobs.sqlite");

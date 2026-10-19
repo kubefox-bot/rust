@@ -78,6 +78,141 @@ test("continuous invalidations refresh within one batch window", async () => {
   expect(events).toEqual(["refresh"]);
 });
 
+test("the initial file revision does not schedule a duplicate page request", async () => {
+  const { createRefreshScheduler } =
+    await import("../src/features/cleanup/files/refresh");
+  let requests = 0;
+  const scheduler = createRefreshScheduler({
+    refresh: async () => {
+      requests++;
+    },
+    onerror: (cause) => {
+      throw cause;
+    },
+    delayMs: 10,
+  });
+  scheduler.restart();
+  scheduler.observe({
+    revision: "1",
+    refreshVersion: 0,
+    terminal: false,
+    visible: true,
+  });
+  await Bun.sleep(25);
+  expect(requests).toBe(1);
+  scheduler.observe({
+    revision: "2",
+    refreshVersion: 0,
+    terminal: false,
+    visible: true,
+  });
+  await Bun.sleep(15);
+  expect(requests).toBe(2);
+  scheduler.cancel();
+});
+
+test("a terminal revision queues an immediate follow-up without aborting the visible page", async () => {
+  const { createRefreshScheduler } =
+    await import("../src/features/cleanup/files/refresh");
+  const requests: {
+    signal: AbortSignal;
+    result: ReturnType<typeof Promise.withResolvers<string>>;
+  }[] = [];
+  const visible: string[] = [];
+  const loader = createPageLoader(async (signal) => {
+    const result = Promise.withResolvers<string>();
+    requests.push({ signal, result });
+    return result.promise;
+  });
+  const scheduler = createRefreshScheduler({
+    refresh: async () => {
+      const loaded = await loader.load();
+      if (loaded?.current()) visible.push(loaded.page);
+    },
+    onerror: (cause) => {
+      throw cause;
+    },
+    delayMs: 100,
+  });
+  scheduler.restart();
+  scheduler.observe({
+    revision: "1",
+    refreshVersion: 0,
+    terminal: false,
+    visible: true,
+  });
+  scheduler.observe({
+    revision: "2",
+    refreshVersion: 0,
+    terminal: false,
+    visible: true,
+  });
+  scheduler.observe({
+    revision: "3",
+    refreshVersion: 0,
+    terminal: true,
+    visible: true,
+  });
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.signal.aborted).toBe(false);
+  requests[0]?.result.resolve("scanning page");
+  await Bun.sleep(0);
+  expect(visible).toEqual(["scanning page"]);
+  expect(requests).toHaveLength(2);
+  requests[1]?.result.resolve("complete page");
+  await Bun.sleep(0);
+  expect(visible).toEqual(["scanning page", "complete page"]);
+  scheduler.cancel();
+  loader.cancel();
+});
+
+test("hidden file revisions remain idle and visible restart performs one current refresh", async () => {
+  const { createRefreshScheduler } =
+    await import("../src/features/cleanup/files/refresh");
+  let requests = 0;
+  const scheduler = createRefreshScheduler({
+    refresh: async () => {
+      requests++;
+    },
+    onerror: (cause) => {
+      throw cause;
+    },
+    delayMs: 10,
+  });
+  scheduler.restart();
+  scheduler.observe({
+    revision: "1",
+    refreshVersion: 0,
+    terminal: false,
+    visible: true,
+  });
+  scheduler.cancel();
+  scheduler.observe({
+    revision: "2",
+    refreshVersion: 1,
+    terminal: false,
+    visible: false,
+  });
+  scheduler.observe({
+    revision: "3",
+    refreshVersion: 1,
+    terminal: true,
+    visible: false,
+  });
+  await Bun.sleep(25);
+  expect(requests).toBe(1);
+  scheduler.restart();
+  scheduler.observe({
+    revision: "3",
+    refreshVersion: 1,
+    terminal: true,
+    visible: true,
+  });
+  await Bun.sleep(25);
+  expect(requests).toBe(2);
+  scheduler.cancel();
+});
+
 test("slow pages become visible during continuous invalidations with one follow-up", async () => {
   const { createRefreshScheduler } =
     await import("../src/features/cleanup/files/refresh");

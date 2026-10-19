@@ -1,10 +1,10 @@
 import type { BrowserContracts } from "./generated/browser.types";
-export type ContractName = keyof BrowserContracts;
-export type RequestOptions<Name extends ContractName> = Readonly<{
+import type { ValidateFunction } from "ajv";
+export type RequestOptions<Value> = Readonly<{
   path: string;
   method?: "GET" | "POST" | "PATCH" | "PUT";
   body?: unknown;
-  responseSchema: Name;
+  responseSchema: ValidateFunction<Value>;
   signal?: AbortSignal;
 }>;
 export type Subscription = Readonly<{

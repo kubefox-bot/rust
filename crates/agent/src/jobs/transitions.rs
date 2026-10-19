@@ -23,6 +23,9 @@ impl JobRepository {
         snapshot.error = update.error;
         self.bump(&mut snapshot)?;
         self.save(&mut transaction, &snapshot).await?;
+        if !snapshot.phase.is_active() {
+            super::retention::prune(&mut transaction).await?;
+        }
         transaction.commit().await?;
         Ok(snapshot)
     }

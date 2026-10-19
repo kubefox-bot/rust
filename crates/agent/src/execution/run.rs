@@ -7,13 +7,9 @@ use crate::jobs::JobUpdate;
 use hmail_cleaner_core::cleanup::Cancellation;
 use hmail_cleaner_protocol::{JobPhase, ObservedMailState, SummaryDto, ValidatedJob};
 use hmail_cleaner_runner::RunObserver;
-use std::{
-    sync::{atomic::AtomicBool, Arc},
-    time::Duration,
-};
+use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::{mpsc, watch};
 const SERVICE_CAPACITY: usize = 8;
-const PERSIST_INTERVAL: Duration = Duration::from_secs(5);
 impl<E: Executor> Worker<E> {
     pub(super) async fn run(&self, job: ValidatedJob, cancel: Arc<Cancellation>) {
         let id = job.command().job_id;
@@ -61,8 +57,8 @@ impl<E: Executor> Worker<E> {
             Err(error) => return Err(error.into()),
         };
         let _ = self.0.events.send(claimed);
-        let (progress, mut latest) = watch::channel(None);
-        let (service, mut service_events) = mpsc::channel(SERVICE_CAPACITY);
+        let (progress, latest) = watch::channel(None);
+        let (service, service_events) = mpsc::channel(SERVICE_CAPACITY);
         diagnostics::record(self.0.journal.as_ref(), Event::JobStarted { job_id: id });
         let observer = Observer {
             repository: self.0.repository.clone(),
@@ -75,37 +71,21 @@ impl<E: Executor> Worker<E> {
             failed: Arc::new(AtomicBool::new(false)),
             cancel: cancel.clone(),
         };
-        let execution = self.0.executor.execute(job, &observer, &cancel);
-        tokio::pin!(execution);
-        let mut interval = tokio::time::interval(PERSIST_INTERVAL);
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        let mut storage_failed = false;
-        let result = loop {
-            tokio::select! {
-                result = &mut execution => break result,
-                state = service_events.recv() => {
-                    if let Some(state) = state {
-                        let progress = *latest.borrow_and_update();
-                        if self.observe(id, progress, Some(state)).await.is_err() { storage_failed = true; cancel.request(); }
-                    }
-                }
-                _ = interval.tick(), if !storage_failed => {
-                    if latest.has_changed().unwrap_or(false) {
-                        let progress = *latest.borrow_and_update();
-                        if self.observe(id, progress, None).await.is_err() { storage_failed = true; cancel.request(); }
-                    }
-                }
-            }
+        let execution = async {
+            let result = self.0.executor.execute(job, &observer, &cancel).await;
+            let output_failed = observer.failed();
+            // Closing the sender lets persistence drain every service observation before finish.
+            drop(observer);
+            (result, output_failed)
         };
-        while let Ok(state) = service_events.try_recv() {
-            let progress = *latest.borrow_and_update();
-            if self.observe(id, progress, Some(state)).await.is_err() {
-                storage_failed = true;
-            }
-        }
-        let fatal = result.is_fatal() || observer.failed() || storage_failed;
+        // Both futures keep advancing while either waits for the single SQLite writer.
+        let ((result, output_failed), storage_failed) = tokio::join!(
+            execution,
+            self.persist_progress(id, &cancel, latest, service_events),
+        );
+        let fatal = result.is_fatal() || output_failed || storage_failed;
         self.finish(id, result.into_report(), fatal).await?;
-        if storage_failed || observer.failed() {
+        if storage_failed || output_failed {
             return Err(AgentError::Unavailable);
         }
         Ok(())

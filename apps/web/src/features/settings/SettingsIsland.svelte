@@ -9,12 +9,9 @@
   import { selectedServer, selectServer } from "../../shell/navigation";
   import ServerHeader from "../../shell/ServerHeader.svelte";
   import { SECTIONS } from "./conts";
+  import { availablePackages, createPackageCatalog } from "../../agents";
   import type { SettingsSection } from "./types";
   import * as api from "./api";
-  import Profile from "./Profile.svelte";
-  import Agents from "./Agents.svelte";
-  import Account from "./Account.svelte";
-  import Updates from "./updates/Updates.svelte";
   let status = $state<"loading" | "authenticated" | "anonymous" | "failed">(
     "loading",
   );
@@ -24,6 +21,7 @@
   let context = $state<BrowserContracts["cleanup_context"] | null>(null);
   let section = $state<SettingsSection>("profile");
   let error = $state("");
+  let packages = $state<ReturnType<typeof createPackageCatalog> | null>(null);
   let generation: string | null = null;
   let scope = new AbortController();
   let targetScope = new AbortController();
@@ -38,24 +36,22 @@
       });
   };
   const refresh = async () => {
-    if (!selected || status !== "authenticated") return;
+    if (!selected || status !== "authenticated" || section !== "agents") return;
     const id = selected;
     const current = generation;
     const signal = targetScope.signal;
     const value = await api.context(id, signal);
     if (!signal.aborted && selected === id && current === generation)
       context = value;
-    await footer?.refresh();
   };
   const choose = async (id: string) => {
-    if (selected === id && context) return;
+    if (selected === id) return;
     targetScope.abort();
     targetScope = new AbortController();
     selected = id;
     context = null;
     error = "";
     selectServer({ id, servers: available });
-    await refresh();
   };
   const navigate = (value: SettingsSection) => {
     section = value;
@@ -85,8 +81,12 @@
     if (target) await choose(target.id);
   };
   const refreshAll = () => {
-    reload().catch(fail);
+    Promise.all([reload(), footer?.refresh()]).catch(fail);
   };
+  $effect(() => {
+    if (section === "agents" && selected && status === "authenticated")
+      refresh().catch(fail);
+  });
   onMount(() => {
     readHash();
     const clear = () => {
@@ -97,6 +97,7 @@
       selected = "";
       context = null;
       agents = null;
+      packages = null;
       footer?.dispose();
       footer = undefined;
       status = "anonymous";
@@ -106,11 +107,14 @@
         scope = new AbortController();
         targetScope = new AbortController();
         generation = current;
+        const signal = scope.signal;
+        const catalog = createPackageCatalog(() => availablePackages(signal));
+        packages = catalog;
         status = "authenticated";
         error = "";
         footer = mountFooter((values) => {
           agents = values;
-        });
+        }, catalog.read);
         await reload();
       },
       onAnonymous: clear,
@@ -167,26 +171,45 @@
         >{/each}
     </nav>
     {#if error}<div class="error" role="alert">{error}</div>{/if}
-    {#if section === "account"}<Account
-        oncommitted={() => {
-          forgetHeaderProfile();
-          window.location.replace("/login/");
-        }}
-      />
-    {:else if section === "updates"}<Updates />
-    {:else if section === "agents"}{#key selected}<Agents
-          servers={available}
-          {selected}
-          {agents}
-          configured={context?.configured}
-          onrefresh={refreshAll}
-        />{/key}
-    {:else if selected}{#key selected}<Profile
-          serverId={selected}
-          name={available.find((server) => server.id === selected)?.name ??
-            "Сервер"}
-          onrefresh={refreshAll}
-        />{/key}
+    {#if section === "account"}{#await import("./Account.svelte")}
+        <p role="status">Загрузка учётной записи…</p>
+      {:then { default: Account }}<Account
+          oncommitted={() => {
+            forgetHeaderProfile();
+            window.location.replace("/login/");
+          }}
+        />
+      {:catch}<p class="error" role="alert">
+          Не удалось загрузить раздел. Обновите страницу.
+        </p>{/await}
+    {:else if section === "updates"}{#await import("./updates/Updates.svelte")}
+        <p role="status">Загрузка настроек обновлений…</p>
+      {:then { default: Updates }}<Updates />
+      {:catch}<p class="error" role="alert">
+          Не удалось загрузить раздел. Обновите страницу.
+        </p>{/await}
+    {:else if section === "agents" && packages}{#key selected}{#await import("./Agents.svelte")}
+          <p role="status">Загрузка агентов…</p>
+        {:then { default: Agents }}<Agents
+            servers={available}
+            {selected}
+            {agents}
+            configured={context?.configured}
+            onrefresh={refreshAll}
+            readPackages={packages.read}
+          />{:catch}<p class="error" role="alert">
+            Не удалось загрузить раздел. Обновите страницу.
+          </p>{/await}{/key}
+    {:else if selected}{#key selected}{#await import("./Profile.svelte")}
+          <p role="status">Загрузка профиля…</p>
+        {:then { default: Profile }}<Profile
+            serverId={selected}
+            name={available.find((server) => server.id === selected)?.name ??
+              "Сервер"}
+            onrefresh={refreshAll}
+          />{:catch}<p class="error" role="alert">
+            Не удалось загрузить раздел. Обновите страницу.
+          </p>{/await}{/key}
     {:else}<section class="card empty">
         Добавьте первый почтовый сервер.
       </section>{/if}

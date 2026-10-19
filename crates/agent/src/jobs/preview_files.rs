@@ -1,10 +1,13 @@
 use super::{JobRepository, JobStoreError};
 use chrono::{DateTime, SecondsFormat, Utc};
 use hmail_cleaner_protocol::{
-    JobId, Operation, PreviewFile, PreviewFileSort, PreviewFilesPage, PreviewFilesQuery,
-    SortDirection,
+    JobId, JobSnapshot, Operation, PreviewFile, PreviewFileSort, PreviewFilesPage,
+    PreviewFilesQuery, SortDirection,
 };
-use sqlx::Row;
+use sqlx::{QueryBuilder, Row};
+
+// Seven bindings per row; stay below even SQLite's older 999-parameter limit.
+const INSERT_ROWS: usize = 128;
 
 impl JobRepository {
     /// Owns persistence of one bounded scan batch before traversal may continue.
@@ -12,7 +15,7 @@ impl JobRepository {
         &self,
         id: JobId,
         files: &[PreviewFile],
-    ) -> Result<(), JobStoreError> {
+    ) -> Result<JobSnapshot, JobStoreError> {
         for file in files {
             file.validate().map_err(|_| JobStoreError::InvalidReceipt)?;
         }
@@ -22,7 +25,7 @@ impl JobRepository {
             .fetch_optional(&mut *transaction)
             .await?
             .ok_or(JobStoreError::NotFound)?;
-        let snapshot = self.decode(&row, id)?;
+        let mut snapshot = self.decode(&row, id)?;
         if !snapshot.phase.is_active()
             || snapshot
                 .job
@@ -32,14 +35,29 @@ impl JobRepository {
             return Err(JobStoreError::InvalidTransition);
         }
         require_capture(&mut transaction, id).await?;
-        for file in files {
-            sqlx::query("INSERT INTO preview_files(job_id,id,path,search_path,size_bytes,created_at,orphan) VALUES(?,?,?,?,?,?,?) ON CONFLICT(job_id,id) DO NOTHING")
-                .bind(id.to_string()).bind(&file.id).bind(&file.path).bind(file.path.to_lowercase())
-                .bind(file.size_bytes.get().to_string()).bind(file.created_at.to_rfc3339_opts(SecondsFormat::Nanos, true)).bind(file.orphan)
-                .execute(&mut *transaction).await?;
+        let job_id = id.to_string();
+        for chunk in files.chunks(INSERT_ROWS) {
+            let mut query = QueryBuilder::new("INSERT INTO preview_files(job_id,id,path,search_path,size_bytes,created_at,orphan) ");
+            query.push_values(chunk, |mut row, file| {
+                row.push_bind(&job_id)
+                    .push_bind(&file.id)
+                    .push_bind(&file.path)
+                    .push_bind(file.path.to_lowercase())
+                    .push_bind(file.size_bytes.get().to_string())
+                    .push_bind(file.created_at.to_rfc3339_opts(SecondsFormat::Nanos, true))
+                    .push_bind(file.orphan);
+            });
+            query.push(" ON CONFLICT(job_id,id) DO NOTHING");
+            query
+                .build()
+                .persistent(false)
+                .execute(&mut *transaction)
+                .await?;
         }
+        self.bump(&mut snapshot)?;
+        self.save(&mut transaction, &snapshot).await?;
         transaction.commit().await?;
-        Ok(())
+        Ok(snapshot)
     }
 
     pub async fn preview_files(

@@ -5,6 +5,8 @@
   import type { BrowserContracts } from "../../api";
   import { mountAuth } from "../../shell/auth";
   import { mountFooter } from "../../shell/footer";
+  import { mountVisiblePolling } from "../../shell/visibility";
+  import { TERMINAL_PHASES } from "../../jobs/display";
   import { selectedServer, selectServer } from "../../shell/navigation";
   import * as api from "./api";
   import { initialState, transition } from "./model";
@@ -124,6 +126,7 @@
             !view.job?.slot_held &&
             view.job?.job_id !== event.job.job_id;
           const advanced = observeJob(event.job);
+          if (needsLatest) contexts.invalidate();
           if (needsLatest || (advanced && !event.job.slot_held))
             refresh().catch(failure);
         }
@@ -131,6 +134,7 @@
       onResync: () => {
         if (active(id, current)) {
           filesRefreshVersion++;
+          if (!busy) contexts.invalidate();
           refresh().catch(failure);
         }
       },
@@ -314,13 +318,16 @@
         failure(cause);
       },
     });
-    const timer = window.setInterval(() => {
-      if (!busy) refresh().catch(failure);
-    }, REFRESH_INTERVAL_MS);
+    const stopPolling = mountVisiblePolling({
+      refresh: () => {
+        if (!busy) refresh().catch(failure);
+      },
+      intervalMs: REFRESH_INTERVAL_MS,
+    });
     return () => {
       clear();
       auth?.dispose();
-      clearInterval(timer);
+      stopPolling();
     };
   });
   $effect(() => {
@@ -419,6 +426,10 @@
               jobId={detailsJobId}
               revision={detailsTarget.revision}
               refreshVersion={filesRefreshVersion}
+              terminal={Boolean(
+                detailsTarget.snapshot &&
+                TERMINAL_PHASES[detailsTarget.snapshot.phase],
+              )}
               ondismiss={() => (detailsJobId = null)}
             />{/key}
         {:catch}<div role="alert" class="error">

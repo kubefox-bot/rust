@@ -7,6 +7,7 @@ mod observation;
 mod preview_files;
 mod recovery;
 mod repository;
+mod retention;
 mod snapshot;
 mod transitions;
 mod types;

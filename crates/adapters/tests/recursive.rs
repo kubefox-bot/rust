@@ -2,7 +2,7 @@ use hmail_cleaner_adapters::filesystem::LocalFiles;
 use hmail_cleaner_core::{
     cleanup::*,
     maintenance::{
-        recursive::{self, Action, TreeRepository},
+        recursive::{self, Action, StoredGroup, TreeRepository},
         *,
     },
 };
@@ -15,6 +15,7 @@ use std::{
 struct Repo {
     rows: Vec<StoredMessage>,
     fail_sql: bool,
+    seen: std::collections::HashSet<String>,
 }
 impl Repository for Repo {
     async fn snapshot(&mut self) -> PortResult<Snapshot> {
@@ -61,8 +62,33 @@ impl FullRepository for Repo {
     }
 }
 impl TreeRepository for Repo {
-    async fn stored_messages(&mut self, _: &Path, _: usize) -> PortResult<Vec<StoredMessage>> {
-        Ok(self.rows.clone())
+    async fn prepare_inventory(&mut self, _: &Path, _: &Cancellation) -> PortResult<()> {
+        self.seen.clear();
+        Ok(())
+    }
+    async fn match_files(&mut self, paths: &[PathBuf]) -> PortResult<Vec<StoredGroup>> {
+        let keys = paths
+            .iter()
+            .map(|path| hmail_cleaner_core::paths::path_key(path))
+            .collect::<std::collections::HashSet<_>>();
+        let groups = groups(&self.rows)
+            .into_iter()
+            .filter(|group| keys.contains(&hmail_cleaner_core::paths::path_key(&group.row.path)))
+            .collect();
+        self.seen.extend(keys);
+        Ok(groups)
+    }
+    async fn unmatched_batch(&mut self, cursor: i64, limit: u32) -> PortResult<Vec<StoredGroup>> {
+        Ok(groups(&self.rows)
+            .into_iter()
+            .filter(|group| {
+                group.row.candidate.id > cursor
+                    && !self
+                        .seen
+                        .contains(&hmail_cleaner_core::paths::path_key(&group.row.path))
+            })
+            .take(limit as usize)
+            .collect())
     }
     async fn delete_stored(&mut self, rows: &[StoredMessage]) -> PortResult<DeleteResult> {
         assert!(
@@ -81,6 +107,20 @@ impl TreeRepository for Repo {
             recipients: 0,
         }))
     }
+}
+fn groups(rows: &[StoredMessage]) -> Vec<StoredGroup> {
+    let mut map = std::collections::HashMap::<String, StoredGroup>::new();
+    for row in rows {
+        let key = hmail_cleaner_core::paths::path_key(&row.path);
+        let group = map.entry(key).or_insert_with(|| StoredGroup {
+            row: row.clone(),
+            references: 0,
+        });
+        group.references += 1;
+    }
+    let mut groups = map.into_values().collect::<Vec<_>>();
+    groups.sort_by_key(|group| group.row.candidate.id);
+    groups
 }
 struct Guard;
 impl OfflineGuard for Guard {
@@ -151,6 +191,7 @@ async fn fast_cleans_queue_arbitrary_depth_orphans_and_initially_empty_directori
     let mut repo = Repo {
         rows: vec![row(1, queue.clone(), fresh_database_date)],
         fail_sql: false,
+        seen: Default::default(),
     };
     let summary = run(&mut repo, &root, &options, ScanOptions::Fast, Action::Clean)
         .await
@@ -175,6 +216,7 @@ async fn preview_and_exact_creation_boundary_preserve_files_and_database() {
     let mut repo = Repo {
         rows: vec![row(1, file.clone(), options.cutoff)],
         fail_sql: false,
+        seen: Default::default(),
     };
     let summary = run(
         &mut repo,
@@ -212,6 +254,7 @@ async fn rerun_reconciles_missing_file_after_database_failure_and_keeps_fresh_mi
             row(2, root.join("missing-fresh.eml"), options.cutoff),
         ],
         fail_sql: true,
+        seen: Default::default(),
     };
     assert!(
         run(&mut repo, &root, &options, ScanOptions::Fast, Action::Clean)
@@ -241,6 +284,7 @@ async fn ambiguous_database_path_is_reported_and_preserved() {
             row(2, file.clone(), options.cutoff),
         ],
         fail_sql: false,
+        seen: Default::default(),
     };
     let summary = run(&mut repo, &root, &options, ScanOptions::Full, Action::Clean)
         .await
@@ -268,6 +312,7 @@ async fn denied_unlink_keeps_database_row() {
     let mut repo = Repo {
         rows: vec![row(1, file.clone(), options.cutoff)],
         fail_sql: false,
+        seen: Default::default(),
     };
     let denied = AtomicBool::new(false);
     let result = recursive::run(
@@ -310,6 +355,7 @@ async fn cancellation_completes_started_file_and_sql_batch_then_closes_scan() {
             row(2, files[1].clone(), options.cutoff),
         ],
         fail_sql: false,
+        seen: Default::default(),
     };
     let cancel = Cancellation::default();
     let error = recursive::run(
@@ -351,6 +397,7 @@ async fn reappeared_missing_file_blocks_database_cleanup() {
             options.cutoff - chrono::Duration::days(1),
         )],
         fail_sql: false,
+        seen: Default::default(),
     };
     let appeared = AtomicBool::new(false);
     let summary = recursive::run(
@@ -394,6 +441,7 @@ async fn fast_preview_is_read_only_with_running_mail_but_other_operations_requir
     let mut repo = Repo {
         rows: vec![],
         fail_sql: false,
+        seen: Default::default(),
     };
     let summary = recursive::run(
         Dependencies {

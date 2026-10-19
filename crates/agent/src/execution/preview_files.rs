@@ -33,14 +33,10 @@ pub(super) async fn persist(
             Ok(row)
         })
         .collect::<PortResult<Vec<_>>>()?;
-    repository
+    let snapshot = repository
         .append_preview_files(id, &rows)
         .await
         .map_err(|_| "Preview file persistence failed")?;
-    let snapshot = repository
-        .observe(id, None, None)
-        .await
-        .map_err(|_| "Preview file notification failed")?;
     let _ = events.send(snapshot);
     Ok(())
 }

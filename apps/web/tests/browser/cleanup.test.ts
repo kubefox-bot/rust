@@ -1,3 +1,10 @@
+import {
+  cleanup_context as cleanupContextSchema,
+  cutoff as cutoffSchema,
+  submit as submitSchema,
+  job as jobSchema,
+  retention as retentionSchema,
+} from "../../src/api/contracts";
 import { selectValue, selectDateTime } from "./controls";
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
@@ -11,7 +18,7 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
     await signIn(page, fixture.origin);
     const serverId = fixture.servers[0].id;
     const context = decode(
-      "cleanup_context",
+      cleanupContextSchema,
       await page.evaluate(async (id) => {
         const response = await fetch(`/api/v1/servers/${id}/cleanup-context`);
         if (!response.ok) throw new Error("Cleanup context unavailable");
@@ -20,7 +27,7 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
     );
     const exactLocal = "2026-09-18T02:55:44.049364123";
     const cutoff = decode(
-      "cutoff",
+      cutoffSchema,
       await page.evaluate(
         async ({ id, local }) => {
           const response = await fetch(`/api/v1/servers/${id}/resolve`, {
@@ -38,7 +45,7 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
       ),
     );
     expect(cutoff.local).toBe(exactLocal);
-    const intent = decode("submit", {
+    const intent = decode(submitSchema, {
       job_id: crypto.randomUUID(),
       server_id: serverId,
       profile_version: context.profile_version,
@@ -51,7 +58,7 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
       confirmed: false,
     });
     const original = decode(
-      "job",
+      jobSchema,
       await page.evaluate(async (body) => {
         const response = await fetch(`/api/v1/servers/${body.server_id}/jobs`, {
           method: "POST",
@@ -121,8 +128,10 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
-    const next = decode("job", await (await nextResponse).json());
-    expect(decode("retention", (await nextResolution).postDataJSON())).toEqual({
+    const next = decode(jobSchema, await (await nextResponse).json());
+    expect(
+      decode(retentionSchema, (await nextResolution).postDataJSON()),
+    ).toEqual({
       kind: "before",
       local: exactLocal,
     });
@@ -146,8 +155,10 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
     expect(
       cancelled.find((agent) => agent.id === fixture.servers[1].id)?.puts,
     ).toBe(0);
-    await field.fill("2026-09-19T03:20");
-    await field.blur();
+    await selectDateTime(page, {
+      label: "Граница по времени сервера",
+      value: "2026-09-19T03:20:00",
+    });
     const editedResponse = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname ===
@@ -157,7 +168,7 @@ test("reloaded fractional preview preserves the exact cutoff until the operator 
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
-    const edited = decode("job", await (await editedResponse).json());
+    const edited = decode(jobSchema, await (await editedResponse).json());
     expect(edited.intent.resolved_cutoff.local).toBe("2026-09-19T03:20:00");
     expect(edited.intent.resolved_cutoff.file_cutoff_utc).toBe(
       "2026-09-19T00:20:00Z",
@@ -225,9 +236,11 @@ test("two tabs keep confirmation target; managed cancellation restores before fi
     const other = await fixture.context.newPage();
     await other.goto(`${fixture.origin}/?server=${fixture.servers[1].id}`);
     await other.getByLabel("Сервер", { exact: true }).waitFor();
-    expect(await other.getByLabel("Сервер", { exact: true }).inputValue()).toBe(
-      fixture.servers[1].id,
-    );
+    expect(
+      await other
+        .getByRole("combobox", { name: "Сервер", exact: true })
+        .textContent(),
+    ).toContain(fixture.servers[1].name);
     await page
       .getByRole("dialog")
       .getByText(fixture.servers[0].name, { exact: true })
@@ -425,7 +438,7 @@ test("unknown delivery offers reconciliation and cancellation without a blind se
       const capture = response
         .json()
         .then((input: unknown) => {
-          const job = decode("job", input);
+          const job = decode(jobSchema, input);
           replies.push({
             at: Date.now(),
             path,
@@ -483,7 +496,10 @@ test("unknown delivery offers reconciliation and cancellation without a blind se
     await page
       .getByRole("button", { name: "Проверить состояние", exact: true })
       .click();
-    const reconciled = decode("job", await (await reconcileResponse).json());
+    const reconciled = decode(
+      jobSchema,
+      await (await reconcileResponse).json(),
+    );
     expect(reconciled.dispatch).toBe("unknown");
     expect(reconciled.snapshot ?? null).toBeNull();
     expect(reconciled.slot_held).toBe(true);
@@ -559,7 +575,10 @@ test("explicit receipt-fault release reconciles the accepted job without another
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
-    const submitted = decode("job", await (await submissionResponse).json());
+    const submitted = decode(
+      jobSchema,
+      await (await submissionResponse).json(),
+    );
     expect(submitted.dispatch).toBe("unknown");
     await page
       .getByRole("heading", { name: "Проверка доставки задания", exact: true })
@@ -577,7 +596,7 @@ test("explicit receipt-fault release reconciles the accepted job without another
       .getByRole("button", { name: "Проверить состояние", exact: true })
       .click();
     const reconciled = decode(
-      "job",
+      jobSchema,
       await (await reconciliationResponse).json(),
     );
     expect(reconciled.job_id).toBe(submitted.job_id);
@@ -673,7 +692,7 @@ for (const operation of ["preview", "clean"] as const) {
           .getByRole("button", { name: "Подтвердить очистку", exact: true })
           .click();
       }
-      const next = decode("job", await (await submitted).json());
+      const next = decode(jobSchema, await (await submitted).json());
       await other
         .getByRole("heading", { name: "Выполняется", exact: true })
         .waitFor({ timeout: 10000 });
@@ -756,6 +775,7 @@ test("delayed cleanup context cannot replace a newer terminal run or its confirm
   const held = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const finished = Promise.withResolvers<void>();
+  const aborted = Promise.withResolvers<void>();
   try {
     const operator = await fixture.context.newPage();
     await signIn(operator, fixture.origin);
@@ -767,7 +787,7 @@ test("delayed cleanup context cannot replace a newer terminal run or its confirm
       .getByRole("heading", { name: "Завершено", exact: true })
       .waitFor();
     const old = decode(
-      "cleanup_context",
+      cleanupContextSchema,
       await page.evaluate(
         async (id) =>
           (await fetch(`/api/v1/servers/${id}/cleanup-context`)).json(),
@@ -783,6 +803,9 @@ test("delayed cleanup context cannot replace a newer terminal run or its confirm
           return;
         }
         first = false;
+        page.on("requestfailed", (request) => {
+          if (request === route.request()) aborted.resolve();
+        });
         held.resolve();
         await release.promise;
         try {
@@ -812,7 +835,7 @@ test("delayed cleanup context cannot replace a newer terminal run or its confirm
     await operator
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
-    const next = decode("job", await (await submitted).json());
+    const next = decode(jobSchema, await (await submitted).json());
     await fixture.finishLatest(serverId);
     await operator
       .getByRole("heading", { name: "Завершено", exact: true })
@@ -824,7 +847,7 @@ test("delayed cleanup context cannot replace a newer terminal run or its confirm
       .getByRole("region", { name: "Состояние задания" })
       .locator("code")
       .filter({ hasText: next.job_id })
-      .waitFor();
+      .waitFor({ timeout: 3000 });
     await page
       .getByRole("heading", { name: "Завершено", exact: true })
       .waitFor();
@@ -835,15 +858,9 @@ test("delayed cleanup context cannot replace a newer terminal run or its confirm
     ).toBe("3");
     await page.getByRole("button", { name: "Очистить", exact: true }).click();
     await page.getByRole("dialog").waitFor();
-    const staleResponse = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname ===
-          `/api/v1/servers/${serverId}/cleanup-context` &&
-        response.status() === 200,
-    );
     release.resolve();
     await finished.promise;
-    await (await staleResponse).finished();
+    await aborted.promise;
     await page.evaluate(
       () =>
         new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
@@ -913,7 +930,7 @@ test("delayed cleanup context cannot revive a preview after owned dispatch witho
     await page
       .getByRole("button", { name: "Предпросмотр", exact: true })
       .click();
-    const preview = decode("job", await (await previewResponse).json());
+    const preview = decode(jobSchema, await (await previewResponse).json());
     await fixture.finishLatest(serverId);
     const operator = await fixture.context.newPage();
     await operator.goto(`${fixture.origin}/?server=${serverId}`);
@@ -927,7 +944,7 @@ test("delayed cleanup context cannot revive a preview after owned dispatch witho
       .getByRole("heading", { name: "Завершено", exact: true })
       .waitFor();
     const old = decode(
-      "cleanup_context",
+      cleanupContextSchema,
       await page.evaluate(
         async (id) =>
           (await fetch(`/api/v1/servers/${id}/cleanup-context`)).json(),
@@ -954,7 +971,7 @@ test("delayed cleanup context cannot revive a preview after owned dispatch witho
       .click();
     await held.promise;
     await page.route(`**/api/v1/servers/${serverId}/jobs`, async (route) => {
-      const input = decode("submit", route.request().postDataJSON());
+      const input = decode(submitSchema, route.request().postDataJSON());
       // Real browser fetch preserves fixture TLS and the exact original command;
       // delay its successful receipt until this short run has already settled.
       await operator.evaluate(async (intent) => {
@@ -982,7 +999,7 @@ test("delayed cleanup context cannot revive a preview after owned dispatch witho
         .getByRole("heading", { name: "Завершено", exact: true })
         .waitFor();
       const latest = decode(
-        "cleanup_context",
+        cleanupContextSchema,
         await operator.evaluate(
           async (id) =>
             (await fetch(`/api/v1/servers/${id}/cleanup-context`)).json(),
@@ -1013,7 +1030,7 @@ test("delayed cleanup context cannot revive a preview after owned dispatch witho
     await page
       .getByRole("button", { name: "Подтвердить очистку", exact: true })
       .click();
-    const clean = decode("job", await (await cleanResponse).json());
+    const clean = decode(jobSchema, await (await cleanResponse).json());
     await page
       .getByRole("region", { name: "Состояние задания" })
       .locator("code")

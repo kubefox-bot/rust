@@ -1,5 +1,31 @@
+import { session as sessionSchema } from "../src/api/contracts";
 import { expect, spyOn, test } from "bun:test";
 import { ApiError, ContractError, requestJson } from "../src/api";
+import { session as sessionContract } from "../src/api/generated/validators.js";
+
+test("requests validate successful responses with their explicit contract", async () => {
+  const fetch = spyOn(globalThis, "fetch").mockResolvedValue(
+    Response.json({ authenticated: true, generation: "9007199254740993" }),
+  );
+  try {
+    const value = await requestJson({
+      path: "/auth/session",
+      responseSchema: sessionContract,
+    });
+    expect(value).toEqual({
+      authenticated: true,
+      generation: "9007199254740993",
+    });
+    fetch.mockResolvedValue(
+      Response.json({ authenticated: "yes", generation: "private-invalid" }),
+    );
+    expect(
+      requestJson({ path: "/auth/session", responseSchema: sessionContract }),
+    ).rejects.toBeInstanceOf(ContractError);
+  } finally {
+    fetch.mockRestore();
+  }
+});
 
 test("malformed successful response never exposes response text in an error", async () => {
   const fetch = spyOn(globalThis, "fetch").mockResolvedValue(
@@ -8,7 +34,7 @@ test("malformed successful response never exposes response text in an error", as
   try {
     const error = await requestJson({
       path: "/auth/session",
-      responseSchema: "session",
+      responseSchema: sessionSchema,
     }).catch((error: unknown) => error);
     expect(error).toBeInstanceOf(ContractError);
   } finally {
@@ -37,7 +63,7 @@ test("unsafe requests use same-origin credentials and required JSON/CSRF headers
       path: "/auth/login",
       method: "POST",
       body: { login: "admin", password: "fixture-password" },
-      responseSchema: "session",
+      responseSchema: sessionSchema,
     });
     expect(result.generation).toBe("9007199254740993");
     expect(calls[0]?.credentials).toBe("same-origin");
@@ -56,7 +82,7 @@ test("malformed failure body still preserves HTTP failure status", async () => {
   try {
     const error = await requestJson({
       path: "/auth/session",
-      responseSchema: "session",
+      responseSchema: sessionSchema,
     }).catch((error: unknown) => error);
     expect(error).toBeInstanceOf(ApiError);
     if (!(error instanceof ApiError)) throw new Error("Expected API failure");

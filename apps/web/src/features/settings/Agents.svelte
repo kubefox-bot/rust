@@ -8,10 +8,7 @@
   import OperationStatus from "./agents/OperationStatus.svelte";
   import ActionConfirmation from "./agents/ActionConfirmation.svelte";
   import { recent, renew, revoke, message } from "./agents/api";
-  import {
-    isNewerAgentBuild,
-    availablePackages as readPackages,
-  } from "../../agents";
+  import { isNewerAgentBuild } from "../../agents";
   import { ENROLLMENT_PHASES } from "./agents/conts";
   import type {
     AgentAction,
@@ -25,12 +22,14 @@
     agents,
     configured,
     onrefresh,
+    readPackages,
   }: {
     servers: BrowserContracts["servers"];
     selected: string;
     agents: BrowserContracts["agents"] | null;
     configured: boolean | undefined;
     onrefresh: () => void;
+    readPackages: () => Promise<BrowserContracts["packages"]>;
   } = $props();
   type Resources =
     | Readonly<{ kind: "loading" }>
@@ -83,7 +82,7 @@
     resources = { kind: "loading" };
     try {
       const [available, operations] = await Promise.all([
-        readPackages(controller.signal),
+        readPackages(),
         recent(controller.signal),
       ]);
       if (!controller.signal.aborted) {

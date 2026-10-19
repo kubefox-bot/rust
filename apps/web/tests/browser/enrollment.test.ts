@@ -1,3 +1,8 @@
+import {
+  packages as packagesSchema,
+  install as installSchema,
+  enrollment as enrollmentSchema,
+} from "../../src/api/contracts";
 import { expect, test } from "bun:test";
 import { decode, type BrowserContracts } from "../../src/api";
 import { startFixture } from "./fixture";
@@ -58,7 +63,7 @@ test("lost installation response clears credentials and reconciles the same oper
     await signIn(page, fixture.origin);
     await page.goto(`${fixture.origin}/settings/`);
     const packages = decode(
-      "packages",
+      packagesSchema,
       await page.evaluate(async () => {
         const response = await fetch("/api/v1/enrollment/packages");
         if (!response.ok)
@@ -82,7 +87,7 @@ test("lost installation response clears credentials and reconciles the same oper
     const installs: BrowserContracts["install"][] = [];
     const reconciliations: string[] = [];
     await page.route("**/api/v1/enrollment/install", async (route) => {
-      installs.push(decode("install", route.request().postDataJSON()));
+      installs.push(decode(installSchema, route.request().postDataJSON()));
       await route.abort("connectionreset");
     });
     await page.route("**/api/v1/enrollment/*/reconcile", async (route) => {
@@ -91,7 +96,7 @@ test("lost installation response clears credentials and reconciles the same oper
         throw new Error("No installation request to reconcile");
       reconciliations.push(new URL(route.request().url()).pathname);
       await route.fulfill({
-        json: decode("enrollment", {
+        json: decode(enrollmentSchema, {
           id: installation.operation_id,
           agent_id: installation.agent_id,
           server_id: installation.server_id,
@@ -273,6 +278,7 @@ test("revoking an agent cannot offer SSH recovery as a way to restore revoked tr
     await page
       .getByRole("button", { name: "Добавить сервер", exact: true })
       .click();
+    await page.getByText("Действия с агентом", { exact: true }).click();
     await page
       .getByRole("button", { name: "Отозвать доступ", exact: true })
       .click();
@@ -284,7 +290,10 @@ test("revoking an agent cannot offer SSH recovery as a way to restore revoked tr
     await dialog
       .getByRole("button", { name: "Подтвердить", exact: true })
       .click();
-    await page.getByText("Доступ отозван", { exact: true }).waitFor();
+    await page
+      .getByRole("region", { name: "Агенты серверов", exact: true })
+      .getByText("Доступ отозван", { exact: true })
+      .waitFor();
     expect(
       await page
         .getByRole("button", { name: "Восстановить доверие", exact: true })
@@ -292,9 +301,13 @@ test("revoking an agent cannot offer SSH recovery as a way to restore revoked tr
     ).toBe(true);
     expect(
       await page
-        .getByRole("button", { name: "Обновить агента", exact: true })
-        .isDisabled(),
-    ).toBe(true);
+        .getByRole("button", {
+          name: "Обновить агента",
+          exact: true,
+          disabled: false,
+        })
+        .count(),
+    ).toBe(0);
     expect(
       await page
         .getByRole("button", { name: "Обновить сертификат", exact: true })

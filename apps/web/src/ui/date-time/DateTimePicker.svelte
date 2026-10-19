@@ -81,16 +81,17 @@
   $effect(() => {
     if (disabled) panel?.hidePopover();
   });
+  $effect(() => {
+    if (!open) return;
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place);
+    };
+  });
 </script>
 
-<svelte:window
-  onresize={() => {
-    if (open) place();
-  }}
-  onscroll={() => {
-    if (open) place();
-  }}
-/>
 <div class="date-time-picker">
   <button
     class="date-trigger"

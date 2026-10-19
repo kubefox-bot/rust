@@ -1,3 +1,7 @@
+import {
+  history as historySchema,
+  agents as agentsSchema,
+} from "../../src/api/contracts";
 import { selectValue } from "./controls";
 import { expect, test } from "bun:test";
 import { startFixture } from "./fixture";
@@ -46,9 +50,7 @@ test("history is scoped, paginated and loaded only on its own page", async () =>
     expect(await page.locator("tbody tr").count()).toBe(50);
     await selectValue(page, { label: "Сервер", value: fixture.servers[1].id });
     await page.getByText("Запусков пока нет", { exact: true }).waitFor();
-    expect(new URL(page.url()).searchParams.get("server")).toBe(
-      fixture.servers[1].id,
-    );
+    expect(new URL(page.url()).searchParams.get("server")).toBe("mail-two");
     expect(
       requests.some(
         (url) =>
@@ -64,9 +66,11 @@ test("history is scoped, paginated and loaded only on its own page", async () =>
     ).toHaveLength(0);
     await page.reload();
     await page.getByText("Запусков пока нет", { exact: true }).waitFor();
-    expect(await page.getByLabel("Сервер", { exact: true }).inputValue()).toBe(
-      fixture.servers[1].id,
-    );
+    expect(
+      await page
+        .getByRole("combobox", { name: "Сервер", exact: true })
+        .textContent(),
+    ).toContain(fixture.servers[1].name);
   } finally {
     await fixture.close();
   }
@@ -167,9 +171,11 @@ test("a delayed page from the previous server cannot replace the selected histor
     await page.getByText("Запусков пока нет", { exact: true }).waitFor();
     releaseResponse.resolve();
     await responseFinished.promise;
-    expect(await page.getByLabel("Сервер", { exact: true }).inputValue()).toBe(
-      fixture.servers[1].id,
-    );
+    expect(
+      await page
+        .getByRole("combobox", { name: "Сервер", exact: true })
+        .textContent(),
+    ).toContain(fixture.servers[1].name);
     expect(await page.locator("tbody tr").count()).toBe(0);
     expect(
       await page.getByText("Запусков пока нет", { exact: true }).isVisible(),
@@ -233,7 +239,7 @@ test("open history follows job completion and releases its sole event source on 
       const capture = response
         .json()
         .then((input: unknown) => {
-          const data = decode("history", input);
+          const data = decode(historySchema, input);
           reads.push({
             at,
             status: response.status(),
@@ -276,7 +282,7 @@ test("open history follows job completion and releases its sole event source on 
         );
         return response.json();
       }, fixture.servers[0].id);
-      const data = decode("history", current);
+      const data = decode(historySchema, current);
       console.error(
         JSON.stringify({
           boundary: "history-live-timeout",
@@ -340,7 +346,7 @@ test("footer maps each server's actual agent observation and clears expanded det
         new URL(response.url()).pathname === "/api/v1/agents" && response.ok(),
     );
     await signIn(page, fixture.origin);
-    const agents = decode("agents", await (await agentsResponse).json());
+    const agents = decode(agentsSchema, await (await agentsResponse).json());
     expect(agents).toHaveLength(2);
     const footer = page.locator("footer");
     await footer
@@ -434,7 +440,7 @@ test("history refreshes a terminal phase while service verification still holds 
         !response.ok()
       )
         return false;
-      return decode("history", await response.json()).jobs.some(
+      return decode(historySchema, await response.json()).jobs.some(
         (job) => job.snapshot?.revision === "2",
       );
     });
@@ -456,7 +462,7 @@ test("history refreshes a terminal phase while service verification still holds 
       );
       return response.json();
     }, fixture.servers[0].id);
-    const heldTerminal = decode("history", current).jobs[0];
+    const heldTerminal = decode(historySchema, current).jobs[0];
     expect(heldTerminal?.snapshot?.phase).toBe("completed");
     expect(heldTerminal?.slot_held).toBe(true);
     await page

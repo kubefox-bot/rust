@@ -1,6 +1,7 @@
-export const FILE_COLUMNS = [
-  { id: "path", accessorKey: "path", header: "Файл / путь" },
-  { id: "size", accessorKey: "size_bytes", header: "Размер" },
-  { id: "created_at", accessorKey: "created_at", header: "Создан" },
-  { id: "orphan", accessorKey: "orphan", header: "Связь с базой" },
-];
+import type { FileSort } from "./types";
+
+export const SORTABLE_COLUMNS = [
+  { id: "path", header: "Файл / путь" },
+  { id: "size", header: "Размер" },
+  { id: "created_at", header: "Создан" },
+] as const satisfies ReadonlyArray<Readonly<{ id: FileSort; header: string }>>;
