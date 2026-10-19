@@ -8,7 +8,10 @@ const DEFAULT_LISTEN: &str = "0.0.0.0:8443";
 pub(crate) const AGENT_PACKAGES_DIRECTORY: &str = "/opt/hmail/agent-packages";
 const CONFIG_FILE: &str = "center.json";
 const MAX_CONFIG_BYTES: u64 = 8192;
+#[cfg(not(windows))]
 const DEFAULT_STATIC_DIR: &str = "/opt/hmail/web";
+#[cfg(windows)]
+const DEFAULT_STATIC_DIR: &str = r"C:\opt\hmail\web";
 const MAX_BUILD_VERSION_BYTES: usize = 128;
 pub(crate) fn validate_build_version(value: &str) -> Result<(), ConfigError> {
     if value.is_empty()
