@@ -20,6 +20,8 @@ test("changing source while assembling an appliance prevents a distributable res
       "user.name=Fixture",
       "-c",
       "user.email=fixture@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
       "commit",
       "--quiet",
       "-m",
