@@ -91,7 +91,10 @@ impl CenterStore {
                 std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
                     .map_err(|_| StorageError::Backup)?;
             }
-            std::fs::File::open(path)
+            // Windows FlushFileBuffers requires a handle opened for writing.
+            std::fs::OpenOptions::new()
+                .write(true)
+                .open(path)
                 .and_then(|file| file.sync_all())
                 .map_err(|_| StorageError::Backup)?;
         }
